@@ -4,8 +4,8 @@
 
 # Pupil Analysis Pipeline
 
-This script runs a full pipeline for **mouse pupil segmentation and size estimation** using a trained UNet model.  
-You can start directly from a video file or from an existing folder of extracted frames. To obtain expected results, the video or images provided should have at least the majority of the eye contained in the 148 x 148 pixel - area in the center of the frames.  This is crucial to getting good results as the model was trained on 148 x 148 centered cropped images.  
+This package runs a full pipeline for **mouse pupil segmentation and size estimation** using a trained UNet model.  
+You can start directly from a video file or from an existing folder of extracted frames. To obtain expected results, the video or images provided should have at least the majority of the eye contained in the 148 x 148 pixel area in the center of the frames. This is crucial to getting good results because the model was trained on 148 x 148 centered eye images.  
 
 ---
 
@@ -20,8 +20,7 @@ cd pupil_tracking
 ```bash
 pip install -e .
 ```
-### 3. Download model checkpoint
-Download `checkpoints/` from [Onedrive](https://uofr-my.sharepoint.com/:f:/g/personal/yzhao38_ur_rochester_edu/EkV9WCc9VQ1Mk1HUcfhZPhgBynbBr5YMczw2Stcv9aRFGQ?e=bndEXX) (contact Yue if you don't have access), and then place it in `pupil_tracking/`.
+The default model checkpoint is included with the package installation.
 
 
 ## 🏃 Basic Usage
@@ -46,10 +45,11 @@ This will:
 | `--out_dir`         | Optional. Directory to save extracted frames. If not given, defaults to `<video_stem>_frames/` next to the video. |
 | `--image_dir`       | Optional alternative to `--video_path`. Use this if you already have extracted PNG frames.                        |
 | `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<image_dir>_result/`.            |
+| `--checkpoint`      | Optional. Path to a custom model checkpoint. If not provided, the packaged checkpoint is used.                   |
 | `--output_mask_dir` | Optional. If provided, saves overlay images showing the predicted pupil mask blended onto the original frames.    |
 | `--extraction_fps`  | Optional. Specifies the number of frames per second at which to extract the frames from the video (default: 5). If `--max_frames` is provided, and if the number of frames to be extracted at `--extraction_fps` would exceed `--max_frames`, then the actual `--extraction_fps` will be automatically reduced so that `--max_frames` number of frames will be extracted. |
 | `--max_frames`      | Optional. Limits the maximum number of frames to extract from a video (default: 10,000). Useful for long recordings.        |
-| `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for calssifying a pixel belonging to a pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel on if the model has a confidence that exceeds 0.7 that this pixel is a pupil pixel. Increase it to if the resulting segmentation overpredicts a pupil; reduce it if the resulting segmentation only finds part of a pupil. |  
+| `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for classifying a pixel as belonging to the pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel only if model confidence exceeds 0.7. Increase it if the resulting segmentation overpredicts the pupil; reduce it if the resulting segmentation only finds part of the pupil. |  
 
 ---
 
