@@ -41,9 +41,30 @@ codegen/
 
 # folders
 __pycache__/
+.pytest_cache/
+.ruff_cache/
 data/
 archive/
 results/
+dist/
+build/
+*.egg-info/
+
+# local project metadata
+.gitattributes
+
+# generated training, inference, and labeling artifacts
+checkpoints_exp/
+images_test*/
+images_test*_result/
+images_train/
+images_validation/
+masks_train/
+masks_validation/
+predicted_masks*/
+predictions_test/
+pupil_diameter_analysis_result_demo.gif
 
 # sketches
-*sketch.py
+*sketch*.py
+sketch*.py

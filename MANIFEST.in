@@ -1,0 +1,3 @@
+include pupil_tracking/checkpoints/*.pth
+include pupil_tracking/checkpoints/*.txt
+prune pupil_tracking/checkpoints/archive

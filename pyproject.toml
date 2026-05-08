@@ -25,7 +25,10 @@ where = ["."]
 include = ["pupil_tracking*"]
 
 [tool.setuptools.package-data]
-pupil_tracking = ["checkpoints/*.pth"]
+pupil_tracking = ["checkpoints/*.pth", "checkpoints/*.txt"]
+
+[tool.setuptools.exclude-package-data]
+pupil_tracking = ["checkpoints/archive/*"]
 
 [build-system]
 requires = ["setuptools>=80.9"]
