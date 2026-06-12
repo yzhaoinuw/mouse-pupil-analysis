@@ -4,9 +4,20 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-No active engineering thread is open after the 2026-06-12 treaty-doc migration.
+- [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
+
+## DOI Archival
+
+Status: ready for user/account action
+
+The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display citation metadata for tagged releases. A DOI still requires linking the GitHub repository to an archival service such as Zenodo and creating or syncing a release there.
+
+Remaining work:
+
+- After the citable version tag is pushed, enable Zenodo or another archive for `yzhaoinuw/pupil_tracking`.
+- Mint a DOI for the release and add it to `CITATION.cff` and `README.md`.
 
 ## Background / Paused
 

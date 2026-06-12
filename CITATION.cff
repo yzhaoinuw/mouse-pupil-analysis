@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "pupil-tracking: Automated mouse pupil segmentation and diameter analysis using UNet"
+authors:
+  - family-names: Zhao
+    given-names: Yue
+    orcid: "https://orcid.org/0000-0002-0819-5012"
+version: "0.1.4"
+date-released: "2026-06-12"
+repository-code: "https://github.com/yzhaoinuw/pupil_tracking"
+url: "https://github.com/yzhaoinuw/pupil_tracking"
+license: MIT
+abstract: "A Python package and command-line pipeline for mouse pupil segmentation and pupil-diameter estimation from video or extracted frame images."

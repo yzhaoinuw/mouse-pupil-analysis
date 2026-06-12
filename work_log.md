@@ -4,6 +4,17 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-06-12
 
+### Add citation and license metadata (Codex, GPT-5)
+
+- Added an MIT `LICENSE`, `CITATION.cff` with Yue Zhao's ORCID, and README citation/license guidance so collaborators can cite the repository from GitHub.
+- Bumped the package version to `0.1.4` in `pyproject.toml` for the next citable release tag.
+- Added a `next_steps.md` follow-up for optional DOI archival through Zenodo or another release archive.
+- Verification:
+  - `git diff --check`
+  - `rg -n "version =|license|license-files|Citation|License|CITATION|Version 0.1.4|doi|DOI" pyproject.toml README.md CITATION.cff LICENSE next_steps.md`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`
+  - `$env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH; C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q`
+
 ### Add treaty adoption badge (Codex, GPT-5)
 
 - Added the official Agent Collab Treaty adoption badge to `README.md`, using the tri-color SVG asset and linking it back to the treaty repository.

@@ -1,8 +1,10 @@
 [project]
 name = "pupil-tracking"
-version = "0.1.2"
+version = "0.1.4"
 description = "Automated mouse pupil segmentation and diameter analysis using UNet."
 authors = [{ name = "Yue Zhao" }]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 
 dependencies = [

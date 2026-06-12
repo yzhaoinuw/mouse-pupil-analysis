@@ -105,6 +105,20 @@ movie_frames_result/
 
 ---
 
+## Citation
+
+If you use this software in a paper or other scholarly work, please cite the version you used. GitHub will show citation metadata from [`CITATION.cff`](CITATION.cff).
+
+Recommended citation:
+
+> Yue Zhao. *pupil-tracking: Automated mouse pupil segmentation and diameter analysis using UNet*. Version 0.1.4. https://github.com/yzhaoinuw/pupil_tracking
+
+## License
+
+This project is released under the MIT License. See [`LICENSE`](LICENSE).
+
+---
+
 ## Developer Notes
 
 ### Model Training
