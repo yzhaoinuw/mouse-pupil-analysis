@@ -1,3 +1,5 @@
+[![Agent Collab Treaty adopted](https://raw.githubusercontent.com/yzhaoinuw/agent_collab_treaty/main/assets/treaty-adopted.svg)](https://github.com/yzhaoinuw/agent_collab_treaty)
+
 ![pupil_diameter_analysis_result_demo](https://github.com/user-attachments/assets/cca0794f-07d9-4ed1-a25e-310dd553e98d)
 
 <p align="center"><em>Left: segmented pupil — Right: evolving pupil diameter plot</em></p>
