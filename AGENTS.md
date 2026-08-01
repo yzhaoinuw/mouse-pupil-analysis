@@ -1,38 +1,28 @@
 # Guidelines and Tips for Agents
 
-This is the first file any agent should read when joining this repository. It names the runtime, the active code paths, the documentation map, and the project-specific rules that prevent accidental churn.
+Read this file first when joining this repository. It is the project-specific quick reference; generic treaty mechanics live in [`treaty_conventions.md`](treaty_conventions.md).
+
+Keep this file lean (aim for under 150 lines). Put detailed procedures in the document that owns them and link from here.
 
 ## Startup Rule
 
-At the beginning of a new chat or agent session, read this file first. Do not automatically read every Markdown file in the repository. Use the [Documentation](#documentation) map below to choose only the files that matter for the current task.
+At the beginning of a new chat or agent session, read this file first. Do not automatically read every Markdown file; use the [Documentation](#documentation) map to select what the task needs.
 
 ## Runtime Environment
 
-Use the local miniconda environment named `pupil_tracking`.
-
-Typical startup:
+Use the local miniconda environment named `pupil_tracking`:
 
 ```powershell
 conda activate pupil_tracking
 ```
 
-All miniconda environments are under:
-
-```powershell
-C:\Users\yzhao\miniconda3\envs\
-```
-
-If `conda` is not on PATH, run the environment Python directly:
+All environments are under `C:\Users\yzhao\miniconda3\envs\`. If `conda` is unavailable, run the environment Python directly:
 
 ```powershell
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe
 ```
 
-For commands that need console scripts from the environment in a plain PowerShell session, prepend the Scripts folder:
-
-```powershell
-$env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH
-```
+For environment console scripts in plain PowerShell, prepend `C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts` to `PATH`.
 
 ## Common Tasks
 
@@ -42,25 +32,15 @@ Install for development:
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pip install -e .[dev]
 ```
 
-Run the main analysis pipeline:
+Run analysis or frame extraction:
 
 ```powershell
 run-pupil-analysis --video_path C:\path\to\movie.avi
-```
-
-Run analysis from an existing PNG frame folder:
-
-```powershell
 run-pupil-analysis --image_dir C:\path\to\frames
-```
-
-Extract frames only:
-
-```powershell
 extract-frames --video_path C:\path\to\movie.avi --out_dir C:\path\to\frames
 ```
 
-Run the CI-equivalent local checks:
+Run the CI-equivalent checks:
 
 ```powershell
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .
@@ -68,67 +48,48 @@ C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .
 $env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH; C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q
 ```
 
-Build verification:
+For packaging changes, also run:
 
 ```powershell
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist
 ```
 
-Pre-flight checklist before committing:
-
-- `ruff check .` is clean.
-- `black --check .` is clean.
-- `pytest -q` is green.
-- Packaging changes still include the packaged checkpoint and training log in the wheel/source distribution.
-- A new entry has been prepended to `work_log.md` with the verification commands that were actually run.
+Before committing, confirm Ruff, Black, and Pytest are clean; package builds still contain the tracked checkpoint and training log when relevant; and `work_log.md` records the verification actually run.
 
 ## When To Update Treaty Docs
 
-At the end of any substantive work session, update `work_log.md` unless the user explicitly asks not to document it, says it is off the book, or the exchange was clearly trivial.
-
-A session is substantive when it includes file edits, meaningful validation/debugging/profiling, a technical decision or reversal, reusable evidence, branch/PR/release/deployment state changes, or unfinished follow-up that belongs in `next_steps.md`.
-
-When a session creates or changes future work, update `next_steps.md` in the same pass: add concrete follow-ups, remove completed items, and keep "Currently Hot" accurate.
+At the end of a substantive session, update `work_log.md` and align `next_steps.md` unless the user asks not to document it or the exchange was clearly trivial. Record decisions and reusable evidence, not a prose copy of the diff. See [Work Log Discipline](treaty_conventions.md#work-log-discipline).
 
 ## Branch Handoff Discipline
 
-Prefer working on `dev` unless the user asks for another branch. Before switching away from an experimental or feature branch, fully resolve the work on that branch. Confirm whether the branch contains all intended changes, whether those changes are committed, and whether the user expects them merged, pushed, or intentionally left parked.
+Prefer `dev` for ordinary development unless the user requests another branch; `main` is the GitHub default and recorded treaty integration branch. Before switching away from experimental or feature work, confirm its intended changes are complete, committed or intentionally local, verified, and merged/pushed/parked as requested. See [Branch Handoff](treaty_conventions.md#branch-handoff).
 
-Useful checks before switching or merging:
+## Release / Tag Checklist
 
-```powershell
-git status --short --branch
-git log --oneline --left-right --cherry-pick main...HEAD
-git merge-base --is-ancestor main HEAD
-```
+Treat commit + push + tag, "cut a release," or "publish version X" as a release. Clear the documentation/version/verification gate before tagging, then verify remote refs. See [Release Gate](treaty_conventions.md#release-gate).
+
+## Updating The Treaty
+
+Only update the treaty when the user asks. Use the stable treaty CLI to run `treaty diff`, preview with `treaty update --dry-run`, apply with `treaty update`, resolve any conflicts, and validate. See [Updating The Treaty](treaty_conventions.md#updating-the-treaty).
 
 ## Documentation
 
-Read these documents only as needed:
+Read only what the task needs:
 
-- `project_overview.md`
-  - Use when onboarding to the codebase structure or editing unfamiliar areas.
-  - Read "What Looks Active vs. Legacy" before editing; this repo mixes package code, scripts, local data folders, and generated outputs.
+- `treaty_conventions.md`: upstream-maintained logging, branch, release, and update procedures; prefer not to edit it.
+- `project_overview.md`: active runtime, structure, tests, and authored-vs-derived boundaries for unfamiliar areas.
+- `next_steps.md`: unfinished work; "Currently Hot" identifies active threads.
+- `work_log.md` and `work_log_archive/`: recent decisions and verification evidence; read the two latest dates when history matters.
+- `README.md`: user-facing installation, usage, packaging, and I/O expectations.
+- `.github/workflows/ci.yml`: lint, format, test, and build expectations.
 
-- `work_log.md` and `work_log_archive/`
-  - Use when the task needs recent implementation history, experiment outcomes, or verification breadcrumbs.
-  - The live `work_log.md` holds at most the 5 most recent unique calendar dates.
-  - Find date anchors with:
-    `rg -n '^## [0-9]{4}-[0-9]{2}-[0-9]{2}' work_log.md`
+## Commit Message Guidelines
 
-- `next_steps.md`
-  - Use when planning or continuing unfinished work.
-  - The "Currently Hot" pointer at the top names active threads.
-
-- `README.md`
-  - Use when changing user-facing setup, packaging, usage, CLI behavior, or input/output expectations.
-
-- `.github/workflows/ci.yml`
-  - Use when changing test, lint, formatting, build, or packaging expectations.
+Use a short title. Add flat body bullets only when a commit contains multiple requested changes. Describe high-level behavior, not implementation details; omit tests/docs/internal work from feature messages unless that work is the commit's purpose.
 
 ## Git Ownership Note
 
-If Git reports a "detected dubious ownership" warning for this repo, mark this repository as safe:
+If Git reports dubious ownership, use command-scoped `safe.directory` when practical. If a persistent exception is needed:
 
 ```powershell
 git config --global --add safe.directory C:/Users/yzhao/python_projects/pupil_tracking
@@ -136,25 +97,18 @@ git config --global --add safe.directory C:/Users/yzhao/python_projects/pupil_tr
 
 ## Pre-commit Note
 
-If pre-commit cannot write to its default cache location, use a repo-local cache before running it:
+If pre-commit cannot write its default cache, use the repo-local cache:
 
 ```powershell
 $env:PRE_COMMIT_HOME = "C:\Users\yzhao\python_projects\pupil_tracking\.pre-commit-cache"
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pre_commit run --all-files
 ```
 
-## Commit Message Guidelines
-
-Commit messages should use a short title line. Add a short body with flat bullets when a commit contains multiple requested changes. Commit message bullets should describe high-level added or changed behavior, not implementation details.
-
-For feature commits, mention only user-facing behavior unless tests, docs, project memory updates, or other internal work are the main purpose of the commit.
-
 ## Project-Specific Reminders
 
-- Keep changes scoped. This repo contains installable package code, training scripts, local experiment folders, generated masks/results, and build outputs.
-- Do not add generated artifacts unless the user explicitly asks.
+- Keep changes scoped: package code, training scripts, local experiments, generated results, and build outputs share this repo.
+- Do not add generated artifacts unless explicitly requested. Check `project_overview.md` before editing unfamiliar or generated-looking paths.
 - Use package imports such as `pupil_tracking.dataset` and `pupil_tracking.unet` in new code.
 - Preserve the 148 x 148 centered/padded image convention unless intentionally changing model assumptions.
-- The default inference path chooses the packaged checkpoint with the highest IoU encoded in its filename.
-- The tracked checkpoint under `pupil_tracking/checkpoints/` is part of the installed package. Checkpoint archive files under `pupil_tracking/checkpoints/archive/` are excluded from package data.
-- For packaging changes, verify that the packaged checkpoint remains included in both wheel and source distribution outputs.
+- Default inference selects the packaged checkpoint with the highest IoU encoded in its filename.
+- `pupil_tracking/checkpoints/` is installed package data; `pupil_tracking/checkpoints/archive/` is excluded. Verify wheel and source-distribution contents after packaging changes.

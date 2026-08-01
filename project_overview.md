@@ -104,6 +104,20 @@ Local/generated surfaces to treat carefully:
 - `archive/` and `sketch*.py` style files are not the active package path.
 - `pupil_tracking/checkpoints/archive/` contains historical checkpoint files excluded from package data.
 
+## Authored vs. Derived
+
+### Authored - hand-edit these
+
+- Package Python modules, root developer scripts, tests, `pyproject.toml`, `MANIFEST.in`, and CI configuration are maintained source.
+- `README.md`, `AGENTS.md`, `project_overview.md`, `next_steps.md`, and `work_log.md` are maintained documentation. `treaty_conventions.md` is the exception: it is upstream-managed through `treaty update`.
+- The selection and packaging policy under `pupil_tracking/checkpoints/` is curated deliberately even though model binaries originate from training.
+
+### Derived - regenerate or intentionally promote
+
+- `build/`, `dist/`, `*.egg-info`, Python/tool caches, and local analysis/result folders are generated and should not be edited or staged.
+- `checkpoints_exp/` is produced by `run_train.py`; promote a model into `pupil_tracking/checkpoints/` only as an intentional, reviewed package change.
+- Local training images, masks, extracted frames, predictions, and plots are data or outputs, not repository source.
+
 ## Tests And Fixtures
 
 The test suite is intentionally lightweight:

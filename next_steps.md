@@ -4,9 +4,21 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
+- [Treaty v0.6.0 remote publication](#treaty-v060-remote-publication) - push the locally integrated migration only when requested.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
+
+## Treaty v0.6.0 Remote Publication
+
+Status: integrated locally; remote push deferred
+
+Local `dev` and `main` contain the validated Copier-managed treaty update from `v0.3.2` to `v0.6.0`. The remote branches remain unchanged because no push was requested.
+
+Remaining work:
+
+- Push `dev` and `main` only when the user requests remote publication, then verify both remote refs.
+- Track upstream dry-run preview feedback in https://github.com/yzhaoinuw/agent_collab_treaty/issues/18.
 
 ## DOI Archival
 

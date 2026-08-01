@@ -2,6 +2,29 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-01
+
+### Update Agent Collab Treaty to v0.6.0 (Codex, GPT-5, xhigh reasoning, token budget not set)
+
+- Confirmed the repository was already Copier-managed at `v0.3.2`: `.copier-answers.yml` was present and tracked, `main` was the recorded and GitHub-default integration branch, `treaty_conventions.md` was absent, and the managed orientation docs were heavily customized.
+- Used a clean-tree preview before applying the update. It wrote nothing but failed to show the promised merge diff; the real apply then reported five answer migrations, two cleanly updated files, and conflicts in `AGENTS.md`, `project_overview.md`, and `work_log.md`.
+- Resolved the three conflicts without losing the `pupil_tracking` environment, CLI, CI, model, checkpoint-packaging, active-runtime, or artifact-hygiene guidance. Kept every v0.6 managed heading, reduced `AGENTS.md` to 114 lines, added the upstream-managed `treaty_conventions.md`, and documented authored-vs-derived boundaries.
+- Repaired one historical work-log heading whose model/version metadata was not recorded so the v0.6 validator could assess the log without inventing provenance.
+- Reviewed upstream issues #8-#15 and posted the new dry-run preview-fidelity defect as https://github.com/yzhaoinuw/agent_collab_treaty/issues/18, signed `Codex (GPT-5)`.
+- Committed the validated migration and fast-forwarded local `dev` and `main` to it; no remote push was requested.
+- Verification:
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe --version`
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe diff .`
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `rg -n "^(<<<<<<<|=======|>>>>>>>)" AGENTS.md project_overview.md work_log.md treaty_conventions.md`
+  - `git diff --check`
+  - `git diff --cached --check`
+  - `git merge-base --is-ancestor chore/treaty-v0.6.0 dev`
+  - `git merge-base --is-ancestor chore/treaty-v0.6.0 main`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q` (`2 passed`)
+
 ## 2026-06-12
 
 ### Add citation and license metadata (Codex, GPT-5)
@@ -36,7 +59,7 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-05-08
 
-### Package hygiene and initial agent docs
+### Package hygiene and initial agent docs (Codex, model version not recorded)
 
 - Created the original agent instructions to capture future Codex startup instructions, environment details, and commit-message preferences.
 - Identified the active leading branch as `origin/dev` / `origin/ci-precommit`, then synced local `dev` and pushed updates so `dev` became the active leading branch.
