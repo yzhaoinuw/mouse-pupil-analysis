@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-This repository packages a mouse pupil segmentation and pupil-diameter analysis pipeline. It can extract evenly spaced frames from video, run a trained attention UNet on centered eye images, and save estimated pupil diameters plus optional mask-overlay PNGs.
+This repository packages a mouse pupil segmentation, pupil-diameter, and opt-in pupil-center velocity analysis pipeline. It can extract sampled or consecutive full-frame images from video, run a trained attention UNet on centered eye images, and save pupil size, tracking, quality-control, and optional mask-overlay outputs.
 
 The installable package is `pupil_tracking`. The user-facing command line tools are `run-pupil-analysis` and `extract-frames`, both declared in `pyproject.toml`.
 
@@ -24,24 +24,32 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - Loads `UNet(use_attention=True)`, picks CUDA when available, and falls back to CPU.
 - Finds the default packaged checkpoint by selecting the highest IoU encoded in a checkpoint filename under `pupil_tracking/checkpoints/`.
 - Writes `*_estimated_pupil_diameter.csv` and `*_estimated_pupil_diameter.png` into the result directory.
+- With `--calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and writes tracking CSV/QC outputs.
 - Optionally writes mask overlays when `--output_mask_dir` is provided.
 
 ### 3. `pupil_tracking/extract_frames.py`
 
 - Implements the frame-extraction CLI and reusable `extract_selected_frames(...)`.
 - Samples evenly spaced frames from the input video with OpenCV.
+- Can extract consecutive source frames and return source-frame metadata for velocity analysis.
 - Honors `--extraction_fps` and `--max_frames`, reducing effective extraction FPS when needed.
 
-### 4. `pupil_tracking/dataset.py`
+### 4. `pupil_tracking/tracking.py`
+
+- Postprocesses UNet probability maps without changing the model or checkpoint.
+- Selects and measures pupil components, maps centers back to original-image pixels, applies explainable quality flags, and calculates frame-to-frame displacement and velocity.
+- Leaves published centers and velocities missing across rejected or non-consecutive frames rather than interpolating.
+
+### 5. `pupil_tracking/dataset.py`
 
 - Handles image loading, preprocessing, padding/resizing, dataset construction, and training augmentations.
 - The 148 x 148 centered/padded image convention is load-bearing for the current trained model.
 
-### 5. `pupil_tracking/unet.py`
+### 6. `pupil_tracking/unet.py`
 
 - Defines the segmentation model used by inference and training.
 
-### 6. `run_train.py`
+### 7. `run_train.py`
 
 - Current local training script.
 - Expects training and validation image/mask folders in the repository root.
@@ -54,12 +62,15 @@ pupil_tracking/
 |- pupil_tracking/
 |  |- run_pupil_analysis.py
 |  |- extract_frames.py
+|  |- tracking.py
 |  |- dataset.py
 |  |- unet.py
 |  |- checkpoints/
 |- tests/
 |  |- test_imports.py
 |  |- test_cli_help.py
+|  |- test_extract_frames.py
+|  |- test_tracking.py
 |- .github/workflows/ci.yml
 |- pyproject.toml
 |- README.md
@@ -80,6 +91,7 @@ Active, package-facing files:
 
 - `pupil_tracking/run_pupil_analysis.py`
 - `pupil_tracking/extract_frames.py`
+- `pupil_tracking/tracking.py`
 - `pupil_tracking/dataset.py`
 - `pupil_tracking/unet.py`
 - `pupil_tracking/checkpoints/`
@@ -110,6 +122,8 @@ The test suite is intentionally lightweight:
 
 - `tests/test_imports.py` imports the package.
 - `tests/test_cli_help.py` runs `run-pupil-analysis --help`.
+- `tests/test_extract_frames.py` verifies sampled/full-frame source-index selection.
+- `tests/test_tracking.py` verifies coordinate mapping, component measurements, quality flags, timing, and kinematics with synthetic inputs.
 - `.github/workflows/ci.yml` runs Ruff, Black, Pytest, and a wheel smoke check across Python 3.10, 3.11, and 3.12 where appropriate.
 
 There is no small canonical sample video committed for end-to-end inference. Local image, mask, and prediction folders are useful for development, but they should not be assumed to be portable fixtures.
@@ -127,6 +141,8 @@ Primary outputs:
 
 - `*_estimated_pupil_diameter.csv`
 - `*_estimated_pupil_diameter.png`
+- Velocity-mode `*_pupil_tracking.csv`
+- Velocity-mode `*_pupil_tracking_qc.png`
 - Optional mask overlay PNGs under `--output_mask_dir`
 
 ## Practical Mental Model

@@ -37,6 +37,21 @@ This will:
 2. Run pupil segmentation and diameter estimation on those frames
 3. Save the results (CSV + plot) into `movie_frames_result/`
 
+To calculate pupil-center position and velocity from every encoded frame, add
+`--calculate_velocity` and provide the actual acquisition rate when it differs
+from the video playback rate:
+
+```bash
+run-pupil-analysis \
+  --video_path data/mouse1.avi \
+  --calculate_velocity \
+  --acquisition_fps 33.3333333333
+```
+
+Velocity mode calculates timestamps from the original source-frame index and
+the acquisition rate. It does not assume that the FPS stored in the video
+container always represents experimental time.
+
 ---
 
 ## ⚙️ Key Arguments
@@ -52,6 +67,8 @@ This will:
 | `--extraction_fps`  | Optional. Specifies the number of frames per second at which to extract the frames from the video (default: 5). If `--max_frames` is provided, and if the number of frames to be extracted at `--extraction_fps` would exceed `--max_frames`, then the actual `--extraction_fps` will be automatically reduced so that `--max_frames` number of frames will be extracted. |
 | `--max_frames`      | Optional. Limits the maximum number of frames to extract from a video (default: 10,000). Useful for long recordings.        |
 | `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for classifying a pixel as belonging to the pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel only if model confidence exceeds 0.7. Increase it if the resulting segmentation overpredicts the pupil; reduce it if the resulting segmentation only finds part of the pupil. |  
+| `--calculate_velocity` | Optional. Analyzes every encoded source frame and adds pupil-center, segmentation-quality, displacement, velocity, and speed outputs. |
+| `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. In velocity mode this is required with `--image_dir`; with video input it defaults to the video header rate when omitted. |
 
 ---
 
@@ -86,7 +103,21 @@ After running, you’ll typically find:
 |------|--------------|
 | `*_estimated_pupil_diameter.csv` | A table of estimated pupil diameters for each frame (in pixels). |
 | `*_estimated_pupil_diameter.png` | A line plot showing pupil diameter over time (frame index on x-axis). |
+| `*_pupil_tracking.csv` | Velocity-mode table containing source-frame timing, pupil-center coordinates, displacement, velocity, speed, pupil size, and segmentation-quality fields. |
+| `*_pupil_tracking_qc.png` | Velocity-mode quality-control plot showing pupil size, x/y center, speed, and rejected segmentations on the actual-time axis. |
 | *(optional)* Mask images in `output_mask_dir` | PNGs with the pupil mask (in red) blended onto the original grayscale image. |
+
+Pupil-center coordinates are reported in original-video pixels. The x
+coordinate increases to the right and the y coordinate increases downward.
+Velocity is reported in pixels per second.
+
+The tracking CSV preserves raw center measurements for diagnosis and also
+provides `segmentation_valid` and `quality_reason`. Published center and
+kinematic fields are left empty when segmentation is rejected. Velocity is
+also left empty when either adjacent frame is invalid or when source frames
+are not consecutive; the pipeline does not interpolate across these gaps.
+A quality reason can also be a non-rejecting warning, such as extra foreground
+components when the selected pupil component remains usable.
 
 ---
 

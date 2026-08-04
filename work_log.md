@@ -2,6 +2,43 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-07-28
+
+### Implement pupil-center velocity tracking (Codex, GPT-5)
+
+- Created `feature/pupil-velocity` from `dev` and carried the requirements/diagnostic notes onto the feature branch.
+- Added opt-in `--calculate_velocity` analysis with a separate `--acquisition_fps` timebase, consecutive full-frame extraction, original source-frame metadata, and a compatibility-preserving diameter-only path.
+- Added `pupil_tracking/tracking.py` for probability-weighted component centers, inverse resize/pad coordinate mapping, explainable segmentation quality flags, temporal area checks, and non-interpolated x/y displacement and velocity.
+- Added a comprehensive tracking CSV, actual-time QC plot, and optional overlays with valid centers in green and rejected masks/centers in orange and yellow.
+- Preserved the UNet architecture, packaged checkpoint, prediction threshold, training workflow, and legacy diameter CSV/plot outputs.
+- Added synthetic tests for frame selection, coordinate mapping, confidence-weighted centers, component warnings, temporal area rejection, actual-time velocity, and invalid/non-consecutive gaps.
+- Updated `README.md`, `project_overview.md`, and `next_steps.md` with the CLI contract, output behavior, implementation map, and validation evidence.
+- Full validation of the supplied `eye.avi` produced 3,001 ordered rows from 0.00 to 90.00 seconds, 2,993 valid segmentations, eight explainable rejections, and 2,989 published frame-to-frame speeds. Visual inspection confirmed the largest speed peaks correspond to visible rapid pupil movement.
+- Verification:
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
+  - `$env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH; C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q` (`13 passed`; pytest cache write emitted one environment-permission warning)
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`
+  - Wheel/source-distribution content inspection confirmed `pupil_tracking/tracking.py`, the packaged checkpoint, and its training log are included.
+  - Full `eye.avi` velocity run with `--acquisition_fps 33.333333333333336 --batch_size 64`.
+  - Focused mask-overlay run and rendered visual inspection around the eyelid closure.
+  - `git diff --check`
+
+### Clarify pupil-center velocity requirements and inspect sample video (Codex, GPT-5)
+
+- Confirmed the collaborator wants per-frame pupil-center coordinates, horizontal and vertical displacement, and velocity calculated using actual elapsed time.
+- Recorded the request for more frequent sampling and stricter filtering of poor pupil segmentations.
+- Inspected the supplied `eye.avi`: it contains 3,001 frames, is encoded at 100 fps for approximately 30 seconds, and has burned-in timestamps spanning 0.0 to 90.0 seconds.
+- Recorded the collaborator's confirmation that the burned-in timestamps represent actual experimental time, making the acquisition interval 0.03 seconds (approximately 33.3 samples/s).
+- Ran the packaged checkpoint on 301 evenly spaced frames. All produced masks at the current 0.7 threshold, 58 contained multiple connected components, and an eyelid closure near the burned-in 3.3-3.9 second interval was confidently misidentified as pupil.
+- Found that confidence-weighted centers alone did not eliminate the blink-related center outlier, supporting combined confidence, component, geometry, and temporal quality checks.
+- Added a concrete implementation and validation thread to `next_steps.md`; no production code was changed.
+- Verification:
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -c "import torch; print('torch', torch.__version__); print('cuda_available', torch.cuda.is_available()); print('device_count', torch.cuda.device_count())"`
+  - Inline `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -` OpenCV/Pillow inspection of video metadata and nine representative frames.
+  - Inline `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -` PyTorch/OpenCV diagnostic using the packaged `iou=0.9158` checkpoint on 301 evenly spaced frames.
+  - `git status --short --branch`
+
 ## 2026-06-12
 
 ### Add citation and license metadata (Codex, GPT-5)
