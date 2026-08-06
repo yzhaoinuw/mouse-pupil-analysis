@@ -4,14 +4,14 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Pupil-center velocity](#pupil-center-velocity) - implementation and sample-video validation are complete on `feature/pupil-velocity`; review and deliver the branch when accepted.
+- [Pupil-center velocity](#pupil-center-velocity) - the branch is pushed and a GPU-regenerated 3,001-frame inspection set with translucent masks and center crosses is ready under `videos/eye_manual_inspection/`; review the overlays before changing quality thresholds.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
 ## Pupil-Center Velocity
 
-Status: implemented and validated on `feature/pupil-velocity`; review/delivery pending
+Status: implemented, validated, and pushed on `feature/pupil-velocity`; manual inspection/tuning review pending
 
 ### Goal And Scope
 
@@ -222,6 +222,7 @@ Observed result on the supplied video:
 
 Follow-up after review:
 
+- Review the GPU-regenerated `videos/eye_manual_inspection/overlays_with_center/` set and sample contact sheet before changing quality thresholds.
 - Validate the quality thresholds on additional recordings before treating them as a universal automated rejection policy.
 - Consider optional trajectory smoothing only after quantifying center jitter and confirming that filtering preserves rapid REM eye movements.
 

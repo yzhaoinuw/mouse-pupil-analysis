@@ -55,6 +55,19 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - Expects training and validation image/mask folders in the repository root.
 - Writes experimental checkpoints to `checkpoints_exp/`.
 
+## Segmentation-To-Velocity Method
+
+Velocity mode is postprocessing around the existing pupil-segmentation model; it does not alter the UNet or its checkpoint.
+
+1. **Preserve the timebase.** The pipeline analyzes consecutive source frames and assigns each frame a timestamp from its source-frame index and the actual acquisition rate.
+2. **Prepare the model image.** Each grayscale frame is resized with its aspect ratio preserved, padded to the model's 148 x 148 input size, and passed through the attention UNet.
+3. **Create the existing pupil segmentation.** A sigmoid converts model output to per-pixel probabilities. The existing prediction threshold, `--pred_thresh` (default `0.7`), determines which pixels enter the binary pupil mask.
+4. **Select and center the pupil candidate.** The largest 8-connected foreground component is selected. Its center is the probability-weighted centroid of its pixels, so higher-confidence pixels contribute more strongly. The resize and padding are then inverted to report the center in original-frame pixels.
+5. **Apply per-frame quality control.** Empty masks are rejected. The selected component is rejected if its mean probability is below `0.90`, its circularity is below `0.45`, or it touches the model-image border. If it contains less than 80% of all foreground pixels, `low_component_dominance` is recorded as a warning but does not by itself reject the frame.
+6. **Apply temporal area control.** Initially valid components are compared with the median component area within approximately +/-0.5 seconds. With at least four valid neighbors, an area below `0.65` or above `2.0` times that median is rejected as an abrupt change.
+7. **Calculate motion without bridging gaps.** Published center coordinates are retained only for valid frames. For consecutive valid frame pairs, the pipeline calculates horizontal and vertical displacement, divides each by the actual elapsed time to obtain x/y velocity, and reports scalar speed as `sqrt(velocity_x^2 + velocity_y^2)`. It does not interpolate across rejected or missing frames.
+8. **Preserve diagnostic evidence.** The tracking CSV retains raw centers, component measurements, validity, and quality reasons even when published centers and kinematics are blank. The QC plot and optional overlays support visual review of accepted and rejected segmentations.
+
 ## Repo Structure Map
 
 ```text

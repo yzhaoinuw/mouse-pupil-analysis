@@ -26,6 +26,8 @@ from pupil_tracking.unet import UNet
 
 _IOU_RE = re.compile(r"iou=(0\.\d+)")
 _NUMERIC_SUFFIX_RE = re.compile(r"(\d+)$")
+_CENTER_MARKER_OPACITY = 0.35
+_CENTER_MARKER_RADIUS = 3
 
 best = None
 with resources.as_file(resources.files("pupil_tracking") / "checkpoints") as ckpt_dir:
@@ -104,18 +106,33 @@ def _save_mask_overlays(
         if tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
             center_x = float(tracking_row["raw_center_x_model_pixels"])
             center_y = float(tracking_row["raw_center_y_model_pixels"])
-            center_color = "lime" if is_valid else "yellow"
-            draw = ImageDraw.Draw(overlay_image)
-            radius = 3
-            draw.ellipse(
+            center_color = "cyan" if is_valid else "yellow"
+            marker_layer = overlay_image.copy()
+            draw = ImageDraw.Draw(marker_layer)
+            draw.line(
                 (
-                    center_x - radius,
-                    center_y - radius,
-                    center_x + radius,
-                    center_y + radius,
+                    center_x - _CENTER_MARKER_RADIUS,
+                    center_y,
+                    center_x + _CENTER_MARKER_RADIUS,
+                    center_y,
                 ),
-                outline=center_color,
-                width=2,
+                fill=center_color,
+                width=1,
+            )
+            draw.line(
+                (
+                    center_x,
+                    center_y - _CENTER_MARKER_RADIUS,
+                    center_x,
+                    center_y + _CENTER_MARKER_RADIUS,
+                ),
+                fill=center_color,
+                width=1,
+            )
+            overlay_image = Image.blend(
+                overlay_image,
+                marker_layer,
+                _CENTER_MARKER_OPACITY,
             )
 
         overlay_image.save(output_mask_dir / image_name)
@@ -148,6 +165,7 @@ def generate_pupil_predictions(
     model = UNet(use_attention=True)
     device_name = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device_name)
+    print(f"Using inference device: {device}.")
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.to(device)
     model.eval()

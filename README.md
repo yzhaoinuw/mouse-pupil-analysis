@@ -52,6 +52,8 @@ Velocity mode calculates timestamps from the original source-frame index and
 the acquisition rate. It does not assume that the FPS stored in the video
 container always represents experimental time.
 
+For the end-to-end methodology—from segmentation probabilities through pupil-center quality control and velocity—see [Segmentation-To-Velocity Method](project_overview.md#segmentation-to-velocity-method).
+
 ---
 
 ## ⚙️ Key Arguments
@@ -105,7 +107,7 @@ After running, you’ll typically find:
 | `*_estimated_pupil_diameter.png` | A line plot showing pupil diameter over time (frame index on x-axis). |
 | `*_pupil_tracking.csv` | Velocity-mode table containing source-frame timing, pupil-center coordinates, displacement, velocity, speed, pupil size, and segmentation-quality fields. |
 | `*_pupil_tracking_qc.png` | Velocity-mode quality-control plot showing pupil size, x/y center, speed, and rejected segmentations on the actual-time axis. |
-| *(optional)* Mask images in `output_mask_dir` | PNGs with the pupil mask (in red) blended onto the original grayscale image. |
+| *(optional)* Mask images in `output_mask_dir` | PNGs with the pupil mask blended translucently onto the original grayscale image. Velocity mode also marks the raw pupil center with a thin translucent cross; accepted masks are red/cyan and rejected candidates are orange/yellow. |
 
 Pupil-center coordinates are reported in original-video pixels. The x
 coordinate increases to the right and the y coordinate increases downward.

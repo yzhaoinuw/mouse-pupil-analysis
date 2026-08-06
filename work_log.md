@@ -2,6 +2,32 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-06
+
+### Document the segmentation-to-velocity methodology (Codex, GPT-5)
+
+- Added a concise end-to-end walkthrough to `project_overview.md`, covering the acquisition timebase, existing 0.7 segmentation threshold, probability-weighted center, spatial and temporal quality controls, gap handling, velocity calculation, and diagnostic outputs.
+- Added a Basic Usage pointer in `README.md` so interested users can find the methodology without expanding the main command walkthrough.
+
+## 2026-08-05
+
+### Generate and refine full manual-inspection overlays (Codex, GPT-5)
+
+- Ran velocity mode on all 3,001 frames from local `videos/eye.avi` using the confirmed 33.3333 Hz acquisition rate.
+- Saved extracted frames, legacy diameter outputs, tracking CSV/QC plot, and one segmentation overlay per frame under local `videos/eye_manual_inspection/`.
+- After visual-review feedback, regenerated every overlay with the `run_inference.py`-equivalent 10% mask opacity and changed the center marker from an opaque ring/heavy cross to a thin 35%-opacity cross.
+- Replaced the environment's CPU-only PyTorch wheels with the matching official CUDA 12.8 builds, verified the RTX 3070 with a CUDA tensor operation, and confirmed the full pipeline reported `Using inference device: cuda.`
+- Verified 3,001 tracking rows, 3,001 regenerated overlays, 2,993 valid segmentations, and 8 rejected segmentations.
+- Regenerated and visually inspected `videos/eye_manual_inspection/sample_overlay_contact_sheet.png` with representative valid, rejected, rapid-movement, and endpoint frames.
+- The generated `videos/` artifacts remain local and untracked.
+- Verification:
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pupil_tracking.run_pupil_analysis --image_dir videos\eye_manual_inspection\frames --result_dir videos\eye_manual_inspection\results --output_mask_dir videos\eye_manual_inspection\overlays_with_center --calculate_velocity --acquisition_fps 33.333333333333336 --mask_transparency 0.1 --batch_size 64`
+  - CUDA run completed in 73 seconds and explicitly reported `Using inference device: cuda.`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
+  - Full test suite: 14 passed, including the targeted translucent-overlay test.
+  - Rendered visual inspection of the regenerated 12-frame contact sheet.
+
 ## 2026-07-28
 
 ### Implement pupil-center velocity tracking (Codex, GPT-5)
