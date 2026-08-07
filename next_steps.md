@@ -4,14 +4,14 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Pupil-center velocity](#pupil-center-velocity) - the `images_test_1` demo is selected and promoted; after the user edits README on GitHub, synchronize the branch before further local work or threshold validation.
+- [Pupil-center velocity](#pupil-center-velocity) - the main-cadence-matched GIF is selected and promoted; after the user edits README on GitHub, synchronize the branch before further local work or threshold validation.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
 ## Pupil-Center Velocity
 
-Status: velocity calculation, confidence-heatmap overlays, 1-based source-frame names, unified user-facing outputs, and the selected `images_test_1` README demo are implemented on `feature/pupil-velocity`
+Status: velocity calculation, confidence-heatmap overlays, 1-based source-frame names, unified user-facing outputs, and the selected 90-frame/5-fps main-cadence README demo are implemented on `feature/pupil-velocity`
 
 ### Goal And Scope
 
@@ -142,7 +142,7 @@ Start with raw valid centroids. Quantify trajectory jitter on the sample video b
 
 ### Unified User-Facing Outputs
 
-Status: implemented; the full sample-video outputs were regenerated and accepted, and the selected README demo uses the approved aligned layout with the more varied `images_test_1` sequence
+Status: implemented; the full sample-video outputs were regenerated and accepted, and the selected README demo uses the approved aligned layout with main's smoother 90-frame/5-fps cadence
 
 Write one table and one plot per analysis instead of separate diameter and tracking artifacts. Prefer the broader names `<experiment>_pupil_analysis.csv` and `<experiment>_pupil_analysis.png`; if backward compatibility requires a transition, make it explicit rather than indefinitely writing duplicate files.
 

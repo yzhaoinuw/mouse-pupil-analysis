@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-07
 
+### Match the current demo to main's motion cadence (Codex, GPT-5)
+
+- Fetched `origin/main` and inspected both its historical `make_gif.py` and public README animation. Confirmed the main GIF contains 90 frames at 5 fps (200 ms per frame, 18 seconds total).
+- Reproduced the exact historical row selection: diameter-filtered rows beginning at index 7,100, every third row, for 90 frames. The selected source-frame range is 7,107-7,375.
+- Identified the cause of the jerkier committed candidate: `images_test_1` is already sparse, usually skipping 97 source frames, so applying the historical every-third-item sampling made most displayed jumps span 291 source frames.
+- The original dense raw sequence is no longer stored locally. For demo reconstruction only, recovered the 90 eye crops from the public main GIF, approximately removed the old translucent red mask, resized them back to 148 x 148, and reran the current CUDA pipeline to obtain new confidence heatmaps and centers.
+- Calculated interval-averaged speed from valid reconstructed centers and suffix-derived timestamps. The reconstructed run produced 86 valid and four invalid segmentations; invalid-frame gaps remain visible in the center and speed traces.
+- Generated `videos/gif_candidates/pupil_demo_main_matched.gif` with the approved aligned layout. It contains 90 frames at 5 fps, spans source frames 7,107-7,375, is approximately 5.02 MB, and visually matches main's motion cadence much more closely.
+- After user approval, promoted the main-cadence-matched candidate to `pupil_diameter_analysis_result_demo.gif` and verified its SHA-256 matches the inspected candidate exactly. The earlier sparse candidate remains local under `videos/` for comparison.
+- Verification:
+  - Downloaded main's public GIF and confirmed 1,152 x 576, 90 frames, 200 ms per frame, and 18,000 ms total duration.
+  - Current CUDA inference completed on all 90 reconstructed frames.
+  - Pillow metadata confirmed the matched candidate is 850 x 520, 90 frames, 200 ms per frame, and 18,000 ms total duration.
+  - Rendered inspection of the opening, midpoint, and closing candidate frames.
+  - SHA-256 comparison of the promoted repository GIF and inspected candidate.
+
 ### Promote the selected old-images README demo (Codex, GPT-5)
 
 - Promoted the approved `images_test_1` candidate to `pupil_diameter_analysis_result_demo.gif` after the user selected it as the more interesting README animation.
