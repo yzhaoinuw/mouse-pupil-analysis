@@ -6,6 +6,7 @@ Created on Thu Oct  2 15:27:03 2025
 """
 
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -13,7 +14,60 @@ import numpy as np
 from tqdm import tqdm
 
 
-def extract_selected_frames(video_path, out_dir, extraction_fps=5, max_frames=10000):
+@dataclass(frozen=True)
+class ExtractedFrame:
+    """Metadata for one image written from a source video frame."""
+
+    image_path: Path
+    source_frame_index: int
+    extraction_index: int
+
+
+def source_frame_image_name(video_name: str, source_frame_index: int) -> str:
+    """Build a one-based image name from a zero-based source-frame index."""
+    if source_frame_index < 0:
+        raise ValueError("Source-frame index cannot be negative.")
+    return f"{video_name}_{source_frame_index + 1:05d}.png"
+
+
+def select_frame_indices(
+    frame_count,
+    encoded_fps,
+    extraction_fps=5,
+    max_frames=10000,
+    extract_all=False,
+):
+    """Select source-frame indices for sampled or full-frame extraction."""
+    if frame_count <= 0:
+        raise ValueError("Video contains no frames.")
+    if encoded_fps <= 0:
+        raise ValueError("Video FPS must be positive.")
+    if extraction_fps <= 0:
+        raise ValueError("Extraction FPS must be positive.")
+    if max_frames <= 0:
+        raise ValueError("Maximum frame count must be positive.")
+
+    if extract_all and max_frames >= frame_count:
+        return np.arange(frame_count, dtype=int)
+
+    if extract_all:
+        return np.arange(max_frames, dtype=int)
+
+    duration = frame_count / encoded_fps
+    effective_extraction_fps = min(extraction_fps, encoded_fps)
+    selected_count = round(duration * effective_extraction_fps)
+    selected_count = max(1, min(frame_count, max_frames, selected_count))
+    return np.linspace(0, frame_count - 1, selected_count, dtype=int)
+
+
+def extract_selected_frames(
+    video_path,
+    out_dir,
+    extraction_fps=5,
+    max_frames=10000,
+    extract_all=False,
+):
+    """Extract video frames and return their paths and original source indices."""
     video_path = Path(video_path)
     video_name = video_path.stem
     out_dir = Path(out_dir)
@@ -27,32 +81,61 @@ def extract_selected_frames(video_path, out_dir, extraction_fps=5, max_frames=10
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"Total frames: {frame_count}. Original FPS: {fps:.2f}")
 
-    duration = frame_count / fps
-    extraction_fps = min(extraction_fps, fps)
-    n_frames = round(duration * extraction_fps)
-    n_frames = min(max_frames, n_frames)
-    extraction_fps = n_frames / duration
-    print(f"Extracting {n_frames} frames at ~{extraction_fps:.2f} fps")
+    selected_frames = select_frame_indices(
+        frame_count,
+        fps,
+        extraction_fps=extraction_fps,
+        max_frames=max_frames,
+        extract_all=extract_all,
+    )
+    if extract_all and len(selected_frames) < frame_count:
+        print(
+            f"Warning: --max_frames limits full-frame extraction to "
+            f"the first {len(selected_frames)} of {frame_count} source frames."
+        )
+    if extract_all:
+        print(f"Extracting consecutive source frames ({len(selected_frames)} frames).")
+    else:
+        duration = frame_count / fps
+        effective_extraction_fps = len(selected_frames) / duration
+        print(
+            f"Extracting {len(selected_frames)} frames at "
+            f"~{effective_extraction_fps:.2f} encoded-video fps"
+        )
 
-    selected_frames = np.linspace(0, frame_count - 1, n_frames, dtype=int)
-
-    for i, frame_idx in tqdm(
+    extracted_frames = []
+    sequential_read = len(selected_frames) == frame_count and np.array_equal(
+        selected_frames,
+        np.arange(frame_count),
+    )
+    for extraction_index, frame_idx in tqdm(
         enumerate(selected_frames),
-        total=n_frames,
+        total=len(selected_frames),
         desc="Extracting frames",
         unit="frame",
     ):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_idx))
+        if not sequential_read:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_idx))
         ret, frame = cap.read()
         if not ret:
             print(f"Warning: could not read frame {frame_idx}")
             continue
 
-        out_path = out_dir / f"{video_name}_{i:05d}.png"
-        cv2.imwrite(str(out_path), frame)
+        out_path = out_dir / source_frame_image_name(video_name, int(frame_idx))
+        if not cv2.imwrite(str(out_path), frame):
+            print(f"Warning: could not write {out_path}")
+            continue
+        extracted_frames.append(
+            ExtractedFrame(
+                image_path=out_path,
+                source_frame_index=int(frame_idx),
+                extraction_index=extraction_index,
+            )
+        )
 
     cap.release()
-    print(f"Extracted {len(selected_frames)} frames into {out_dir}")
+    print(f"Extracted {len(extracted_frames)} frames into {out_dir}")
+    return extracted_frames
 
 
 def main():
@@ -78,9 +161,20 @@ def main():
         default=10000,
         help="Maximum number of frames to extract (default: 10000)",
     )
+    parser.add_argument(
+        "--all_frames",
+        action="store_true",
+        help="Extract every encoded source frame, up to --max_frames.",
+    )
 
     args = parser.parse_args()
-    extract_selected_frames(args.video_path, args.out_dir, args.extraction_fps, args.max_frames)
+    extract_selected_frames(
+        args.video_path,
+        args.out_dir,
+        args.extraction_fps,
+        args.max_frames,
+        extract_all=args.all_frames,
+    )
 
 
 if __name__ == "__main__":

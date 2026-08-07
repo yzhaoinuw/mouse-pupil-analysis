@@ -63,7 +63,6 @@ masks_train/
 masks_validation/
 predicted_masks*/
 predictions_test/
-pupil_diameter_analysis_result_demo.gif
 
 # sketches
 *sketch*.py
