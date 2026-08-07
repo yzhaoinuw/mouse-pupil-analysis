@@ -23,6 +23,13 @@ class ExtractedFrame:
     extraction_index: int
 
 
+def source_frame_image_name(video_name: str, source_frame_index: int) -> str:
+    """Build a one-based image name from a zero-based source-frame index."""
+    if source_frame_index < 0:
+        raise ValueError("Source-frame index cannot be negative.")
+    return f"{video_name}_{source_frame_index + 1:05d}.png"
+
+
 def select_frame_indices(
     frame_count,
     encoded_fps,
@@ -114,7 +121,7 @@ def extract_selected_frames(
             print(f"Warning: could not read frame {frame_idx}")
             continue
 
-        out_path = out_dir / f"{video_name}_{extraction_index:05d}.png"
+        out_path = out_dir / source_frame_image_name(video_name, int(frame_idx))
         if not cv2.imwrite(str(out_path), frame):
             print(f"Warning: could not write {out_path}")
             continue

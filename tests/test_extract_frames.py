@@ -1,6 +1,11 @@
 import numpy as np
 
-from pupil_tracking.extract_frames import select_frame_indices
+from pupil_tracking.extract_frames import select_frame_indices, source_frame_image_name
+
+
+def test_source_frame_image_name_is_one_based():
+    assert source_frame_image_name("eye", 0) == "eye_00001.png"
+    assert source_frame_image_name("eye", 19) == "eye_00020.png"
 
 
 def test_select_frame_indices_preserves_existing_rate_sampling():

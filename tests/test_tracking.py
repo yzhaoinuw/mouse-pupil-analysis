@@ -10,7 +10,7 @@ from pupil_tracking.tracking import (
 
 def _measurement(source_frame_index, center_x, center_y, *, valid=True, area=100):
     return {
-        "image_name": f"frame_{source_frame_index:05d}.png",
+        "image_name": f"frame_{source_frame_index + 1:05d}.png",
         "source_frame_index": source_frame_index,
         "raw_center_x_pixels": center_x,
         "raw_center_y_pixels": center_y,

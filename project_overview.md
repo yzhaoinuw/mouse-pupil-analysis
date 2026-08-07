@@ -23,9 +23,9 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - If a video is provided, calls `extract_selected_frames(...)` before inference.
 - Loads `UNet(use_attention=True)`, picks CUDA when available, and falls back to CPU.
 - Finds the default packaged checkpoint by selecting the highest IoU encoded in a checkpoint filename under `pupil_tracking/checkpoints/`.
-- Writes `*_estimated_pupil_diameter.csv` and `*_estimated_pupil_diameter.png` into the result directory.
-- With `--calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and writes tracking CSV/QC outputs.
-- Optionally writes mask overlays when `--output_mask_dir` is provided.
+- Writes one compact `*_pupil_analysis.csv` and one frame-indexed `*_pupil_analysis.png` into the result directory.
+- With `--calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and appends accepted center, speed, and three-state quality fields/panels to the unified outputs.
+- Optionally writes translucent yellow-orange-red confidence-heatmap overlays when `--output_mask_dir` is provided.
 
 ### 3. `pupil_tracking/extract_frames.py`
 
@@ -66,7 +66,7 @@ Velocity mode is postprocessing around the existing pupil-segmentation model; it
 5. **Apply per-frame quality control.** Empty masks are rejected. The selected component is rejected if its mean probability is below `0.90`, its circularity is below `0.45`, or it touches the model-image border. If it contains less than 80% of all foreground pixels, `low_component_dominance` is recorded as a warning but does not by itself reject the frame.
 6. **Apply temporal area control.** Initially valid components are compared with the median component area within approximately +/-0.5 seconds. With at least four valid neighbors, an area below `0.65` or above `2.0` times that median is rejected as an abrupt change.
 7. **Calculate motion without bridging gaps.** Published center coordinates are retained only for valid frames. For consecutive valid frame pairs, the pipeline calculates horizontal and vertical displacement, divides each by the actual elapsed time to obtain x/y velocity, and reports scalar speed as `sqrt(velocity_x^2 + velocity_y^2)`. It does not interpolate across rejected or missing frames.
-8. **Preserve diagnostic evidence.** The tracking CSV retains raw centers, component measurements, validity, and quality reasons even when published centers and kinematics are blank. The QC plot and optional overlays support visual review of accepted and rejected segmentations.
+8. **Preserve diagnostic evidence.** The internal tracking table retains raw centers and detailed component measurements for quality decisions and tests. The compact analysis CSV exposes accepted centers, speed, a valid/warning/invalid status, and a concise reason. The unified plot supports frame-indexed review. Optional overlays map threshold-passing pixel probabilities from yellow just above the prediction threshold, through orange, to red near probability 1.0; thin center markers locate accepted and rejected candidates.
 
 ## Repo Structure Map
 
@@ -83,6 +83,7 @@ pupil_tracking/
 |  |- test_imports.py
 |  |- test_cli_help.py
 |  |- test_extract_frames.py
+|  |- test_outputs.py
 |  |- test_tracking.py
 |- .github/workflows/ci.yml
 |- pyproject.toml
@@ -136,6 +137,7 @@ The test suite is intentionally lightweight:
 - `tests/test_imports.py` imports the package.
 - `tests/test_cli_help.py` runs `run-pupil-analysis --help`.
 - `tests/test_extract_frames.py` verifies sampled/full-frame source-index selection.
+- `tests/test_outputs.py` verifies 1-based source-frame naming, compact unified schemas, three-state tracking status, legacy-output cleanup, and plot creation.
 - `tests/test_tracking.py` verifies coordinate mapping, component measurements, quality flags, timing, and kinematics with synthetic inputs.
 - `.github/workflows/ci.yml` runs Ruff, Black, Pytest, and a wheel smoke check across Python 3.10, 3.11, and 3.12 where appropriate.
 
@@ -152,10 +154,8 @@ Primary input modes:
 
 Primary outputs:
 
-- `*_estimated_pupil_diameter.csv`
-- `*_estimated_pupil_diameter.png`
-- Velocity-mode `*_pupil_tracking.csv`
-- Velocity-mode `*_pupil_tracking_qc.png`
+- `*_pupil_analysis.csv`
+- `*_pupil_analysis.png`
 - Optional mask overlay PNGs under `--output_mask_dir`
 
 ## Practical Mental Model

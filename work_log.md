@@ -2,118 +2,61 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
-## 2026-08-06
+## 2026-08-07
 
-### Document the segmentation-to-velocity methodology (Codex, GPT-5)
+### Promote the selected old-images README demo (Codex, GPT-5)
 
-- Added a concise end-to-end walkthrough to `project_overview.md`, covering the acquisition timebase, existing 0.7 segmentation threshold, probability-weighted center, spatial and temporal quality controls, gap handling, velocity calculation, and diagnostic outputs.
-- Added a Basic Usage pointer in `README.md` so interested users can find the methodology without expanding the main command walkthrough.
-
-## 2026-08-05
-
-### Generate and refine full manual-inspection overlays (Codex, GPT-5)
-
-- Ran velocity mode on all 3,001 frames from local `videos/eye.avi` using the confirmed 33.3333 Hz acquisition rate.
-- Saved extracted frames, legacy diameter outputs, tracking CSV/QC plot, and one segmentation overlay per frame under local `videos/eye_manual_inspection/`.
-- After visual-review feedback, regenerated every overlay with the `run_inference.py`-equivalent 10% mask opacity and changed the center marker from an opaque ring/heavy cross to a thin 35%-opacity cross.
-- Replaced the environment's CPU-only PyTorch wheels with the matching official CUDA 12.8 builds, verified the RTX 3070 with a CUDA tensor operation, and confirmed the full pipeline reported `Using inference device: cuda.`
-- Verified 3,001 tracking rows, 3,001 regenerated overlays, 2,993 valid segmentations, and 8 rejected segmentations.
-- Regenerated and visually inspected `videos/eye_manual_inspection/sample_overlay_contact_sheet.png` with representative valid, rejected, rapid-movement, and endpoint frames.
-- The generated `videos/` artifacts remain local and untracked.
-- Verification:
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pupil_tracking.run_pupil_analysis --image_dir videos\eye_manual_inspection\frames --result_dir videos\eye_manual_inspection\results --output_mask_dir videos\eye_manual_inspection\overlays_with_center --calculate_velocity --acquisition_fps 33.333333333333336 --mask_transparency 0.1 --batch_size 64`
-  - CUDA run completed in 73 seconds and explicitly reported `Using inference device: cuda.`
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
-  - Full test suite: 14 passed, including the targeted translucent-overlay test.
-  - Rendered visual inspection of the regenerated 12-frame contact sheet.
-
-## 2026-07-28
-
-### Implement pupil-center velocity tracking (Codex, GPT-5)
-
-- Created `feature/pupil-velocity` from `dev` and carried the requirements/diagnostic notes onto the feature branch.
-- Added opt-in `--calculate_velocity` analysis with a separate `--acquisition_fps` timebase, consecutive full-frame extraction, original source-frame metadata, and a compatibility-preserving diameter-only path.
-- Added `pupil_tracking/tracking.py` for probability-weighted component centers, inverse resize/pad coordinate mapping, explainable segmentation quality flags, temporal area checks, and non-interpolated x/y displacement and velocity.
-- Added a comprehensive tracking CSV, actual-time QC plot, and optional overlays with valid centers in green and rejected masks/centers in orange and yellow.
-- Preserved the UNet architecture, packaged checkpoint, prediction threshold, training workflow, and legacy diameter CSV/plot outputs.
-- Added synthetic tests for frame selection, coordinate mapping, confidence-weighted centers, component warnings, temporal area rejection, actual-time velocity, and invalid/non-consecutive gaps.
-- Updated `README.md`, `project_overview.md`, and `next_steps.md` with the CLI contract, output behavior, implementation map, and validation evidence.
-- Full validation of the supplied `eye.avi` produced 3,001 ordered rows from 0.00 to 90.00 seconds, 2,993 valid segmentations, eight explainable rejections, and 2,989 published frame-to-frame speeds. Visual inspection confirmed the largest speed peaks correspond to visible rapid pupil movement.
+- Promoted the approved `images_test_1` candidate to `pupil_diameter_analysis_result_demo.gif` after the user selected it as the more interesting README animation.
+- Verified the promoted repository GIF and inspected candidate have identical SHA-256 hashes. The README already references the repository-local filename.
+- Kept both comparison candidates and their generated inputs under local untracked `videos/`; they are intentionally excluded from the commit.
+- Recorded that the user plans to edit README on GitHub after the branch push, so the next local session should synchronize the remote README change before further edits.
 - Verification:
   - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
   - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
-  - `$env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH; C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q` (`13 passed`; pytest cache write emitted one environment-permission warning)
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`
-  - Wheel/source-distribution content inspection confirmed `pupil_tracking/tracking.py`, the packaged checkpoint, and its training log are included.
-  - Full `eye.avi` velocity run with `--acquisition_fps 33.333333333333336 --batch_size 64`.
-  - Focused mask-overlay run and rendered visual inspection around the eyelid closure.
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking python -m pytest -q --basetemp .pytest_tmp_delivery_20260807` (`18 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`; wheel and source distribution retained the packaged checkpoint and training log.
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
   - `git diff --check`
 
-### Clarify pupil-center velocity requirements and inspect sample video (Codex, GPT-5)
+### Generate two approved-layout GIF candidates (Codex, GPT-5)
 
-- Confirmed the collaborator wants per-frame pupil-center coordinates, horizontal and vertical displacement, and velocity calculated using actual elapsed time.
-- Recorded the request for more frequent sampling and stricter filtering of poor pupil segmentations.
-- Inspected the supplied `eye.avi`: it contains 3,001 frames, is encoded at 100 fps for approximately 30 seconds, and has burned-in timestamps spanning 0.0 to 90.0 seconds.
-- Recorded the collaborator's confirmation that the burned-in timestamps represent actual experimental time, making the acquisition interval 0.03 seconds (approximately 33.3 samples/s).
-- Ran the packaged checkpoint on 301 evenly spaced frames. All produced masks at the current 0.7 threshold, 58 contained multiple connected components, and an eyelid closure near the burned-in 3.3-3.9 second interval was confidently misidentified as pupil.
-- Found that confidence-weighted centers alone did not eliminate the blink-related center outlier, supporting combined confidence, component, geometry, and temporal quality checks.
-- Added a concrete implementation and validation thread to `next_steps.md`; no production code was changed.
+- Preserved the approved square eye panel, continuous 0.7-1.0 confidence legend, aligned/narrowed trace panel, and simplified user-facing axis labels.
+- Generated `videos/gif_candidates/pupil_demo_eye_frames_500_1200.gif` from displayed frames 500-1,200 at every seventh frame. The candidate contains 101 frames at 10 fps, is 850 x 520, and is approximately 4.03 MB.
+- Re-ran all 945 images in `images_test_1/` through the current CUDA pipeline to create current confidence overlays and pupil centers. The run produced 943 valid, one warning, and one invalid segmentation.
+- The `images_test_1` files are sparse source samples, usually 97 source frames apart. For the demo only, calculated interval-averaged speed from suffix-derived timestamps and valid centers; the production analysis CSV remained unchanged.
+- Reused the old helper's `sample_every=3`, 5 fps, and 90-frame cap to generate `videos/gif_candidates/pupil_demo_images_test_1.gif`. It spans source frames 97-28,615, is 850 x 520, and is approximately 4.71 MB.
+- Visually inspected the opening, midpoint, and closing states of both animations. Kept both candidates and left the current repository/README GIF unchanged for direct comparison.
 - Verification:
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -c "import torch; print('torch', torch.__version__); print('cuda_available', torch.cuda.is_available()); print('device_count', torch.cuda.device_count())"`
-  - Inline `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -` OpenCV/Pillow inspection of video metadata and nine representative frames.
-  - Inline `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -` PyTorch/OpenCV diagnostic using the packaged `iou=0.9158` checkpoint on 301 evenly spaced frames.
-  - `git status --short --branch`
-
-## 2026-06-12
-
-### Add citation and license metadata (Codex, GPT-5)
-
-- Added an MIT `LICENSE`, `CITATION.cff` with Yue Zhao's ORCID, and README citation/license guidance so collaborators can cite the repository from GitHub.
-- Bumped the package version to `0.1.4` in `pyproject.toml` for the next citable release tag.
-- Added a `next_steps.md` follow-up for optional DOI archival through Zenodo or another release archive.
-- Verification:
+  - Current CUDA inference on 945 `images_test_1` images completed successfully and wrote 945 confidence overlays.
+  - Pillow metadata confirmed 101 frames at 100 ms per frame for the frames-500-1,200 candidate.
+  - Pillow metadata confirmed 90 frames at 200 ms per frame for the `images_test_1` candidate.
+  - Rendered contact-sheet inspection of the beginning, midpoint, and end of both GIFs.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check make_gif.py`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check make_gif.py`
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
   - `git diff --check`
-  - `rg -n "version =|license|license-files|Citation|License|CITATION|Version 0.1.4|doi|DOI" pyproject.toml README.md CITATION.cff LICENSE next_steps.md`
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`
-  - `$env:PATH='C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts;' + $env:PATH; C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q`
 
-### Add treaty adoption badge (Codex, GPT-5)
+### Expand the README demo across the pupil-size transition (Codex, GPT-5)
 
-- Added the official Agent Collab Treaty adoption badge to `README.md`, using the tri-color SVG asset and linking it back to the treaty repository.
+- Expanded the default GIF window from displayed frames 680-820 to frames 200-2,100 so the demo visibly progresses from the early small pupil to the much larger pupil later in the recording.
+- Changed the default sampling interval from every second frame to every twentieth frame. The resulting 96-frame animation remains smooth enough for the README, lasts 9.6 seconds at 10 fps, and is approximately 6.28 MB.
+- Preserved the major frame-740 movement event in the sampled sequence while showing diameter growth from roughly 16 to 40 model pixels.
+- Regenerated `pupil_diameter_analysis_result_demo.gif` at 1000 x 520 and visually inspected displayed frames 200, 740, 1,500, and 2,100. The changing pupil size, confidence heatmap, center marker, and live diameter/center/speed traces were legible throughout.
+- Simplified the next layout sample to show only `Frame N` above the image, `Frame` on the x-axis, and plain `Diameter (pixel)`, `Center (pixel)`, and `Speed (pixel/s)` y-axis labels. Removed status and implementation-coordinate wording from the visible figure.
+- Added a compact confidence-heatmap/pupil-center legend below the image and rendered a frame-1,500 sample for review. The repository GIF was intentionally left unchanged pending approval of this sample.
+- Replaced the single-color heatmap swatch with a continuous yellow-orange-red confidence scale labeled from the 0.7 prediction threshold to 1.0. Added a fixed GIF palette that preserves the continuum, translucent colored mask, grayscale eye detail, and center marker during GIF quantization.
+- Narrowed only the right-side trace panel and added dedicated vertical spacing around its three plots. The resulting 850 x 520 sample aligns the right title and x-axis label with the left frame title and confidence legend while preserving the square eye image and making changes in the traces visually steeper.
+- Updated `next_steps.md` to require approval of the cleaned-label sample before regenerating the long-span demo.
 - Verification:
-  - `rg -n "Agent Collab Treaty|treaty-adopted|agent_collab_treaty" README.md`
-  - No code tests were run because this was a README-only change.
-
-### Migrate treaty docs from archive (Codex, GPT-5)
-
-- Replaced placeholder treaty text in `AGENTS.md`, `project_overview.md`, and `next_steps.md` with repo-specific guidance migrated from `treaty_archive/` and checked against the current package, tests, and CI configuration.
-- Preserved the `pupil_tracking` conda environment, direct environment-Python path, CLI entry points, packaged-checkpoint rule, 148 x 148 image convention, artifact hygiene notes, and branch/work-log discipline in active treaty docs.
-- Migrated the older 2026-05-08 work history into this live log and removed the obsolete `treaty_archive/` directory after its unique content was represented in active docs.
-- Verification:
-  - `git ls-files | rg "(^|/)(AGENTS|PROJECT_OVERVIEW|WORK_LOG|project_overview|work_log|next_steps|treaty_archive)"` confirmed `AGENTS.md`, `project_overview.md`, and `work_log.md` are tracked under the active treaty names.
-  - `rg -n "Thread A|Thread B|name of the conda|test command|app launch command|\[path/to|\[One|\[what|\[step|\[concrete|\[Same|\[Paused" AGENTS.md project_overview.md next_steps.md` returned no matches.
-  - `Test-Path treaty_archive` returned `False`.
-  - `git status --short --branch`
-  - No code tests were run because this was a documentation-only migration.
-
-## 2026-05-08
-
-### Package hygiene and initial agent docs
-
-- Created the original agent instructions to capture future Codex startup instructions, environment details, and commit-message preferences.
-- Identified the active leading branch as `origin/dev` / `origin/ci-precommit`, then synced local `dev` and pushed updates so `dev` became the active leading branch.
-- Added a developer collaboration guide, then split it into `PROJECT_OVERVIEW.md` so shared project context was separate from agent-only execution instructions.
-- Confirmed the project miniconda environment is named `pupil_tracking` and documented the direct Python path for shells where `conda` is unavailable.
-- Updated `.gitignore` to ignore generated analysis outputs, training artifacts, build outputs, egg-info folders, local sketch scripts, and local `.gitattributes`.
-- Removed tracked cached bytecode from `tests/__pycache__`.
-- Made checkpoint packaging explicit with `MANIFEST.in` and `pyproject.toml` package-data rules.
-- Verified built wheel and source distribution include only the current packaged checkpoint and training log from `pupil_tracking/checkpoints/`.
-- Removed the tracked `archive/` directory from the repository.
-- Confirmed no `*sketch*.py` files remain tracked; local sketch files remain ignored.
-- Updated `README.md` to remove the obsolete external checkpoint download step, note that the default checkpoint is bundled with installation, and document the optional `--checkpoint` override.
-- Verification:
-  - `ruff check .`
-  - `black --check .`
-  - `pytest -q`
-  - package build inspection
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe make_gif.py` (saved 96 GIF frames covering displayed frames 200-2,100).
+  - Pillow metadata check confirmed a 1000 x 520 GIF with 96 frames at 100 ms per frame.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking python -m pytest -q --basetemp .pytest_tmp_gif_span_20260807` (`18 passed`).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check make_gif.py`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check make_gif.py`
+  - Rendered inspection of the cleaned-label frame-1,500 sample.
+  - Regenerated the frame-1,500 sample through the GIF writer and confirmed that the confidence bar retained 47 distinct rendered colors instead of collapsing to a few color blocks.
+  - Rendered inspection confirmed that the narrowed right plot block and unchanged left image block share the same top and bottom visual boundaries.

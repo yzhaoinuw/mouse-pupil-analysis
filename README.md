@@ -1,8 +1,8 @@
 [![Agent Collab Treaty adopted](https://raw.githubusercontent.com/yzhaoinuw/agent_collab_treaty/main/assets/treaty-adopted.svg)](https://github.com/yzhaoinuw/agent_collab_treaty)
 
-![pupil_diameter_analysis_result_demo](https://github.com/user-attachments/assets/cca0794f-07d9-4ed1-a25e-310dd553e98d)
+![Pupil analysis pipeline demo](pupil_diameter_analysis_result_demo.gif)
 
-<p align="center"><em>Left: segmented pupil — Right: evolving pupil diameter plot</em></p>
+<p align="center"><em>Left: confidence-colored pupil mask and estimated center — Right: evolving pupil diameter, center, and speed</em></p>
 
 # Pupil Analysis Pipeline
 
@@ -65,11 +65,11 @@ For the end-to-end methodology—from segmentation probabilities through pupil-c
 | `--image_dir`       | Optional alternative to `--video_path`. Use this if you already have extracted PNG frames.                        |
 | `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<image_dir>_result/`.            |
 | `--checkpoint`      | Optional. Path to a custom model checkpoint. If not provided, the packaged checkpoint is used.                   |
-| `--output_mask_dir` | Optional. If provided, saves overlay images showing the predicted pupil mask blended onto the original frames.    |
+| `--output_mask_dir` | Optional. If provided, saves translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
 | `--extraction_fps`  | Optional. Specifies the number of frames per second at which to extract the frames from the video (default: 5). If `--max_frames` is provided, and if the number of frames to be extracted at `--extraction_fps` would exceed `--max_frames`, then the actual `--extraction_fps` will be automatically reduced so that `--max_frames` number of frames will be extracted. |
 | `--max_frames`      | Optional. Limits the maximum number of frames to extract from a video (default: 10,000). Useful for long recordings.        |
 | `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for classifying a pixel as belonging to the pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel only if model confidence exceeds 0.7. Increase it if the resulting segmentation overpredicts the pupil; reduce it if the resulting segmentation only finds part of the pupil. |  
-| `--calculate_velocity` | Optional. Analyzes every encoded source frame and adds pupil-center, segmentation-quality, displacement, velocity, and speed outputs. |
+| `--calculate_velocity` | Optional. Analyzes every encoded source frame and appends pupil-center, speed, and segmentation-quality fields and plot panels to the unified analysis outputs. |
 | `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. In velocity mode this is required with `--image_dir`; with video input it defaults to the video header rate when omitted. |
 
 ---
@@ -103,23 +103,21 @@ After running, you’ll typically find:
 
 | File | Description |
 |------|--------------|
-| `*_estimated_pupil_diameter.csv` | A table of estimated pupil diameters for each frame (in pixels). |
-| `*_estimated_pupil_diameter.png` | A line plot showing pupil diameter over time (frame index on x-axis). |
-| `*_pupil_tracking.csv` | Velocity-mode table containing source-frame timing, pupil-center coordinates, displacement, velocity, speed, pupil size, and segmentation-quality fields. |
-| `*_pupil_tracking_qc.png` | Velocity-mode quality-control plot showing pupil size, x/y center, speed, and rejected segmentations on the actual-time axis. |
-| *(optional)* Mask images in `output_mask_dir` | PNGs with the pupil mask blended translucently onto the original grayscale image. Velocity mode also marks the raw pupil center with a thin translucent cross; accepted masks are red/cyan and rejected candidates are orange/yellow. |
+| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
+| `*_pupil_analysis.png` | Unified frame-indexed plot. Velocity mode appends x/y center, speed, and valid/warning/invalid quality-control panels below pupil diameter. |
+| *(optional)* Mask images in `output_mask_dir` | PNGs with a translucent yellow-orange-red confidence heatmap over threshold-passing pupil pixels. Velocity mode also marks the raw pupil center with a thin translucent cross: cyan for accepted candidates and yellow for rejected candidates. |
 
 Pupil-center coordinates are reported in original-video pixels. The x
 coordinate increases to the right and the y coordinate increases downward.
 Velocity is reported in pixels per second.
 
-The tracking CSV preserves raw center measurements for diagnosis and also
-provides `segmentation_valid` and `quality_reason`. Published center and
-kinematic fields are left empty when segmentation is rejected. Velocity is
-also left empty when either adjacent frame is invalid or when source frames
-are not consecutive; the pipeline does not interpolate across these gaps.
-A quality reason can also be a non-rejecting warning, such as extra foreground
-components when the selected pupil component remains usable.
+The compact analysis CSV reports `tracking_status` as `valid`, `warning`, or
+`invalid`, with `quality_reason` identifying suspicious or rejected frames.
+Published center and speed fields are left empty when segmentation is rejected.
+Speed is also left empty when either adjacent frame is invalid or when source
+frames are not consecutive; the pipeline does not interpolate across these
+gaps. A warning remains usable, such as extra foreground components when the
+selected pupil component is still acceptable.
 
 ---
 
@@ -128,12 +126,12 @@ components when the selected pupil component remains usable.
 ```
 movie.avi
 movie_frames/
-    movie_00000.png
     movie_00001.png
+    movie_00002.png
     ...
 movie_frames_result/
-    movie_estimated_pupil_diameter.csv
-    movie_estimated_pupil_diameter.png
+    movie_pupil_analysis.csv
+    movie_pupil_analysis.png
 ```
 
 ---

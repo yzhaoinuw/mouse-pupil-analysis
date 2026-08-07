@@ -28,6 +28,12 @@ _IOU_RE = re.compile(r"iou=(0\.\d+)")
 _NUMERIC_SUFFIX_RE = re.compile(r"(\d+)$")
 _CENTER_MARKER_OPACITY = 0.35
 _CENTER_MARKER_RADIUS = 3
+_LEGACY_RESULT_SUFFIXES = (
+    "estimated_pupil_diameter.csv",
+    "estimated_pupil_diameter.png",
+    "pupil_tracking.csv",
+    "pupil_tracking_qc.png",
+)
 
 best = None
 with resources.as_file(resources.files("pupil_tracking") / "checkpoints") as ckpt_dir:
@@ -51,10 +57,18 @@ def _numeric_suffix(path: Path) -> tuple[int, str]:
 
 def _frames_from_image_directory(image_dir: Path) -> list[ExtractedFrame]:
     image_paths = sorted(image_dir.glob("*.png"), key=_numeric_suffix)
+    suffix_matches = [_NUMERIC_SUFFIX_RE.search(path.stem) for path in image_paths]
+    if image_paths and all(match is not None for match in suffix_matches):
+        suffixes = [int(match.group(1)) for match in suffix_matches if match is not None]
+        index_offset = 1 if min(suffixes) >= 1 else 0
+        source_frame_indices = [suffix - index_offset for suffix in suffixes]
+    else:
+        source_frame_indices = list(range(len(image_paths)))
+
     return [
         ExtractedFrame(
             image_path=image_path,
-            source_frame_index=index,
+            source_frame_index=source_frame_indices[index],
             extraction_index=index,
         )
         for index, image_path in enumerate(image_paths)
@@ -72,9 +86,44 @@ def _read_encoded_video_fps(video_path: Path) -> float:
     return encoded_fps
 
 
+def _encode_thresholded_confidence(
+    probability_map: np.ndarray,
+    pred_thresh: float,
+) -> np.ndarray:
+    """Encode threshold-passing confidence from yellow (low) to red (high)."""
+    probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
+    if probabilities.ndim != 2:
+        raise ValueError("Probability map must be two-dimensional after squeezing.")
+    if not 0 < pred_thresh < 1:
+        raise ValueError("Prediction threshold must be between 0 and 1.")
+
+    passed = probabilities > pred_thresh
+    encoded = np.zeros(probabilities.shape, dtype=np.uint8)
+    normalized = (probabilities[passed] - pred_thresh) / (1.0 - pred_thresh)
+    encoded[passed] = np.clip(np.rint(normalized * 254.0) + 1.0, 1.0, 255.0).astype(np.uint8)
+    return encoded
+
+
+def _confidence_heatmap_colors(encoded_confidence: np.ndarray) -> np.ndarray:
+    """Map encoded confidence to yellow, orange, and red RGB anchors."""
+    normalized = (encoded_confidence.astype(np.float32) - 1.0) / 254.0
+    green = np.where(
+        normalized <= 0.5,
+        255.0 - 180.0 * normalized,
+        330.0 * (1.0 - normalized),
+    )
+    return np.column_stack(
+        [
+            np.full(normalized.shape, 255.0),
+            np.clip(np.rint(green), 0.0, 255.0),
+            np.zeros(normalized.shape),
+        ]
+    ).astype(np.uint8)
+
+
 def _save_mask_overlays(
     image_frames: list[ExtractedFrame],
-    binary_masks: dict[str, np.ndarray],
+    confidence_maps: dict[str, np.ndarray],
     output_mask_dir: Path,
     mask_transparency: float,
     tracking_dataframe: pd.DataFrame | None = None,
@@ -86,21 +135,26 @@ def _save_mask_overlays(
 
     for frame in image_frames:
         image_name = frame.image_path.name
-        if image_name not in binary_masks:
+        if image_name not in confidence_maps:
             continue
 
         original = Image.open(frame.image_path).convert("L")
         resized = resize_with_pad(original, target_size=148)
         grayscale = np.asarray(resized, dtype=np.uint8)
         rgb = np.stack([grayscale] * 3, axis=-1)
-        mask = binary_masks[image_name].astype(bool)
+        confidence_map = confidence_maps[image_name]
+        if confidence_map.shape != grayscale.shape:
+            raise ValueError("Confidence map shape must match the resized image shape.")
+        mask = confidence_map > 0
 
         tracking_row = tracking_rows.get(image_name)
         is_valid = tracking_row is None or bool(tracking_row["segmentation_valid"])
-        mask_color = np.array([255, 0, 0] if is_valid else [255, 165, 0], dtype=np.uint8)
-        colored = rgb.copy()
-        colored[mask] = mask_color
-        blended = ((1 - mask_transparency) * rgb + mask_transparency * colored).astype(np.uint8)
+        blended = rgb.copy()
+        if mask.any():
+            heatmap_colors = _confidence_heatmap_colors(confidence_map[mask])
+            blended[mask] = (
+                (1 - mask_transparency) * rgb[mask] + mask_transparency * heatmap_colors
+            ).astype(np.uint8)
         overlay_image = Image.fromarray(blended)
 
         if tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
@@ -172,7 +226,7 @@ def generate_pupil_predictions(
 
     legacy_results = []
     tracking_measurements = []
-    binary_masks = {}
+    confidence_maps = {}
 
     progress = tqdm(total=len(test_dataset), desc="Segmenting pupil images...", unit="image")
     with torch.inference_mode():
@@ -192,7 +246,7 @@ def generate_pupil_predictions(
                 if calculate_velocity:
                     with Image.open(frame.image_path) as original:
                         original_size = original.size
-                    measurement, binary_mask, _ = measure_probability_map(
+                    measurement, _, _ = measure_probability_map(
                         probability_map,
                         pred_thresh=pred_thresh,
                         original_size=original_size,
@@ -205,11 +259,11 @@ def generate_pupil_predictions(
                         }
                     )
                     tracking_measurements.append(measurement)
-                else:
-                    binary_mask = batch_binary_masks[index].squeeze().astype(np.uint8)
-
                 if output_mask_dir is not None:
-                    binary_masks[name] = binary_mask
+                    confidence_maps[name] = _encode_thresholded_confidence(
+                        probability_map,
+                        pred_thresh,
+                    )
 
             progress.update(image_count)
     progress.close()
@@ -224,7 +278,7 @@ def generate_pupil_predictions(
     if output_mask_dir is not None:
         _save_mask_overlays(
             image_frames,
-            binary_masks,
+            confidence_maps,
             output_mask_dir,
             mask_transparency,
             tracking_dataframe=tracking_dataframe,
@@ -255,105 +309,163 @@ def generate_pupil_mask_prediction(
     return legacy_results
 
 
-def save_results(results, result_dir: Path, exp_name: str):
-    """Save the original diameter CSV and plot outputs."""
-    results.sort(key=lambda result: _numeric_suffix(Path(result[0])))
-    dataframe = pd.DataFrame(results, columns=["image_name", "estimated_pupil_diameter"])
-    dataframe.index = np.arange(1, len(dataframe) + 1)
-    csv_path = result_dir / f"{exp_name}_estimated_pupil_diameter.csv"
-    dataframe.to_csv(csv_path, index=True)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(dataframe.index, dataframe["estimated_pupil_diameter"], linewidth=1)
-    plt.xlabel("Frame")
-    plt.ylabel("Estimated Pupil Diameter (pixels)")
-    plt.title("Estimated Pupil Diameter Over Time")
-    plt.tight_layout()
-    plot_path = result_dir / f"{exp_name}_estimated_pupil_diameter.png"
-    plt.savefig(plot_path, dpi=200)
-    plt.close()
-
-    print(f"Saved CSV:  {csv_path}")
-    print(f"Saved plot: {plot_path}")
+def _tracking_status(tracking_dataframe: pd.DataFrame) -> pd.Series:
+    """Reduce detailed quality evidence to valid, warning, or invalid."""
+    valid = tracking_dataframe["segmentation_valid"].astype(bool)
+    reasons = tracking_dataframe["quality_reason"].fillna("").astype(str)
+    return pd.Series(
+        np.select(
+            [~valid, reasons.ne("")],
+            ["invalid", "warning"],
+            default="valid",
+        ),
+        index=tracking_dataframe.index,
+        dtype="object",
+    )
 
 
-def save_tracking_results(
-    tracking_dataframe: pd.DataFrame,
+def _remove_legacy_result_files(result_dir: Path, exp_name: str) -> None:
+    """Remove superseded duplicate outputs after the unified files are saved."""
+    for suffix in _LEGACY_RESULT_SUFFIXES:
+        legacy_path = result_dir / f"{exp_name}_{suffix}"
+        if not legacy_path.exists():
+            continue
+        try:
+            legacy_path.unlink()
+            print(f"Removed legacy result: {legacy_path}")
+        except PermissionError:
+            print(f"Warning: close the legacy result so it can be removed: {legacy_path}")
+
+
+def save_analysis_results(
+    results,
+    image_frames: list[ExtractedFrame],
     result_dir: Path,
     exp_name: str,
+    tracking_dataframe: pd.DataFrame | None = None,
 ) -> tuple[Path, Path]:
-    """Save pupil-center measurements and a shared-time-axis quality-control plot."""
-    preferred_columns = [
-        "image_name",
+    """Save one compact analysis table and one frame-indexed plot."""
+    source_index_by_name = {
+        frame.image_path.name: frame.source_frame_index for frame in image_frames
+    }
+    result_rows = [
+        {
+            "image_name": name,
+            "estimated_pupil_diameter": diameter,
+            "source_frame_index": source_index_by_name[name],
+        }
+        for name, diameter in results
+    ]
+    result_dataframe = pd.DataFrame(result_rows).sort_values(
         "source_frame_index",
-        "timestamp_seconds",
-        "center_x_pixels",
-        "center_y_pixels",
-        "raw_center_x_pixels",
-        "raw_center_y_pixels",
-        "displacement_x_pixels",
-        "displacement_y_pixels",
-        "velocity_x_pixels_per_second",
-        "velocity_y_pixels_per_second",
-        "speed_pixels_per_second",
-        "estimated_pupil_diameter",
-        "selected_component_area",
-        "foreground_area",
-        "component_count",
-        "component_dominance",
-        "mean_component_confidence",
-        "component_circularity",
-        "component_touches_border",
-        "local_area_median",
-        "area_to_local_median_ratio",
-        "segmentation_valid",
-        "quality_reason",
-    ]
-    remaining_columns = [
-        column for column in tracking_dataframe.columns if column not in preferred_columns
-    ]
-    output_dataframe = tracking_dataframe[preferred_columns + remaining_columns]
+        kind="stable",
+    )
 
-    csv_path = result_dir / f"{exp_name}_pupil_tracking.csv"
+    if tracking_dataframe is None:
+        output_dataframe = result_dataframe[["image_name", "estimated_pupil_diameter"]].reset_index(
+            drop=True
+        )
+        frame_numbers = result_dataframe["source_frame_index"].to_numpy(dtype=int) + 1
+    else:
+        ordered_tracking = (
+            tracking_dataframe.set_index("image_name")
+            .loc[result_dataframe["image_name"]]
+            .reset_index()
+        )
+        ordered_tracking["tracking_status"] = _tracking_status(ordered_tracking)
+        ordered_tracking["quality_reason"] = (
+            ordered_tracking["quality_reason"].fillna("").astype(str)
+        )
+        output_columns = [
+            "image_name",
+            "estimated_pupil_diameter",
+            "timestamp_seconds",
+            "center_x_pixels",
+            "center_y_pixels",
+            "speed_pixels_per_second",
+            "tracking_status",
+            "quality_reason",
+        ]
+        output_dataframe = ordered_tracking[output_columns]
+        frame_numbers = ordered_tracking["source_frame_index"].to_numpy(dtype=int) + 1
+
+    csv_path = result_dir / f"{exp_name}_pupil_analysis.csv"
     output_dataframe.to_csv(csv_path, index=False)
 
-    time = output_dataframe["timestamp_seconds"]
-    valid = output_dataframe["segmentation_valid"].astype(bool)
-    figure, axes = plt.subplots(4, 1, figsize=(12, 11), sharex=True)
+    if tracking_dataframe is None:
+        figure, axis = plt.subplots(figsize=(10, 6))
+        axis.plot(frame_numbers, output_dataframe["estimated_pupil_diameter"], linewidth=1)
+        axis.set_ylabel("Estimated pupil diameter\n(model pixels)")
+        axis.set_title("Pupil Analysis")
+        axis.set_xlabel("Frame (1-based)")
+    else:
+        figure, axes = plt.subplots(4, 1, figsize=(12, 11), sharex=True)
+        axes[0].plot(
+            frame_numbers,
+            output_dataframe["estimated_pupil_diameter"],
+            linewidth=0.8,
+        )
+        axes[0].set_ylabel("Diameter\n(model pixels)")
+        axes[0].set_title("Pupil Analysis")
 
-    axes[0].plot(time, output_dataframe["estimated_pupil_diameter"], linewidth=0.8)
-    axes[0].set_ylabel("Diameter\n(model pixels)")
-    axes[0].set_title("Pupil Tracking Quality Control")
+        axes[1].plot(
+            frame_numbers,
+            output_dataframe["center_x_pixels"],
+            label="x",
+            linewidth=0.8,
+        )
+        axes[1].plot(
+            frame_numbers,
+            output_dataframe["center_y_pixels"],
+            label="y",
+            linewidth=0.8,
+        )
+        axes[1].set_ylabel("Center\n(video pixels)")
+        axes[1].legend(loc="upper right")
 
-    axes[1].plot(time, output_dataframe["center_x_pixels"], label="x", linewidth=0.8)
-    axes[1].plot(time, output_dataframe["center_y_pixels"], label="y", linewidth=0.8)
-    axes[1].set_ylabel("Center\n(video pixels)")
-    axes[1].legend(loc="upper right")
+        axes[2].plot(
+            frame_numbers,
+            output_dataframe["speed_pixels_per_second"],
+            linewidth=0.8,
+        )
+        axes[2].set_ylabel("Speed\n(pixels/s)")
 
-    axes[2].plot(time, output_dataframe["speed_pixels_per_second"], linewidth=0.8)
-    axes[2].set_ylabel("Speed\n(pixels/s)")
-
-    axes[3].step(time, valid.astype(int), where="mid", linewidth=0.8)
-    axes[3].scatter(
-        time[~valid],
-        np.zeros((~valid).sum()),
-        color="red",
-        s=8,
-        label="Rejected segmentation",
-    )
-    axes[3].set_yticks([0, 1], labels=["rejected", "valid"])
-    axes[3].set_ylim(-0.2, 1.2)
-    axes[3].set_xlabel("Actual acquisition time (seconds)")
-    if (~valid).any():
-        axes[3].legend(loc="lower right")
+        status_codes = output_dataframe["tracking_status"].map(
+            {"invalid": 0, "warning": 1, "valid": 2}
+        )
+        axes[3].step(
+            frame_numbers,
+            status_codes,
+            where="mid",
+            color="#9CA3AF",
+            linewidth=0.6,
+        )
+        for status, code, color in (
+            ("valid", 2, "#16A34A"),
+            ("warning", 1, "#F59E0B"),
+            ("invalid", 0, "#DC2626"),
+        ):
+            selected = output_dataframe["tracking_status"].eq(status)
+            axes[3].scatter(
+                frame_numbers[selected],
+                np.full(selected.sum(), code),
+                color=color,
+                s=8 if status == "valid" else 16,
+                label=status,
+            )
+        axes[3].set_yticks([0, 1, 2], labels=["invalid", "warning", "valid"])
+        axes[3].set_ylim(-0.25, 2.25)
+        axes[3].set_xlabel("Frame (1-based)")
+        axes[3].legend(loc="lower right", ncol=3)
 
     figure.tight_layout()
-    plot_path = result_dir / f"{exp_name}_pupil_tracking_qc.png"
+    plot_path = result_dir / f"{exp_name}_pupil_analysis.png"
     figure.savefig(plot_path, dpi=200)
     plt.close(figure)
 
-    print(f"Saved tracking CSV:  {csv_path}")
-    print(f"Saved tracking QC plot: {plot_path}")
+    _remove_legacy_result_files(result_dir, exp_name)
+    print(f"Saved analysis CSV:  {csv_path}")
+    print(f"Saved analysis plot: {plot_path}")
     return csv_path, plot_path
 
 
@@ -470,9 +582,13 @@ def main():
     args.result_dir.mkdir(parents=True, exist_ok=True)
 
     exp_name = "_".join(Path(results[0][0]).stem.split("_")[:-1]) if results else "experiment"
-    save_results(results, args.result_dir, exp_name)
-    if tracking_dataframe is not None:
-        save_tracking_results(tracking_dataframe, args.result_dir, exp_name)
+    save_analysis_results(
+        results,
+        image_frames,
+        args.result_dir,
+        exp_name,
+        tracking_dataframe=tracking_dataframe,
+    )
 
 
 if __name__ == "__main__":
