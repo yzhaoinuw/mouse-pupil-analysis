@@ -4,6 +4,18 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-07
 
+### Restore portable collection of the GIF helper test (Codex, GPT-5)
+
+- Reproduced GitHub Actions' `ModuleNotFoundError: No module named 'make_gif'` locally with the console-script form `pytest -q`; the earlier `python -m pytest` verification had implicitly placed the repository root on Python's import path.
+- Updated `tests/test_make_gif.py` to load the repository-root `make_gif.py` from an explicit path derived from the test file, so collection no longer depends on the launcher's import-path behavior.
+- Verification:
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts\pytest.exe -q tests\test_make_gif.py` (`1 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts\ruff.exe check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts\black.exe --check .`
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_ci_import_conda_20260807` (`19 passed`).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+
 ### Show QC-rejected estimates in the README demo (Codex, GPT-5)
 
 - Diagnosed the brief center and speed gap in the main-cadence demo. The four affected frames (7,209, 7,212, 7,215, and 7,218) retained usable raw center candidates and were rejected for `abrupt_area_change`, not low center confidence.

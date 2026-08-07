@@ -1,6 +1,11 @@
+from pathlib import Path
+from runpy import run_path
+
 import numpy as np
 
-from make_gif import diagnostic_segment
+diagnostic_segment = run_path(str(Path(__file__).resolve().parents[1] / "make_gif.py"))[
+    "diagnostic_segment"
+]
 
 
 def test_diagnostic_segment_keeps_rejected_run_and_neighboring_endpoints():
