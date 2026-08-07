@@ -140,6 +140,14 @@ def padded_limits(*series: np.ndarray, padding_fraction: float = 0.08) -> tuple[
     return lower - padding, upper + padding
 
 
+def diagnostic_segment(values: np.ndarray, rejected: np.ndarray) -> np.ndarray:
+    """Keep rejected samples and one accepted endpoint on each side."""
+    visible = rejected.copy()
+    visible[:-1] |= rejected[1:]
+    visible[1:] |= rejected[:-1]
+    return np.where(visible, values, np.nan)
+
+
 def load_demo_data(
     csv_path: Path,
     overlay_dir: Path,
@@ -196,6 +204,28 @@ def create_demo_gif(
     center_x = dataframe["center_x_pixels"].to_numpy(dtype=float)
     center_y = dataframe["center_y_pixels"].to_numpy(dtype=float)
     speeds = dataframe["speed_pixels_per_second"].to_numpy(dtype=float)
+    diagnostic_columns = {
+        "tracking_status",
+        "raw_center_x_pixels",
+        "raw_center_y_pixels",
+        "raw_speed_pixels_per_second",
+    }
+    has_diagnostics = diagnostic_columns.issubset(dataframe.columns)
+    rejected = np.zeros(len(dataframe), dtype=bool)
+    rejected_center_x = np.full(len(dataframe), np.nan)
+    rejected_center_y = np.full(len(dataframe), np.nan)
+    rejected_speeds = np.full(len(dataframe), np.nan)
+    if has_diagnostics:
+        rejected = dataframe["tracking_status"].astype(str).eq("invalid").to_numpy()
+        raw_center_x = dataframe["raw_center_x_pixels"].to_numpy(dtype=float)
+        raw_center_y = dataframe["raw_center_y_pixels"].to_numpy(dtype=float)
+        raw_speeds = dataframe["raw_speed_pixels_per_second"].to_numpy(dtype=float)
+        rejected_center_x = diagnostic_segment(raw_center_x, rejected)
+        rejected_center_y = diagnostic_segment(raw_center_y, rejected)
+        rejected_intervals = rejected.copy()
+        rejected_intervals[1:] |= rejected[:-1]
+        rejected_speeds = diagnostic_segment(raw_speeds, rejected_intervals)
+
     figure = plt.figure(figsize=(8.5, 5.2), layout="constrained")
     outer_grid = figure.add_gridspec(1, 2, width_ratios=(1.0, 1.7))
     image_axis = figure.add_subplot(outer_grid[0, 0])
@@ -268,17 +298,49 @@ def create_demo_gif(
 
     (center_x_line,) = center_axis.plot([], [], color="#6b46c1", linewidth=2.0, label="x center")
     (center_y_line,) = center_axis.plot([], [], color="#dd6b20", linewidth=2.0, label="y center")
+    (rejected_center_x_line,) = center_axis.plot(
+        [],
+        [],
+        color="#6b46c1",
+        linewidth=1.8,
+        linestyle="--",
+        alpha=0.85,
+        label="rejected estimate",
+    )
+    (rejected_center_y_line,) = center_axis.plot(
+        [],
+        [],
+        color="#dd6b20",
+        linewidth=1.8,
+        linestyle="--",
+        alpha=0.85,
+    )
     (center_x_dot,) = center_axis.plot([], [], "o", color="#6b46c1", markersize=5)
     (center_y_dot,) = center_axis.plot([], [], "o", color="#dd6b20", markersize=5)
     center_axis.set_ylabel("Center (pixel)")
-    center_axis.set_ylim(*padded_limits(center_x, center_y))
-    center_axis.legend(loc="upper right", frameon=False, ncols=2, fontsize=8)
+    center_axis.set_ylim(*padded_limits(center_x, center_y, rejected_center_x, rejected_center_y))
+    center_axis.legend(
+        loc="upper right",
+        frameon=False,
+        ncols=3,
+        fontsize=7,
+        handlelength=1.7,
+        columnspacing=0.9,
+    )
 
     (speed_line,) = speed_axis.plot([], [], color="#c53030", linewidth=2.0)
+    (rejected_speed_line,) = speed_axis.plot(
+        [],
+        [],
+        color="#c53030",
+        linewidth=1.8,
+        linestyle="--",
+        alpha=0.85,
+    )
     (speed_dot,) = speed_axis.plot([], [], "o", color="#c53030", markersize=5)
     speed_axis.set_ylabel("Speed (pixel/s)")
     speed_axis.set_xlabel("Frame")
-    speed_lower, speed_upper = padded_limits(speeds)
+    speed_lower, speed_upper = padded_limits(speeds, rejected_speeds)
     speed_axis.set_ylim(max(0.0, speed_lower), speed_upper)
 
     cursor_lines = []
@@ -304,10 +366,17 @@ def create_demo_gif(
 
         center_x_line.set_data(frame_numbers[current_slice], center_x[current_slice])
         center_y_line.set_data(frame_numbers[current_slice], center_y[current_slice])
+        rejected_center_x_line.set_data(
+            frame_numbers[current_slice], rejected_center_x[current_slice]
+        )
+        rejected_center_y_line.set_data(
+            frame_numbers[current_slice], rejected_center_y[current_slice]
+        )
         center_x_dot.set_data([current_frame], [center_x[frame_index]])
         center_y_dot.set_data([current_frame], [center_y[frame_index]])
 
         speed_line.set_data(frame_numbers[current_slice], speeds[current_slice])
+        rejected_speed_line.set_data(frame_numbers[current_slice], rejected_speeds[current_slice])
         speed_dot.set_data([current_frame], [speeds[frame_index]])
 
         for cursor_line in cursor_lines:
@@ -320,9 +389,12 @@ def create_demo_gif(
             diameter_dot,
             center_x_line,
             center_y_line,
+            rejected_center_x_line,
+            rejected_center_y_line,
             center_x_dot,
             center_y_dot,
             speed_line,
+            rejected_speed_line,
             speed_dot,
             *cursor_lines,
         ]

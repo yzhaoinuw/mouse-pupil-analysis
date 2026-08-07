@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-07
 
+### Show QC-rejected estimates in the README demo (Codex, GPT-5)
+
+- Diagnosed the brief center and speed gap in the main-cadence demo. The four affected frames (7,209, 7,212, 7,215, and 7,218) retained usable raw center candidates and were rejected for `abrupt_area_change`, not low center confidence.
+- Extended `make_gif.py` to recognize optional internal diagnostic columns. Accepted measurements remain solid; rejected raw center estimates and speed intervals touching rejected frames are shown as dashed traces, with one accepted endpoint on either side to make the transition legible.
+- Kept the compact exported analysis contract unchanged: invalid published center and speed values remain blank. The dashed bridge is a README-demo diagnostic only and is not interpolation or a replacement measurement.
+- Regenerated and promoted `pupil_diameter_analysis_result_demo.gif` with the established main cadence: 850 x 520, 90 frames, 200 ms per frame (5 fps), and 18 seconds total.
+- Verification:
+  - Focused unit coverage for retaining only the rejected diagnostic run and its neighboring endpoints.
+  - Rendered inspection immediately before, during, and after the four rejected frames.
+  - SHA-256 comparison confirmed that the promoted GIF exactly matches the inspected candidate.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .`
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking python -m pytest -q --basetemp .pytest_tmp_dashed_gif_20260807` (`19 passed`).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+
 ### Match the current demo to main's motion cadence (Codex, GPT-5)
 
 - Fetched `origin/main` and inspected both its historical `make_gif.py` and public README animation. Confirmed the main GIF contains 90 frames at 5 fps (200 ms per frame, 18 seconds total).
