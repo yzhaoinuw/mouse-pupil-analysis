@@ -225,6 +225,11 @@ def create_demo_gif(
         rejected_intervals = rejected.copy()
         rejected_intervals[1:] |= rejected[:-1]
         rejected_speeds = diagnostic_segment(raw_speeds, rejected_intervals)
+    has_rejected_diagnostics = bool(
+        np.isfinite(rejected_center_x).any()
+        or np.isfinite(rejected_center_y).any()
+        or np.isfinite(rejected_speeds).any()
+    )
 
     figure = plt.figure(figsize=(8.5, 5.2), layout="constrained")
     outer_grid = figure.add_gridspec(1, 2, width_ratios=(1.0, 1.7))
@@ -305,7 +310,7 @@ def create_demo_gif(
         linewidth=1.8,
         linestyle="--",
         alpha=0.85,
-        label="rejected estimate",
+        label="rejected estimate" if has_rejected_diagnostics else "_nolegend_",
     )
     (rejected_center_y_line,) = center_axis.plot(
         [],
@@ -322,8 +327,8 @@ def create_demo_gif(
     center_axis.legend(
         loc="upper right",
         frameon=False,
-        ncols=3,
-        fontsize=7,
+        ncols=3 if has_rejected_diagnostics else 2,
+        fontsize=7 if has_rejected_diagnostics else 8,
         handlelength=1.7,
         columnspacing=0.9,
     )
