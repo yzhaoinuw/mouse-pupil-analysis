@@ -4,14 +4,14 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Pupil-center velocity](#pupil-center-velocity) - the main-cadence-matched GIF now shows QC-rejected center and speed estimates as dashed diagnostics; after the user edits README on GitHub, synchronize the branch before further local work or threshold validation.
+- [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for GitHub review; next validate the provisional thresholds on additional recordings.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
 ## Pupil-Center Velocity
 
-Status: velocity calculation, confidence-heatmap overlays, 1-based source-frame names, unified user-facing outputs, and the selected 90-frame/5-fps main-cadence README demo with dashed rejected estimates are implemented on `feature/pupil-velocity`
+Status: velocity calculation, confidence-heatmap overlays, 1-based source-frame names, unified user-facing outputs, and the selected 90-frame/5-fps main-cadence README demo are implemented on `feature/pupil-velocity`; temporal area outliers now remain usable warnings when all hard per-frame checks pass
 
 ### Goal And Scope
 
@@ -116,7 +116,7 @@ Use combined per-frame evidence:
 
 Retain the individual metrics internally for quality-control decisions and tests. Export only a compact status and reason alongside the measurements users normally analyze. Keep thresholds as named constants in `tracking.py` so they remain visible, testable, and easy to tune from validation evidence.
 
-Low component dominance is retained as a diagnostic warning rather than a standalone rejection because reflections can create extra foreground components while the selected pupil component remains accurate. Low selected-component confidence, low circularity, border contact, empty masks, and abrupt local area changes reject a segmentation.
+Low component dominance and abrupt local area changes are diagnostic warnings rather than standalone rejections when the selected pupil component remains otherwise usable. Low selected-component confidence, low circularity, border contact, and empty masks reject a segmentation.
 
 The first version must not interpolate rejected centers or velocities. Preserve rejected raw measurements for diagnosis, but publish center and kinematic values as missing for invalid frames.
 
@@ -142,7 +142,7 @@ Start with raw valid centroids. Quantify trajectory jitter on the sample video b
 
 ### Unified User-Facing Outputs
 
-Status: implemented; the full sample-video outputs were regenerated and accepted, and the selected README demo uses the approved aligned layout with main's smoother 90-frame/5-fps cadence. The demo alone bridges rejected raw center and speed estimates with dashed traces for quick diagnosis; exported invalid measurements remain blank as specified above.
+Status: implemented; the full sample-video outputs were regenerated and accepted, and the selected README demo uses the approved aligned layout with main's smoother 90-frame/5-fps cadence. Temporal area warnings retain their published center and speed values; genuinely invalid measurements remain blank as specified above.
 
 Write one table and one plot per analysis instead of separate diameter and tracking artifacts. Prefer the broader names `<experiment>_pupil_analysis.csv` and `<experiment>_pupil_analysis.png`; if backward compatibility requires a transition, make it explicit rather than indefinitely writing duplicate files.
 
@@ -179,8 +179,10 @@ When `--output_mask_dir` is supplied, render threshold-passing pixels as a trans
   - Focused frame-selection and metadata tests.
 - `tests/test_outputs.py`
   - One-based naming, compact diameter/velocity schemas, three-state status, legacy-output cleanup, and unified plot tests.
+- `project_overview.md`
+  - Detailed segmentation-to-velocity methodology and quality-control semantics.
 - `README.md`
-  - New arguments, sample command, output schema summary, coordinate convention, and quality-flag behavior.
+  - User-facing arguments, sample command, output summary, and a link to the detailed methodology in `project_overview.md`.
 
 ### Acceptance And Verification
 
@@ -199,16 +201,16 @@ Sample-video acceptance:
 - Velocity-mode output has 3,001 ordered rows when not capped.
 - Timestamps run from 0.00 through 90.00 seconds in 0.03-second steps.
 - Normal pupil centers visually land inside the pupil.
-- Closed-eye displayed frames 111-114 at 3.30-3.39 seconds are rejected instead of generating a published velocity spike.
+- Closed-eye displayed frames 111-114 at 3.30-3.39 seconds remain explainable: hard-invalid frames are rejected, while otherwise usable temporal area outliers remain published with warnings.
 - Genuine rapid or edge-position movements are not rejected solely for their position or magnitude.
 - Quality metrics and overlays make every rejected frame explainable.
 
 Observed result on the supplied video:
 
-- 2,993 of 3,001 segmentations are valid.
-- Eight segmentations are rejected: displayed frames 111-114, 122-123, and 128-129.
-- Eleven otherwise valid frames retain a `low_component_dominance` warning.
-- 2,989 frame-to-frame speeds are published; values touching rejected frames remain missing.
+- 2,995 of 3,001 segmentations are usable: 2,982 clean `valid` rows and 13 `warning` rows.
+- Six segmentations are rejected: displayed frames 111, 114, 122-123, and 128-129.
+- Two formerly rejected temporal-area outliers, displayed frames 112-113, retain an `abrupt_area_change` warning; 11 other usable frames retain a `low_component_dominance` warning.
+- 2,990 frame-to-frame speeds are published; values touching the six rejected frames remain missing.
 - The largest published speed peaks at displayed frames 740, 1,197, and 2,722 correspond to visible rapid pupil movement in adjacent source frames.
 - Optional overlays retain thin center markers and use mask color to show per-pixel model confidence from yellow through orange to red.
 

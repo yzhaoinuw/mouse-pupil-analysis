@@ -65,7 +65,7 @@ def test_velocity_mode_appends_compact_tracking_fields_and_removes_legacy_output
             "speed_pixels_per_second": [np.nan, 47.0, np.nan],
             "estimated_pupil_diameter": [10.0, 11.0, 12.0],
             "segmentation_valid": [True, True, False],
-            "quality_reason": ["", "low_component_dominance", "abrupt_area_change"],
+            "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
     )
     for suffix in (

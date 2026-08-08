@@ -2,6 +2,23 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-08
+
+### Keep otherwise usable temporal area outliers (Codex, GPT-5)
+
+- Changed `abrupt_area_change` from a hard rejection to a diagnostic warning when the existing per-frame confidence, circularity, border, and nonempty-mask checks pass. Warning rows retain their measured centers and eligible frame-to-frame speeds; prior hard failures remain invalid and are not restored.
+- Kept the README unchanged because it already links to the detailed method. Updated `project_overview.md` as the methodology source of truth and aligned `next_steps.md` with the warning semantics.
+- Re-ran all 3,001 frames of `videos/eye.avi` at the confirmed 33.3333 Hz acquisition rate. The result contains 2,982 valid rows, 13 warnings, six invalid rows, and 2,990 published speeds. Frames 112-113 are now `abrupt_area_change` warnings; frames 111 and 114 remain hard-invalid.
+- Regenerated and promoted the matched README demo with its established 850 x 520 layout, 90 frames, 5 fps cadence, confidence heatmap, and center marker. The former four-frame temporal-area run now remains continuous in the center and speed plots, and the unused rejected-estimate legend is omitted.
+- Verification:
+  - Focused tests: `13 passed` across `tests/test_tracking.py`, `tests/test_outputs.py`, and `tests/test_make_gif.py`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`18 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_area_warning_full_20260808` (`20 passed`).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+  - Pillow metadata confirmed 850 x 520, 90 frames, and 200 ms per frame; SHA-256 comparison confirmed the promoted GIF exactly matches the inspected candidate.
+
 ## 2026-08-07
 
 ### Restore portable collection of the GIF helper test (Codex, GPT-5)

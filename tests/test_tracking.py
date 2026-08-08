@@ -119,17 +119,33 @@ def test_build_tracking_dataframe_does_not_bridge_invalid_or_missing_frames():
     assert missing_dataframe["speed_pixels_per_second"].isna().all()
 
 
-def test_build_tracking_dataframe_flags_abrupt_area_change():
+def test_build_tracking_dataframe_warns_about_abrupt_area_change():
     measurements = [
         _measurement(index, index, index, area=300 if index == 5 else 100) for index in range(11)
     ]
 
     dataframe = build_tracking_dataframe(measurements, acquisition_fps=10)
 
-    assert not dataframe.loc[5, "segmentation_valid"]
+    assert dataframe.loc[5, "segmentation_valid"]
     assert dataframe.loc[5, "area_to_local_median_ratio"] == 3
     assert "abrupt_area_change" in dataframe.loc[5, "quality_reason"]
+    assert dataframe.loc[5, "center_x_pixels"] == 5
+    assert np.isfinite(dataframe.loc[5, "speed_pixels_per_second"])
+
+
+def test_temporal_area_warning_does_not_restore_prior_invalid_frame():
+    measurements = [
+        _measurement(index, index, index, area=300 if index == 5 else 100) for index in range(11)
+    ]
+    measurements[5]["segmentation_valid"] = False
+    measurements[5]["quality_reason"] = "low_component_confidence"
+
+    dataframe = build_tracking_dataframe(measurements, acquisition_fps=10)
+
+    assert not dataframe.loc[5, "segmentation_valid"]
+    assert dataframe.loc[5, "quality_reason"] == "low_component_confidence"
     assert np.isnan(dataframe.loc[5, "center_x_pixels"])
+    assert np.isnan(dataframe.loc[5, "speed_pixels_per_second"])
 
 
 def test_temporal_area_check_uses_source_frame_distance():

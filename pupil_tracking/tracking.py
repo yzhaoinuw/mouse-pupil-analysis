@@ -242,7 +242,6 @@ def build_tracking_dataframe(
         dataframe.at[index, "local_area_median"] = local_median
         dataframe.at[index, "area_to_local_median_ratio"] = area_ratio
         if area_ratio < MIN_LOCAL_AREA_RATIO or area_ratio > MAX_LOCAL_AREA_RATIO:
-            dataframe.at[index, "segmentation_valid"] = False
             dataframe.at[index, "quality_reason"] = _append_quality_reason(
                 dataframe.at[index, "quality_reason"],
                 "abrupt_area_change",
