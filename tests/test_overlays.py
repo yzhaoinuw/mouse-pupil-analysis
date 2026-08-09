@@ -5,7 +5,7 @@ import pandas as pd
 from PIL import Image
 
 from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.run_pupil_analysis import (
+from pupil_tracking.pupil_predictions import (
     _encode_thresholded_confidence,
     _save_mask_overlays,
 )

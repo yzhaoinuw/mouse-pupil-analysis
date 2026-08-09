@@ -1,7 +1,13 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
+from PIL import Image
 
+from pupil_tracking.extract_frames import ExtractedFrame
+from pupil_tracking.pupil_predictions import PupilPrediction
 from pupil_tracking.tracking import (
+    TrackingAccumulator,
     build_tracking_dataframe,
     measure_probability_map,
     model_to_original_coordinates,
@@ -78,6 +84,31 @@ def test_measure_probability_map_warns_on_low_component_dominance():
     assert measurement["component_dominance"] == 0.6
     assert measurement["segmentation_valid"]
     assert "low_component_dominance" in measurement["quality_reason"]
+
+
+def test_tracking_accumulator_reuses_streamed_binary_mask(tmp_path: Path):
+    image_path = tmp_path / "eye_00001.png"
+    Image.fromarray(np.zeros((148, 148), dtype=np.uint8)).save(image_path)
+    frame = ExtractedFrame(image_path, source_frame_index=0, extraction_index=0)
+
+    probability_map = np.zeros((148, 148), dtype=np.float32)
+    probability_map[70:79, 70:79] = 0.95
+    binary_mask = np.zeros((148, 148), dtype=bool)
+    binary_mask[70:79, 70:79] = True
+    prediction = PupilPrediction(
+        frame=frame,
+        probability_map=probability_map,
+        binary_mask=binary_mask,
+        estimated_pupil_diameter=10.0,
+    )
+
+    accumulator = TrackingAccumulator(pred_thresh=0.99, acquisition_fps=10.0)
+    accumulator.add(prediction)
+    dataframe = accumulator.build_dataframe()
+
+    assert dataframe.loc[0, "selected_component_area"] == 81
+    assert dataframe.loc[0, "segmentation_valid"]
+    assert dataframe.loc[0, "image_name"] == image_path.name
 
 
 def test_build_tracking_dataframe_uses_actual_elapsed_time():

@@ -4,10 +4,8 @@ import numpy as np
 import pandas as pd
 
 from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.run_pupil_analysis import (
-    _frames_from_image_directory,
-    save_analysis_results,
-)
+from pupil_tracking.pupil_predictions import frames_from_image_directory
+from pupil_tracking.run_pupil_analysis import save_analysis_results
 
 
 def _frames(tmp_path: Path) -> list[ExtractedFrame]:
@@ -28,7 +26,7 @@ def test_image_directory_uses_one_based_filename_as_source_frame(tmp_path: Path)
     (tmp_path / "eye_00001.png").touch()
     (tmp_path / "eye_00020.png").touch()
 
-    frames = _frames_from_image_directory(tmp_path)
+    frames = frames_from_image_directory(tmp_path)
 
     assert [frame.source_frame_index for frame in frames] == [0, 19]
 

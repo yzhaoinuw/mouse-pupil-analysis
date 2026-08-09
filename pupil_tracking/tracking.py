@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
+from pathlib import Path
+from typing import Protocol
 
 import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
+
+from pupil_tracking.extract_frames import ExtractedFrame
 
 MODEL_IMAGE_SIZE = 148
 
@@ -18,6 +23,18 @@ MIN_LOCAL_AREA_RATIO = 0.65
 MAX_LOCAL_AREA_RATIO = 2.00
 TEMPORAL_AREA_WINDOW_SECONDS = 0.50
 MIN_TEMPORAL_NEIGHBORS = 4
+
+
+class PupilPredictionLike(Protocol):
+    """Structural interface consumed by ``TrackingAccumulator``."""
+
+    frame: ExtractedFrame
+    probability_map: np.ndarray
+    binary_mask: np.ndarray
+    estimated_pupil_diameter: float
+
+    @property
+    def image_name(self) -> str: ...
 
 
 def model_to_original_coordinates(
@@ -70,6 +87,7 @@ def measure_probability_map(
     probability_map: np.ndarray,
     pred_thresh: float,
     original_size: tuple[int, int],
+    binary_mask: np.ndarray | None = None,
 ) -> tuple[dict[str, object], np.ndarray, np.ndarray]:
     """Measure the most plausible pupil component in one probability map."""
     probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
@@ -79,7 +97,13 @@ def measure_probability_map(
         raise ValueError("Prediction threshold must be between 0 and 1.")
 
     original_width, original_height = original_size
-    binary_mask = (probabilities > pred_thresh).astype(np.uint8)
+    if binary_mask is None:
+        binary_mask = (probabilities > pred_thresh).astype(np.uint8)
+    else:
+        binary_mask = np.asarray(binary_mask).squeeze()
+        if binary_mask.shape != probabilities.shape:
+            raise ValueError("Binary mask shape must match the probability map shape.")
+        binary_mask = binary_mask.astype(bool).astype(np.uint8)
     component_count, labels, stats, _ = cv2.connectedComponentsWithStats(
         binary_mask,
         connectivity=8,
@@ -168,6 +192,45 @@ def measure_probability_map(
         "quality_reason": _join_reasons(quality_reasons),
     }
     return measurement, binary_mask, selected_mask
+
+
+class TrackingAccumulator:
+    """Consume transient predictions and finalize temporal tracking results."""
+
+    def __init__(self, pred_thresh: float, acquisition_fps: float) -> None:
+        if not 0 < pred_thresh < 1:
+            raise ValueError("Prediction threshold must be between 0 and 1.")
+        if acquisition_fps <= 0:
+            raise ValueError("Acquisition FPS must be positive.")
+        self.pred_thresh = pred_thresh
+        self.acquisition_fps = acquisition_fps
+        self.measurements: list[dict[str, object]] = []
+
+    def add(self, prediction: PupilPredictionLike) -> None:
+        """Measure one prediction without retaining its float probability map."""
+        with Image.open(prediction.frame.image_path) as original:
+            original_size = original.size
+        measurement, _, _ = measure_probability_map(
+            prediction.probability_map,
+            pred_thresh=self.pred_thresh,
+            original_size=original_size,
+            binary_mask=prediction.binary_mask,
+        )
+        measurement.update(
+            {
+                "image_name": prediction.image_name,
+                "source_frame_index": prediction.frame.source_frame_index,
+                "estimated_pupil_diameter": prediction.estimated_pupil_diameter,
+            }
+        )
+        self.measurements.append(measurement)
+
+    def build_dataframe(self) -> pd.DataFrame:
+        """Apply temporal quality checks and calculate kinematics."""
+        return build_tracking_dataframe(
+            self.measurements,
+            acquisition_fps=self.acquisition_fps,
+        )
 
 
 def _append_quality_reason(current: object, reason: str) -> str:
@@ -295,3 +358,32 @@ def build_tracking_dataframe(
         dataframe.at[index, "speed_pixels_per_second"] = math.hypot(velocity_x, velocity_y)
 
     return dataframe
+
+
+if __name__ == "__main__":
+    # Spyder: edit these values, then use "Run file".
+    from pupil_tracking.pupil_predictions import (
+        DEFAULT_CHECKPOINT,
+        frames_from_image_directory,
+        iter_pupil_predictions,
+    )
+
+    project_root = Path(__file__).resolve().parents[1]
+    image_dir = project_root / "images_test_1"
+    checkpoint_path = DEFAULT_CHECKPOINT
+    pred_thresh = 0.7
+    batch_size = 32
+    acquisition_fps = 10.0  # Replace with the recording's actual acquisition rate.
+
+    image_frames = frames_from_image_directory(image_dir)
+    tracking_accumulator = TrackingAccumulator(pred_thresh, acquisition_fps)
+    for prediction in iter_pupil_predictions(
+        checkpoint_path,
+        image_frames,
+        pred_thresh=pred_thresh,
+        batch_size=batch_size,
+    ):
+        tracking_accumulator.add(prediction)
+
+    tracking_dataframe = tracking_accumulator.build_dataframe()
+    print(tracking_dataframe.head())

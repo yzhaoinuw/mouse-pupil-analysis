@@ -6,73 +6,34 @@ Created on Tue Oct 21 00:07:48 2025
 """
 
 import argparse
-import re
-from importlib import resources
 from pathlib import Path
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import torch
-from PIL import Image, ImageDraw
-from torch.utils.data import DataLoader
-from tqdm import tqdm
 
-from pupil_tracking.dataset import PupilDataset, resize_with_pad
 from pupil_tracking.extract_frames import ExtractedFrame, extract_selected_frames
-from pupil_tracking.tracking import build_tracking_dataframe, measure_probability_map
-from pupil_tracking.unet import UNet
+from pupil_tracking.pupil_predictions import (
+    DEFAULT_CHECKPOINT,
+    MaskOverlayAccumulator,
+    frames_from_image_directory,
+    iter_pupil_predictions,
+)
+from pupil_tracking.pupil_predictions import (
+    generate_pupil_mask_prediction as generate_pupil_mask_prediction,
+)
+from pupil_tracking.pupil_predictions import (
+    generate_pupil_predictions as generate_pupil_predictions,
+)
+from pupil_tracking.tracking import TrackingAccumulator
 
-_IOU_RE = re.compile(r"iou=(0\.\d+)")
-_NUMERIC_SUFFIX_RE = re.compile(r"(\d+)$")
-_CENTER_MARKER_OPACITY = 0.35
-_CENTER_MARKER_RADIUS = 3
 _LEGACY_RESULT_SUFFIXES = (
     "estimated_pupil_diameter.csv",
     "estimated_pupil_diameter.png",
     "pupil_tracking.csv",
     "pupil_tracking_qc.png",
 )
-
-best = None
-with resources.as_file(resources.files("pupil_tracking") / "checkpoints") as ckpt_dir:
-    for p in ckpt_dir.glob("*.pth"):
-        m = _IOU_RE.search(p.name)
-        if not m:
-            continue
-        iou = float(m.group(1))
-        if best is None or iou > best[0]:
-            best = (iou, p)
-assert best is not None, "No packaged checkpoints found."
-DEFAULT_CHECKPOINT = best[1]
-
-
-def _numeric_suffix(path: Path) -> tuple[int, str]:
-    match = _NUMERIC_SUFFIX_RE.search(path.stem)
-    if match:
-        return int(match.group(1)), path.name
-    return 0, path.name
-
-
-def _frames_from_image_directory(image_dir: Path) -> list[ExtractedFrame]:
-    image_paths = sorted(image_dir.glob("*.png"), key=_numeric_suffix)
-    suffix_matches = [_NUMERIC_SUFFIX_RE.search(path.stem) for path in image_paths]
-    if image_paths and all(match is not None for match in suffix_matches):
-        suffixes = [int(match.group(1)) for match in suffix_matches if match is not None]
-        index_offset = 1 if min(suffixes) >= 1 else 0
-        source_frame_indices = [suffix - index_offset for suffix in suffixes]
-    else:
-        source_frame_indices = list(range(len(image_paths)))
-
-    return [
-        ExtractedFrame(
-            image_path=image_path,
-            source_frame_index=source_frame_indices[index],
-            extraction_index=index,
-        )
-        for index, image_path in enumerate(image_paths)
-    ]
 
 
 def _read_encoded_video_fps(video_path: Path) -> float:
@@ -84,229 +45,6 @@ def _read_encoded_video_fps(video_path: Path) -> float:
     if encoded_fps <= 0:
         raise ValueError(f"Video reports an invalid FPS: {encoded_fps}")
     return encoded_fps
-
-
-def _encode_thresholded_confidence(
-    probability_map: np.ndarray,
-    pred_thresh: float,
-) -> np.ndarray:
-    """Encode threshold-passing confidence from yellow (low) to red (high)."""
-    probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
-    if probabilities.ndim != 2:
-        raise ValueError("Probability map must be two-dimensional after squeezing.")
-    if not 0 < pred_thresh < 1:
-        raise ValueError("Prediction threshold must be between 0 and 1.")
-
-    passed = probabilities > pred_thresh
-    encoded = np.zeros(probabilities.shape, dtype=np.uint8)
-    normalized = (probabilities[passed] - pred_thresh) / (1.0 - pred_thresh)
-    encoded[passed] = np.clip(np.rint(normalized * 254.0) + 1.0, 1.0, 255.0).astype(np.uint8)
-    return encoded
-
-
-def _confidence_heatmap_colors(encoded_confidence: np.ndarray) -> np.ndarray:
-    """Map encoded confidence to yellow, orange, and red RGB anchors."""
-    normalized = (encoded_confidence.astype(np.float32) - 1.0) / 254.0
-    green = np.where(
-        normalized <= 0.5,
-        255.0 - 180.0 * normalized,
-        330.0 * (1.0 - normalized),
-    )
-    return np.column_stack(
-        [
-            np.full(normalized.shape, 255.0),
-            np.clip(np.rint(green), 0.0, 255.0),
-            np.zeros(normalized.shape),
-        ]
-    ).astype(np.uint8)
-
-
-def _save_mask_overlays(
-    image_frames: list[ExtractedFrame],
-    confidence_maps: dict[str, np.ndarray],
-    output_mask_dir: Path,
-    mask_transparency: float,
-    tracking_dataframe: pd.DataFrame | None = None,
-) -> None:
-    output_mask_dir.mkdir(parents=True, exist_ok=True)
-    tracking_rows = {}
-    if tracking_dataframe is not None:
-        tracking_rows = tracking_dataframe.set_index("image_name").to_dict(orient="index")
-
-    for frame in image_frames:
-        image_name = frame.image_path.name
-        if image_name not in confidence_maps:
-            continue
-
-        original = Image.open(frame.image_path).convert("L")
-        resized = resize_with_pad(original, target_size=148)
-        grayscale = np.asarray(resized, dtype=np.uint8)
-        rgb = np.stack([grayscale] * 3, axis=-1)
-        confidence_map = confidence_maps[image_name]
-        if confidence_map.shape != grayscale.shape:
-            raise ValueError("Confidence map shape must match the resized image shape.")
-        mask = confidence_map > 0
-
-        tracking_row = tracking_rows.get(image_name)
-        is_valid = tracking_row is None or bool(tracking_row["segmentation_valid"])
-        blended = rgb.copy()
-        if mask.any():
-            heatmap_colors = _confidence_heatmap_colors(confidence_map[mask])
-            blended[mask] = (
-                (1 - mask_transparency) * rgb[mask] + mask_transparency * heatmap_colors
-            ).astype(np.uint8)
-        overlay_image = Image.fromarray(blended)
-
-        if tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
-            center_x = float(tracking_row["raw_center_x_model_pixels"])
-            center_y = float(tracking_row["raw_center_y_model_pixels"])
-            center_color = "cyan" if is_valid else "yellow"
-            marker_layer = overlay_image.copy()
-            draw = ImageDraw.Draw(marker_layer)
-            draw.line(
-                (
-                    center_x - _CENTER_MARKER_RADIUS,
-                    center_y,
-                    center_x + _CENTER_MARKER_RADIUS,
-                    center_y,
-                ),
-                fill=center_color,
-                width=1,
-            )
-            draw.line(
-                (
-                    center_x,
-                    center_y - _CENTER_MARKER_RADIUS,
-                    center_x,
-                    center_y + _CENTER_MARKER_RADIUS,
-                ),
-                fill=center_color,
-                width=1,
-            )
-            overlay_image = Image.blend(
-                overlay_image,
-                marker_layer,
-                _CENTER_MARKER_OPACITY,
-            )
-
-        overlay_image.save(output_mask_dir / image_name)
-
-
-def generate_pupil_predictions(
-    checkpoint_path,
-    image_frames: list[ExtractedFrame],
-    output_mask_dir: Path = None,
-    pred_thresh: float = 0.7,
-    batch_size: int = 32,
-    mask_transparency: float = 0.1,
-    calculate_velocity: bool = False,
-    acquisition_fps: float = None,
-):
-    """Run inference and optionally build pupil-center tracking measurements."""
-    if not image_frames:
-        raise FileNotFoundError("No PNG images were provided for pupil analysis.")
-    if calculate_velocity and (acquisition_fps is None or acquisition_fps <= 0):
-        raise ValueError("A positive acquisition FPS is required for velocity calculation.")
-
-    image_paths = [frame.image_path for frame in image_frames]
-    frame_by_name = {frame.image_path.name: frame for frame in image_frames}
-
-    print(f"Building dataloader with batch size = {batch_size}.")
-    test_dataset = PupilDataset(image_paths)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-
-    print("Loading UNet model...")
-    model = UNet(use_attention=True)
-    device_name = "cuda" if torch.cuda.is_available() else "cpu"
-    device = torch.device(device_name)
-    print(f"Using inference device: {device}.")
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.to(device)
-    model.eval()
-
-    legacy_results = []
-    tracking_measurements = []
-    confidence_maps = {}
-
-    progress = tqdm(total=len(test_dataset), desc="Segmenting pupil images...", unit="image")
-    with torch.inference_mode():
-        for images, names in test_loader:
-            image_count = images.size(0)
-            images = images.to(device)
-            probabilities = torch.sigmoid(model(images)).cpu().numpy()
-            batch_binary_masks = probabilities > pred_thresh
-            pupil_diameters = np.sqrt(np.sum(batch_binary_masks, axis=(1, 2, 3)) * 1.27)
-
-            for index, (name, diameter) in enumerate(zip(names, pupil_diameters)):
-                diameter = float(diameter)
-                legacy_results.append((name, diameter))
-                frame = frame_by_name[name]
-                probability_map = probabilities[index].squeeze()
-
-                if calculate_velocity:
-                    with Image.open(frame.image_path) as original:
-                        original_size = original.size
-                    measurement, _, _ = measure_probability_map(
-                        probability_map,
-                        pred_thresh=pred_thresh,
-                        original_size=original_size,
-                    )
-                    measurement.update(
-                        {
-                            "image_name": name,
-                            "source_frame_index": frame.source_frame_index,
-                            "estimated_pupil_diameter": diameter,
-                        }
-                    )
-                    tracking_measurements.append(measurement)
-                if output_mask_dir is not None:
-                    confidence_maps[name] = _encode_thresholded_confidence(
-                        probability_map,
-                        pred_thresh,
-                    )
-
-            progress.update(image_count)
-    progress.close()
-
-    tracking_dataframe = None
-    if calculate_velocity:
-        tracking_dataframe = build_tracking_dataframe(
-            tracking_measurements,
-            acquisition_fps=acquisition_fps,
-        )
-
-    if output_mask_dir is not None:
-        _save_mask_overlays(
-            image_frames,
-            confidence_maps,
-            output_mask_dir,
-            mask_transparency,
-            tracking_dataframe=tracking_dataframe,
-        )
-
-    return legacy_results, tracking_dataframe
-
-
-def generate_pupil_mask_prediction(
-    checkpoint_path,
-    image_dir: Path,
-    output_mask_dir: Path = None,
-    pred_thresh: float = 0.7,
-    batch_size: int = 32,
-    mask_transparency: float = 0.1,
-):
-    """Compatibility wrapper for the original diameter-only inference function."""
-    image_frames = _frames_from_image_directory(Path(image_dir))
-    legacy_results, _ = generate_pupil_predictions(
-        checkpoint_path,
-        image_frames,
-        output_mask_dir=output_mask_dir,
-        pred_thresh=pred_thresh,
-        batch_size=batch_size,
-        mask_transparency=mask_transparency,
-        calculate_velocity=False,
-    )
-    return legacy_results
 
 
 def _tracking_status(tracking_dataframe: pd.DataFrame) -> pd.Series:
@@ -549,7 +287,7 @@ def main():
                 f"Using encoded video rate: {args.acquisition_fps:.6g} fps"
             )
     elif args.image_dir is not None:
-        image_frames = _frames_from_image_directory(args.image_dir)
+        image_frames = frames_from_image_directory(args.image_dir)
     else:
         raise ValueError("You must specify either (--video_path) or (--image_dir).")
 
@@ -562,16 +300,41 @@ def main():
     if args.output_mask_dir is not None:
         args.output_mask_dir.mkdir(parents=True, exist_ok=True)
 
-    results, tracking_dataframe = generate_pupil_predictions(
+    tracking_accumulator = None
+    if args.calculate_velocity:
+        tracking_accumulator = TrackingAccumulator(
+            pred_thresh=args.pred_thresh,
+            acquisition_fps=args.acquisition_fps,
+        )
+    overlay_accumulator = None
+    if args.output_mask_dir is not None:
+        overlay_accumulator = MaskOverlayAccumulator(
+            args.output_mask_dir,
+            pred_thresh=args.pred_thresh,
+            mask_transparency=args.mask_transparency,
+        )
+
+    results = []
+    for prediction in iter_pupil_predictions(
         args.checkpoint,
         image_frames,
-        output_mask_dir=args.output_mask_dir,
         pred_thresh=args.pred_thresh,
         batch_size=args.batch_size,
-        mask_transparency=args.mask_transparency,
-        calculate_velocity=args.calculate_velocity,
-        acquisition_fps=args.acquisition_fps,
-    )
+    ):
+        results.append((prediction.image_name, prediction.estimated_pupil_diameter))
+        if tracking_accumulator is not None:
+            tracking_accumulator.add(prediction)
+        if overlay_accumulator is not None:
+            overlay_accumulator.add(prediction)
+
+    tracking_dataframe = None
+    if tracking_accumulator is not None:
+        tracking_dataframe = tracking_accumulator.build_dataframe()
+    if overlay_accumulator is not None:
+        overlay_accumulator.save(
+            image_frames,
+            tracking_dataframe=tracking_dataframe,
+        )
 
     if args.result_dir is None:
         if args.video_path:

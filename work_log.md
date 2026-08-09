@@ -2,7 +2,39 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-09
+
+### Stream inference into optional tracking and overlay consumers (Codex, GPT-5)
+
+- Replaced the tracking-aware inference branch with a streaming `PupilPrediction` record. Each record carries one frame's probability map, already-thresholded binary mask, diameter, and source metadata and is consumed before the next record is retained.
+- Added `TrackingAccumulator` in `tracking.py` and `MaskOverlayAccumulator` in `pupil_predictions.py`. The CLI now constructs those consumers only when their flags are enabled; `generate_pupil_predictions(...)` no longer accepts `calculate_velocity` or `acquisition_fps`. The tracking module now also has an editable Spyder run block that leaves the detailed tracking DataFrame available for inspection.
+- Reused the streamed binary mask during component measurement, preserving one UNet pass without repeating thresholding or accumulating all float probability maps. Kept the diameter-only convenience function, Spyder entry block, and original mask-prediction import path. Anchored both Spyder examples to the repository root instead of a machine-specific path or current working directory.
+- Ran the packaged checkpoint through a two-image CLI smoke test in diameter-only and velocity modes. Both modes returned identical diameters; velocity mode returned valid rows at the expected 0.0 and 0.1 second timestamps.
+- Verification:
+  - Focused tests: `14 passed` across `tests/test_imports.py`, `tests/test_tracking.py`, and `tests/test_overlays.py`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`19 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_streaming_refactor_full` (`23 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`; the wheel and source distribution contain the refactored prediction/tracking modules, packaged checkpoint, and training log.
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+
 ## 2026-08-08
+
+### Extract reusable pupil-prediction module (Codex, GPT-5)
+
+- Moved packaged-checkpoint discovery, PNG frame discovery, UNet inference, optional tracking measurements, and confidence-heatmap overlay generation out of `run_pupil_analysis.py` into the sibling `pupil_tracking/pupil_predictions.py` module.
+- Kept `run_pupil_analysis.py` as the CLI orchestrator and retained the original `generate_pupil_mask_prediction` import path as a compatibility re-export.
+- Added a Spyder-friendly `if __name__ == "__main__":` block with editable local paths and inference settings. It runs `generate_pupil_predictions(...)` directly and writes example overlays without invoking the CLI parser.
+- Updated focused tests to import frame discovery and overlay helpers from their owning module, and added coverage for the new module boundary and legacy prediction import.
+- Verification:
+  - Focused tests: `7 passed` across `tests/test_imports.py`, `tests/test_outputs.py`, and `tests/test_overlays.py`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`19 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_prediction_refactor_full` (`22 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`; the wheel and source distribution contain `pupil_predictions.py`, the packaged checkpoint, and its training log.
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
 
 ### Keep otherwise usable temporal area outliers (Codex, GPT-5)
 

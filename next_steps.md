@@ -4,11 +4,21 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
+- [Runtime modularization](#runtime-modularization) - streaming inference, optional tracking, and overlays now have separate boundaries; next assess result-table and plotting responsibilities.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
+
+## Runtime Modularization
+
+Status: inference streams transient prediction records through one model pass; tracking and overlay accumulators consume them only when requested, while `run_pupil_analysis.py` owns workflow composition
+
+Remaining work:
+
+- Review `save_analysis_results(...)` as the next possible extraction, keeping table and plotting responsibilities cohesive rather than splitting functions only to reduce file length.
+- Review the repository-root training and utility scripts separately after the active packaged runtime has clear module boundaries.
 
 ## Pupil-Center Velocity
 
