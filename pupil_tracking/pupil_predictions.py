@@ -320,7 +320,7 @@ def generate_pupil_mask_prediction(
     batch_size: int = 32,
     mask_transparency: float = 0.1,
 ) -> list[tuple[str, float]]:
-    """Compatibility wrapper for the original diameter-only inference function."""
+    """Generate diameter results for the PNG files in an image directory."""
     image_frames = frames_from_image_directory(Path(image_dir))
     return generate_pupil_predictions(
         checkpoint_path,

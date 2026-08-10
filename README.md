@@ -1,8 +1,10 @@
 [![Agent Collab Treaty adopted](https://raw.githubusercontent.com/yzhaoinuw/agent_collab_treaty/main/assets/treaty-adopted.svg)](https://github.com/yzhaoinuw/agent_collab_treaty)
 
-![Pupil analysis pipeline demo](pupil_diameter_analysis_result_demo.gif)
+![Pupil analysis pipeline demo](media/pupil_diameter_analysis_result_demo.gif)
 
 <p align="center"><em>Left: confidence-colored pupil mask and estimated center — Right: evolving pupil diameter, center, and speed</em></p>
+
+See [`media/README.md`](media/README.md) to regenerate and review the demo GIF.
 
 # Pupil Analysis Pipeline
 
@@ -154,10 +156,12 @@ This project is released under the MIT License. See [`LICENSE`](LICENSE).
 
 ### Model Training
 
+The complete data-preparation, augmentation, fresh-training, fine-tuning, and checkpoint-promotion workflow is documented in [`training/README.md`](training/README.md).
+
 #### Making Training Data
 Create two folders in *pupil_tracking/*, *images_train/* and *masks_train/* if you haven't. Place your training images in *images_train/*. Once you have done this once, you can just add new training images to *images_train/*.
 1. In Terminal/Anaconda Powershell Prompt, activate environment pupil_tracking, then run `labelme.exe`
 to open the labelme interface to label images.
-2. After you are done, **labelme** should have saved your labels as json files in *images_train/* along with your training images. Now run `python .\labelme_json2png.py`, which will create the masks (png files) and move them to *masks_train/*.
-3. To create the validation set, create *images_validation/* and *masks_validation/* and then follow the same steps above, but remember to change **image_dir** and **mask_dir** in **labelme_json2png.py** accordingly.
-4. To start training the model, run `python run_train.py`. You can modify the hyperparameters in **run_train.py** as needed.
+2. After you are done, **labelme** should have saved your labels as json files in *images_train/* along with your training images. Now run `python .\training\labelme_json2png.py`, which will create the masks (png files) and move them to *masks_train/*.
+3. To create the validation set, create *images_validation/* and *masks_validation/* and then follow the same steps above, but remember to change **dataset_type** in **training/labelme_json2png.py** accordingly.
+4. To start training the model, run `python .\training\run_train.py`. You can modify the hyperparameters in **training/run_train.py** as needed.

@@ -20,20 +20,7 @@ from pupil_tracking.pupil_predictions import (
     frames_from_image_directory,
     iter_pupil_predictions,
 )
-from pupil_tracking.pupil_predictions import (
-    generate_pupil_mask_prediction as generate_pupil_mask_prediction,
-)
-from pupil_tracking.pupil_predictions import (
-    generate_pupil_predictions as generate_pupil_predictions,
-)
 from pupil_tracking.tracking import TrackingAccumulator
-
-_LEGACY_RESULT_SUFFIXES = (
-    "estimated_pupil_diameter.csv",
-    "estimated_pupil_diameter.png",
-    "pupil_tracking.csv",
-    "pupil_tracking_qc.png",
-)
 
 
 def _read_encoded_video_fps(video_path: Path) -> float:
@@ -60,19 +47,6 @@ def _tracking_status(tracking_dataframe: pd.DataFrame) -> pd.Series:
         index=tracking_dataframe.index,
         dtype="object",
     )
-
-
-def _remove_legacy_result_files(result_dir: Path, exp_name: str) -> None:
-    """Remove superseded duplicate outputs after the unified files are saved."""
-    for suffix in _LEGACY_RESULT_SUFFIXES:
-        legacy_path = result_dir / f"{exp_name}_{suffix}"
-        if not legacy_path.exists():
-            continue
-        try:
-            legacy_path.unlink()
-            print(f"Removed legacy result: {legacy_path}")
-        except PermissionError:
-            print(f"Warning: close the legacy result so it can be removed: {legacy_path}")
 
 
 def save_analysis_results(
@@ -201,7 +175,6 @@ def save_analysis_results(
     figure.savefig(plot_path, dpi=200)
     plt.close(figure)
 
-    _remove_legacy_result_files(result_dir, exp_name)
     print(f"Saved analysis CSV:  {csv_path}")
     print(f"Saved analysis plot: {plot_path}")
     return csv_path, plot_path

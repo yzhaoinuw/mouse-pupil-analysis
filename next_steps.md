@@ -189,7 +189,7 @@ When `--output_mask_dir` is supplied, render threshold-passing pixels as a trans
 - `tests/test_extract_frames.py`
   - Focused frame-selection and metadata tests.
 - `tests/test_outputs.py`
-  - One-based naming, compact diameter/velocity schemas, three-state status, legacy-output cleanup, and unified plot tests.
+  - One-based naming, compact diameter/velocity schemas, three-state status, and unified plot tests.
 - `project_overview.md`
   - Detailed segmentation-to-velocity methodology and quality-control semantics.
 - `README.md`
@@ -266,7 +266,7 @@ Remaining work:
 
 ### Portable End-To-End Fixture
 
-Status: paused
+Status: tracked media and training utilities now have dedicated root folders; ignored local sketches and generated analysis artifacts remain outside the maintained source layout
 
 The current tests cover package import and CLI help. There is no small committed video/frame fixture for end-to-end inference.
 
@@ -292,13 +292,13 @@ Remaining work:
 
 ### Training Workflow Documentation
 
-Status: paused
+Status: documented; the workflow remains script-based
 
-`README.md` includes maintainer notes for creating masks with Labelme and training with `run_train.py`, but training remains a local workflow rather than a packaged command.
+`training/README.md` now documents the local data layout, Labelme conversion, augmentation review, fresh training, weight-based fine-tuning, and checkpoint promotion. The current fine-tuning path restores model weights but starts new optimizer and scheduler state.
 
 Resume if the training path becomes user-facing or needs reproducible CI coverage.
 
 Remaining work:
 
-- Decide whether training should stay in `run_train.py` or move behind a package CLI.
-- Document any required data layout, hyperparameter, and checkpoint naming contracts if the workflow is formalized.
+- Decide whether the workflow under `training/` should remain script-based or move behind a package CLI.
+- Add structured optimizer/scheduler checkpointing only if exact interrupted-run resume becomes necessary.

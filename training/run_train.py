@@ -10,9 +10,12 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from dataset import PupilDataset
 from torch.utils.data import DataLoader
-from unet import UNet
+
+from pupil_tracking.dataset import PupilDataset
+from pupil_tracking.unet import UNet
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 # -------------------- Metrics -------------------- #
@@ -45,11 +48,19 @@ patience = 20
 n_epochs = 200
 use_attention = True
 
-checkpoint_dir = Path("checkpoints_exp")
+checkpoint_dir = PROJECT_ROOT / "checkpoints_exp"
 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-train_dataset = make_dataset("images_train", "masks_train", augment=True)
-val_dataset = make_dataset("images_validation", "masks_validation", augment=False)
+train_dataset = make_dataset(
+    PROJECT_ROOT / "images_train",
+    PROJECT_ROOT / "masks_train",
+    augment=True,
+)
+val_dataset = make_dataset(
+    PROJECT_ROOT / "images_validation",
+    PROJECT_ROOT / "masks_validation",
+    augment=False,
+)
 
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, pin_memory=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, pin_memory=True)

@@ -50,9 +50,7 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
     assert plot_path.is_file()
 
 
-def test_velocity_mode_appends_compact_tracking_fields_and_removes_legacy_outputs(
-    tmp_path: Path,
-):
+def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
     tracking = pd.DataFrame(
         {
             "image_name": ["eye_00001.png", "eye_00002.png", "eye_00003.png"],
@@ -66,14 +64,6 @@ def test_velocity_mode_appends_compact_tracking_fields_and_removes_legacy_output
             "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
     )
-    for suffix in (
-        "estimated_pupil_diameter.csv",
-        "estimated_pupil_diameter.png",
-        "pupil_tracking.csv",
-        "pupil_tracking_qc.png",
-    ):
-        (tmp_path / f"eye_{suffix}").touch()
-
     csv_path, plot_path = save_analysis_results(
         _results(),
         _frames(tmp_path),
@@ -97,10 +87,3 @@ def test_velocity_mode_appends_compact_tracking_fields_and_removes_legacy_output
     assert dataframe.loc[2, "center_x_pixels"] == ""
     assert plot_path.name == "eye_pupil_analysis.png"
     assert plot_path.is_file()
-    for suffix in (
-        "estimated_pupil_diameter.csv",
-        "estimated_pupil_diameter.png",
-        "pupil_tracking.csv",
-        "pupil_tracking_qc.png",
-    ):
-        assert not (tmp_path / f"eye_{suffix}").exists()

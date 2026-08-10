@@ -1,0 +1,109 @@
+# Model Training and Fine-Tuning
+
+This folder contains the maintained local workflow for preparing masks, reviewing augmentation, training the UNet, and promoting a selected checkpoint. These are editable research scripts rather than installed command-line tools, so their configuration is intentionally kept near the top of each file for terminal or Spyder runs.
+
+Run commands from the repository root. All paths in the scripts are anchored to that root.
+
+## Environment
+
+Use the project's environment and editable installation:
+
+```powershell
+conda activate pupil_tracking
+python -m pip install -e .
+```
+
+Label creation also requires [Labelme](https://github.com/wkentaro/labelme). Install it in the same environment if `labelme.exe` and `labelme_export_json` are not already available.
+
+## Data layout
+
+Create these local folders at the repository root:
+
+```text
+images_train/
+masks_train/
+images_validation/
+masks_validation/
+```
+
+Images and masks must be PNG files whose sorted filenames correspond one-to-one. Keep the validation set independent of the training set. The dataset loader preserves aspect ratio and pads to the model's 148 x 148 input, so keep the eye centered and mostly visible in the source image.
+
+## 1. Create masks with Labelme
+
+1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
+2. Save each JSON file beside its image in `images_train/` or `images_validation/`.
+3. In `labelme_json2png.py`, set `dataset_type` to `"train"` or `"validation"`.
+4. Run:
+
+```powershell
+python training\labelme_json2png.py
+```
+
+The script runs `labelme_export_json`, moves each generated `label.png` into the matching mask folder, and removes Labelme's temporary export directory. Existing masks with the same stem are skipped.
+
+Before training, compare the filenames and counts in each image/mask pair. A mask with the wrong image can train without an obvious file error while corrupting the model.
+
+## 2. Inspect augmentation
+
+Open `check_augmentation.py` in Spyder or run:
+
+```powershell
+python training\check_augmentation.py
+```
+
+The script draws repeated augmented versions of training samples with the mask overlaid. Adjust `n_samples`, `n_augs_per_sample`, and `mask_transparency` in its final block as needed. Confirm that transforms keep the pupil mask aligned and do not create unrealistic crops before starting a long run.
+
+## 3. Train a model from scratch
+
+Edit the hyperparameter block in `run_train.py`, especially:
+
+- `pred_thresh`: threshold used for validation Dice/IoU and encoded in the checkpoint name.
+- `notable_iou`: minimum best validation IoU before a checkpoint is saved.
+- `patience`: early-stopping patience.
+- `n_epochs`: maximum training epochs.
+- `use_attention`: must match the desired UNet architecture.
+- DataLoader batch size and Adam learning rate, currently `8` and `1e-3`.
+
+Then run the file in Spyder or execute:
+
+```powershell
+python training\run_train.py
+```
+
+The script automatically uses CUDA when available. Experimental checkpoints and their training logs are written to the repository-root `checkpoints_exp/` folder. That folder is local output and is not package data.
+
+## 4. Fine-tune an existing checkpoint
+
+`run_train.py` currently initializes a fresh model. For weight-based fine-tuning, keep `use_attention` compatible with the source checkpoint and add a checkpoint load immediately after model creation:
+
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = UNet(use_attention=use_attention).to(device)
+
+finetune_checkpoint = (
+    PROJECT_ROOT
+    / "pupil_tracking"
+    / "checkpoints"
+    / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
+)
+model.load_state_dict(
+    torch.load(finetune_checkpoint, map_location=device, weights_only=True)
+)
+```
+
+Also lower the Adam learning rate deliberately, for example from `1e-3` to `1e-4`, and choose `notable_iou` relative to the checkpoint's existing validation performance.
+
+This loads model weights only. It starts a new optimizer, learning-rate scheduler, early-stopping counter, and log, so it is fine-tuning rather than an exact resume of an interrupted training run. Exact resume support would require saving and restoring those states in a structured training checkpoint.
+
+## 5. Review and promote a checkpoint
+
+Do not automatically place experimental output in `pupil_tracking/checkpoints/`. First:
+
+1. Review training and validation curves in the generated log.
+2. Evaluate the checkpoint on recordings that were not used for training or validation.
+3. Inspect segmentation overlays and downstream diameter/center tracking, not IoU alone.
+4. Compare against the currently packaged model on the same cases.
+
+When a model is accepted, copy its `.pth` file and matching `.txt` log into `pupil_tracking/checkpoints/` as an intentional package change. The default inference code selects the packaged checkpoint with the highest IoU encoded in its filename, so preserve the `_iou=<value>` naming contract and remove or archive superseded packaged candidates deliberately.
+
+After promotion, run the repository checks and package build documented in `AGENTS.md`, then verify that the selected checkpoint and log appear in both the wheel and source distribution.

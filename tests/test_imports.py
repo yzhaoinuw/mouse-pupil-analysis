@@ -23,9 +23,3 @@ def test_prediction_functions_are_available_from_their_own_module():
     parameters = signature(generate_pupil_predictions).parameters
     assert "calculate_velocity" not in parameters
     assert "acquisition_fps" not in parameters
-
-
-def test_original_prediction_import_remains_compatible():
-    from pupil_tracking.run_pupil_analysis import generate_pupil_mask_prediction
-
-    assert generate_pupil_mask_prediction.__module__ == "pupil_tracking.pupil_predictions"

@@ -9,7 +9,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from dataset import PupilDataset
+
+from pupil_tracking.dataset import PupilDataset
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def show_augmented_samples(
@@ -74,8 +77,8 @@ def show_augmented_samples(
 
 
 # example paths
-image_paths = sorted(Path("images_train/").glob("*.png"))
-mask_paths = sorted(Path("masks_train/").glob("*.png"))
+image_paths = sorted((PROJECT_ROOT / "images_train").glob("*.png"))
+mask_paths = sorted((PROJECT_ROOT / "masks_train").glob("*.png"))
 
 dataset = PupilDataset(
     image_paths=image_paths,

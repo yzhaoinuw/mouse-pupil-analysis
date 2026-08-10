@@ -9,9 +9,11 @@ import shutil
 import subprocess
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 dataset_type = "validation"
-image_dir = Path(f"./images_{dataset_type}")
-mask_dir = Path(f"./masks_{dataset_type}")
+image_dir = PROJECT_ROOT / f"images_{dataset_type}"
+mask_dir = PROJECT_ROOT / f"masks_{dataset_type}"
 mask_dir.mkdir(exist_ok=True, parents=True)
 
 for json_file in image_dir.glob("*.json"):

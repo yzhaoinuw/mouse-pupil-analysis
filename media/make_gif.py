@@ -15,11 +15,12 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.ticker import MaxNLocator
 from PIL import Image
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+MEDIA_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = MEDIA_DIR.parent
 DEFAULT_RUN_DIR = PROJECT_ROOT / "videos" / "eye_unified_review"
 DEFAULT_CSV = DEFAULT_RUN_DIR / "results" / "eye_pupil_analysis.csv"
 DEFAULT_OVERLAY_DIR = DEFAULT_RUN_DIR / "overlays"
-DEFAULT_OUTPUT = PROJECT_ROOT / "pupil_diameter_analysis_result_demo.gif"
+DEFAULT_OUTPUT = MEDIA_DIR / "pupil_diameter_analysis_result_demo.gif"
 REQUIRED_COLUMNS = {
     "image_name",
     "estimated_pupil_diameter",

@@ -2,7 +2,53 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-10
+
+### Document media generation and model training (Codex, GPT-5)
+
+- Added folder-local guides for rebuilding and reviewing the README GIF and for preparing masks, checking augmentation, training from scratch, fine-tuning from packaged weights, and promoting an accepted checkpoint.
+- Clarified that the current fine-tuning workflow restores model weights into a compatible UNet but creates fresh optimizer, scheduler, early-stopping, and logging state rather than exactly resuming an interrupted run.
+- Linked both guides from the root README and repository overview, and replaced the completed training-documentation follow-up with the remaining optional CLI and exact-resume work.
+- Verification:
+  - Confirmed every repository path referenced by the new guides exists.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe media\make_gif.py --help`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q tests\test_make_gif.py` (`2 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`18 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`.
+  - `git diff --check`.
+
+### Organize tracked media and training workflows (Codex, GPT-5)
+
+- Moved the README animation and its generator into `media/`, updated the README/test references, and made the generator resolve local analysis inputs from the repository root while writing its promoted GIF beside the script.
+- Moved `run_train.py`, `labelme_json2png.py`, and `check_augmentation.py` into `training/`. Replaced obsolete top-level imports with package imports and anchored their training data and checkpoint paths to the repository root so execution no longer depends on the current working directory.
+- Removed tracked `run_inference.py`: it was unused by the package and documentation, referenced an obsolete checkpoint layout, used pre-package imports, and was superseded by `run-pupil-analysis` and `pupil_tracking.pupil_predictions`.
+- Found no remaining tracked general-purpose root utility requiring a `scripts/` folder. Left ignored/untracked local sketch files and the existing `videos/` artifacts untouched.
+- Updated the repository map, maintained/generated boundaries, training instructions, and active follow-ups for the new layout.
+- Verification:
+  - Focused tests: `7 passed` across `tests/test_make_gif.py`, `tests/test_imports.py`, and `tests/test_outputs.py`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`18 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_layout_full` (`23 passed`).
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe media\make_gif.py --help`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`; the wheel and source distribution retain the packaged checkpoint and training log.
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
+
 ## 2026-08-09
+
+### Retire legacy import and output-cleanup paths (Codex, GPT-5)
+
+- Removed the `run_pupil_analysis.py` re-exports for prediction functions now owned by `pupil_predictions.py`; the CLI and repository callers already use their actual module.
+- Removed automatic deletion of the four superseded diameter/tracking result filenames. Current unified CSV/plot output behavior is unchanged, while pre-existing user files are no longer deleted during a new analysis.
+- Retained `generate_pupil_mask_prediction(...)` in `pupil_predictions.py` as a useful directory-based public helper and replaced its compatibility wording with its current purpose.
+- Verification:
+  - Focused tests: `5 passed` across `tests/test_imports.py` and `tests/test_outputs.py`.
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`
+  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`19 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
+  - `C:\Users\yzhao\miniconda3\Scripts\conda.exe run -n pupil_tracking pytest -q --basetemp .pytest_tmp_remove_legacy_full` (`22 passed`).
+  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`
+  - `git diff --check`
 
 ### Stream inference into optional tracking and overlay consumers (Codex, GPT-5)
 
