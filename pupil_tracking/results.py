@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import NamedTuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,13 +13,23 @@ import pandas as pd
 from pupil_tracking.extract_frames import ExtractedFrame
 from pupil_tracking.plotting import plot_analysis
 
+
+class DiameterRow(NamedTuple):
+    """One frame's diameter measurements, in both model and video pixels."""
+
+    image_name: str
+    estimated_pupil_diameter: float
+    pupil_diameter_video_pixels: float
+
+
 logger = logging.getLogger(__name__)
 
-DIAMETER_COLUMNS = ["image_name", "estimated_pupil_diameter"]
+DIAMETER_COLUMNS = ["image_name", "estimated_pupil_diameter", "pupil_diameter_video_pixels"]
 
 VELOCITY_COLUMNS = [
     "image_name",
     "estimated_pupil_diameter",
+    "pupil_diameter_video_pixels",
     "timestamp_seconds",
     "center_x_pixels",
     "center_y_pixels",
@@ -56,7 +67,7 @@ def build_analysis_table(
     source_index_by_name = {
         frame.image_path.name: frame.source_frame_index for frame in image_frames
     }
-    missing = [name for name, _ in results if name not in source_index_by_name]
+    missing = [row.image_name for row in results if row.image_name not in source_index_by_name]
     if missing:
         raise KeyError(
             f"{len(missing)} prediction(s) have no matching extracted frame, "
@@ -65,11 +76,12 @@ def build_analysis_table(
 
     result_rows = [
         {
-            "image_name": name,
-            "estimated_pupil_diameter": diameter,
-            "source_frame_index": source_index_by_name[name],
+            "image_name": row.image_name,
+            "estimated_pupil_diameter": row.estimated_pupil_diameter,
+            "pupil_diameter_video_pixels": row.pupil_diameter_video_pixels,
+            "source_frame_index": source_index_by_name[row.image_name],
         }
-        for name, diameter in results
+        for row in results
     ]
     result_dataframe = pd.DataFrame(result_rows).sort_values(
         "source_frame_index",

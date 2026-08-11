@@ -23,7 +23,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, InferenceDataset, resize_with_pad
+from pupil_tracking.preprocessing import (
+    MODEL_IMAGE_SIZE,
+    InferenceDataset,
+    model_to_video_length,
+    resize_with_pad,
+)
 from pupil_tracking.unet import UNet
 
 logger = logging.getLogger(__name__)
@@ -51,10 +56,22 @@ class PupilPrediction:
     probability_map: np.ndarray
     binary_mask: np.ndarray
     estimated_pupil_diameter: float
+    original_size: tuple[int, int]
 
     @property
     def image_name(self) -> str:
         return self.frame.image_path.name
+
+    @property
+    def pupil_diameter_video_pixels(self) -> float:
+        """Equivalent-circle diameter expressed in original-video pixels.
+
+        ``estimated_pupil_diameter`` is measured in the 148 x 148 model image, so it
+        is not comparable across recordings with different resolution or cropping.
+        This property inverts the resize-and-pad geometry to give a diameter that is.
+        """
+        width, height = self.original_size
+        return model_to_video_length(self.estimated_pupil_diameter, width, height)
 
 
 def find_default_checkpoint() -> Path:
@@ -92,6 +109,37 @@ def __getattr__(name: str):
     if name == "DEFAULT_CHECKPOINT":
         return find_default_checkpoint()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def load_unet_checkpoint(checkpoint_path: Path, device: torch.device) -> UNet:
+    """Load a checkpoint into a matching UNet, in eval mode on ``device``.
+
+    Whether the checkpoint uses spatial attention is read from its own weights
+    rather than assumed, so a custom ``--checkpoint`` trained without attention
+    loads correctly instead of failing on a state-dict key mismatch.
+    """
+    state_dict = torch.load(checkpoint_path, map_location=device)
+    if not isinstance(state_dict, dict):
+        raise ValueError(
+            f"{checkpoint_path} does not contain a state dict. Export the model with "
+            "torch.save(model.state_dict(), path)."
+        )
+
+    use_attention = any(key.startswith("att.") for key in state_dict)
+    model = UNet(use_attention=use_attention)
+    try:
+        model.load_state_dict(state_dict)
+    except RuntimeError as error:
+        raise ValueError(
+            f"{checkpoint_path} is not compatible with this UNet architecture. "
+            "It may come from a different model version. Original error: "
+            f"{error}"
+        ) from error
+
+    logger.info("Loaded checkpoint %s (attention: %s).", Path(checkpoint_path).name, use_attention)
+    model.to(device)
+    model.eval()
+    return model
 
 
 def _numeric_suffix(path: Path) -> tuple[int, str]:
@@ -279,6 +327,12 @@ def iter_pupil_predictions(
 
     image_paths = [frame.image_path for frame in image_frames]
     frame_by_name = {frame.image_path.name: frame for frame in image_frames}
+    # Read each header once here so tracking and diameter conversion share the
+    # lookup instead of reopening every frame downstream.
+    size_by_name = {}
+    for frame in image_frames:
+        with Image.open(frame.image_path) as original:
+            size_by_name[frame.image_path.name] = original.size
 
     logger.info("Building dataloader with batch size = %d.", batch_size)
     test_dataset = InferenceDataset(image_paths)
@@ -290,13 +344,10 @@ def iter_pupil_predictions(
     )
 
     logger.info("Loading UNet model...")
-    model = UNet(use_attention=True)
     device_name = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device_name)
     logger.info("Using inference device: %s.", device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.to(device)
-    model.eval()
+    model = load_unet_checkpoint(checkpoint_path, device)
 
     progress = tqdm(total=len(test_dataset), desc="Segmenting pupil images...", unit="image")
     try:
@@ -314,6 +365,7 @@ def iter_pupil_predictions(
                         probability_map=probabilities[index].squeeze(),
                         binary_mask=batch_binary_masks[index].squeeze(),
                         estimated_pupil_diameter=float(diameter),
+                        original_size=size_by_name[name],
                     )
                     progress.update(1)
     finally:

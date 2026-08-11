@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Breaking (packaging).** The distribution is renamed from `pupil-tracking` to
-  `mouse-pupil-analysis`. The name `pupil-tracking` on PyPI belongs to an unrelated
-  project by a different author. Install with `pip install mouse-pupil-analysis`.
-  The import name is unchanged, so existing code keeps using `import pupil_tracking`.
-
 ### Added
 
 - A public Python API. `analyze_video(...)`, `analyze_frames(...)`, `run_analysis(...)`,
@@ -27,9 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PyPI project metadata: long description, keywords, trove classifiers, and project URLs.
 - End-to-end tests that run the packaged checkpoint over a synthetic video, covering
   frame extraction, inference, velocity mode, and overlay generation.
+- `pupil_diameter_video_pixels`, a new output column reporting pupil diameter in
+  original-video pixels. The existing `estimated_pupil_diameter` is measured in the
+  148 x 148 model image and is therefore not comparable between recordings with
+  different resolution or cropping; the new column is. The old column is unchanged,
+  so existing analyses keep working.
+- Checkpoints passed with `--checkpoint` no longer have to use spatial attention.
+  The architecture is read from the checkpoint's own weights, and a genuinely
+  incompatible file now reports which checkpoint failed and why instead of raising a
+  raw state-dict key error.
 
 ### Changed
 
+- **Breaking (packaging).** The distribution is renamed from `pupil-tracking` to
+  `mouse-pupil-analysis`. The name `pupil-tracking` on PyPI belongs to an unrelated
+  project by a different author. Install with `pip install mouse-pupil-analysis`.
+  The import name is unchanged, so existing code keeps using `import pupil_tracking`.
 - Library modules log through the standard `logging` module instead of printing, so
   embedding applications can silence or capture output. Console scripts configure a
   plain handler, leaving terminal output unchanged.
@@ -47,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `importlib.resources.as_file` block.
 - The pupil-diameter conversion factor is derived from `4 / pi` and named, rather than
   appearing as the literal `1.27`. Results are unchanged.
+- Frame-to-frame kinematics are computed column-wise rather than row by row, which
+  matters for long recordings. Verified equivalent to the previous implementation over
+  randomized inputs covering gaps, invalid frames, and varied acquisition rates.
+- Source-image dimensions are read once during inference and reused, removing a
+  per-frame file open from velocity mode.
+- `training/run_train.py` pairs each image with the mask sharing its filename stem and
+  fails loudly on a mismatch. Previously it sorted the two directories independently,
+  which silently trained against misaligned labels whenever the folders diverged. The
+  script also seeds `random`, `numpy`, and `torch`.
 
 ### Deprecated
 

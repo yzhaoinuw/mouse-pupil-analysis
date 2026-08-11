@@ -10,10 +10,9 @@ from typing import Protocol
 import cv2
 import numpy as np
 import pandas as pd
-from PIL import Image
 
 from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE
+from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, resize_scale
 
 MIN_COMPONENT_DOMINANCE = 0.80
 MIN_MEAN_COMPONENT_CONFIDENCE = 0.90
@@ -31,9 +30,13 @@ class PupilPredictionLike(Protocol):
     probability_map: np.ndarray
     binary_mask: np.ndarray
     estimated_pupil_diameter: float
+    original_size: tuple[int, int]
 
     @property
     def image_name(self) -> str: ...
+
+    @property
+    def pupil_diameter_video_pixels(self) -> float: ...
 
 
 def model_to_original_coordinates(
@@ -44,22 +47,11 @@ def model_to_original_coordinates(
     target_size: int = MODEL_IMAGE_SIZE,
 ) -> tuple[float, float]:
     """Invert the aspect-ratio-preserving resize and padding used for inference."""
-    if original_width <= 0 or original_height <= 0:
-        raise ValueError("Original image dimensions must be positive.")
-    if target_size <= 0:
-        raise ValueError("Target size must be positive.")
-
-    if original_width >= original_height:
-        resized_width = target_size
-        resized_height = int(round(original_height * target_size / original_width))
-    else:
-        resized_height = target_size
-        resized_width = int(round(original_width * target_size / original_height))
-
-    pad_left = (target_size - resized_width) // 2
-    pad_top = (target_size - resized_height) // 2
-    scale_x = resized_width / original_width
-    scale_y = resized_height / original_height
+    scale_x, scale_y, pad_left, pad_top = resize_scale(
+        original_width,
+        original_height,
+        target_size,
+    )
 
     original_x = (center_x - pad_left) / scale_x
     original_y = (center_y - pad_top) / scale_y
@@ -207,12 +199,10 @@ class TrackingAccumulator:
 
     def add(self, prediction: PupilPredictionLike) -> None:
         """Measure one prediction without retaining its float probability map."""
-        with Image.open(prediction.frame.image_path) as original:
-            original_size = original.size
         measurement, _, _ = measure_probability_map(
             prediction.probability_map,
             pred_thresh=self.pred_thresh,
-            original_size=original_size,
+            original_size=prediction.original_size,
             binary_mask=prediction.binary_mask,
         )
         measurement.update(
@@ -220,6 +210,7 @@ class TrackingAccumulator:
                 "image_name": prediction.image_name,
                 "source_frame_index": prediction.frame.source_frame_index,
                 "estimated_pupil_diameter": prediction.estimated_pupil_diameter,
+                "pupil_diameter_video_pixels": prediction.pupil_diameter_video_pixels,
             }
         )
         self.measurements.append(measurement)
@@ -313,48 +304,31 @@ def build_tracking_dataframe(
     dataframe["center_x_pixels"] = dataframe["raw_center_x_pixels"].where(valid, np.nan)
     dataframe["center_y_pixels"] = dataframe["raw_center_y_pixels"].where(valid, np.nan)
 
-    kinematic_columns = [
-        "displacement_x_pixels",
-        "displacement_y_pixels",
-        "velocity_x_pixels_per_second",
-        "velocity_y_pixels_per_second",
-        "speed_pixels_per_second",
-    ]
-    for column in kinematic_columns:
-        dataframe[column] = np.nan
+    # Kinematics are only defined between immediately consecutive source frames whose
+    # segmentations are both usable. Everything else stays missing; the pipeline never
+    # bridges a gap. Computed column-wise so long recordings stay fast.
+    source_indices = dataframe["source_frame_index"].to_numpy(dtype=float)
+    timestamps = dataframe["timestamp_seconds"].to_numpy(dtype=float)
+    center_x = dataframe["center_x_pixels"].to_numpy(dtype=float)
+    center_y = dataframe["center_y_pixels"].to_numpy(dtype=float)
+    valid_pair = valid.to_numpy(dtype=bool)
 
-    for index in range(1, len(dataframe)):
-        previous_index = index - 1
-        current_source_index = int(dataframe.at[index, "source_frame_index"])
-        previous_source_index = int(dataframe.at[previous_index, "source_frame_index"])
-        if current_source_index - previous_source_index != 1:
-            continue
-        if not bool(dataframe.at[index, "segmentation_valid"]) or not bool(
-            dataframe.at[previous_index, "segmentation_valid"]
-        ):
-            continue
+    delta_time = np.diff(timestamps, prepend=np.nan)
+    consecutive = np.diff(source_indices, prepend=np.nan) == 1
+    both_valid = np.concatenate(([False], valid_pair[1:] & valid_pair[:-1]))
+    usable = consecutive & both_valid & (delta_time > 0)
 
-        delta_time = float(
-            dataframe.at[index, "timestamp_seconds"]
-            - dataframe.at[previous_index, "timestamp_seconds"]
-        )
-        if delta_time <= 0:
-            continue
-
-        delta_x = float(
-            dataframe.at[index, "center_x_pixels"] - dataframe.at[previous_index, "center_x_pixels"]
-        )
-        delta_y = float(
-            dataframe.at[index, "center_y_pixels"] - dataframe.at[previous_index, "center_y_pixels"]
-        )
+    delta_x = np.where(usable, np.diff(center_x, prepend=np.nan), np.nan)
+    delta_y = np.where(usable, np.diff(center_y, prepend=np.nan), np.nan)
+    with np.errstate(invalid="ignore", divide="ignore"):
         velocity_x = delta_x / delta_time
         velocity_y = delta_y / delta_time
 
-        dataframe.at[index, "displacement_x_pixels"] = delta_x
-        dataframe.at[index, "displacement_y_pixels"] = delta_y
-        dataframe.at[index, "velocity_x_pixels_per_second"] = velocity_x
-        dataframe.at[index, "velocity_y_pixels_per_second"] = velocity_y
-        dataframe.at[index, "speed_pixels_per_second"] = math.hypot(velocity_x, velocity_y)
+    dataframe["displacement_x_pixels"] = delta_x
+    dataframe["displacement_y_pixels"] = delta_y
+    dataframe["velocity_x_pixels_per_second"] = velocity_x
+    dataframe["velocity_y_pixels_per_second"] = velocity_y
+    dataframe["speed_pixels_per_second"] = np.hypot(velocity_x, velocity_y)
 
     return dataframe
 

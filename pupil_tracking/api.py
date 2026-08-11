@@ -21,7 +21,7 @@ from pupil_tracking.pupil_predictions import (
     frames_from_image_directory,
     iter_pupil_predictions,
 )
-from pupil_tracking.results import write_analysis_outputs
+from pupil_tracking.results import DiameterRow, write_analysis_outputs
 from pupil_tracking.tracking import TrackingAccumulator
 
 logger = logging.getLogger(__name__)
@@ -178,7 +178,13 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         batch_size=config.batch_size,
         num_workers=config.num_workers,
     ):
-        results.append((prediction.image_name, prediction.estimated_pupil_diameter))
+        results.append(
+            DiameterRow(
+                prediction.image_name,
+                prediction.estimated_pupil_diameter,
+                prediction.pupil_diameter_video_pixels,
+            )
+        )
         if tracking_accumulator is not None:
             tracking_accumulator.add(prediction)
         if overlay_accumulator is not None:
@@ -191,7 +197,9 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         overlay_accumulator.save(image_frames, tracking_dataframe=tracking_dataframe)
 
     result_dir = _resolve_result_dir(config)
-    exp_name = "_".join(Path(results[0][0]).stem.split("_")[:-1]) if results else "experiment"
+    exp_name = (
+        "_".join(Path(results[0].image_name).stem.split("_")[:-1]) if results else "experiment"
+    )
     analysis_table, csv_path, plot_path = write_analysis_outputs(
         results,
         image_frames,

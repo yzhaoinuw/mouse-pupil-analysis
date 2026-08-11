@@ -5,8 +5,10 @@ Created on Sun Sep 28 23:09:41 2025
 @author: yzhao
 """
 
+import random
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -36,8 +38,26 @@ def iou_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
 
 # -------------------- Data Preparation -------------------- #
 def make_dataset(image_dir, mask_dir, augment=False):
+    """Pair each image with the mask sharing its filename stem.
+
+    Sorting the two directories independently silently misaligns images and masks
+    as soon as the folders diverge, which trains the model against wrong labels
+    without any error. labelme_json2png.py writes each mask as <image stem>.png,
+    so the stem is the reliable key.
+    """
     image_paths = sorted(Path(image_dir).glob("*.png"))
-    mask_paths = sorted(Path(mask_dir).glob("*.png"))
+    if not image_paths:
+        raise FileNotFoundError(f"No PNG images found in {image_dir}")
+
+    mask_by_stem = {path.stem: path for path in Path(mask_dir).glob("*.png")}
+    unmatched = [path.name for path in image_paths if path.stem not in mask_by_stem]
+    if unmatched:
+        raise FileNotFoundError(
+            f"{len(unmatched)} image(s) in {image_dir} have no mask in {mask_dir}, "
+            f"starting with {unmatched[0]!r}."
+        )
+
+    mask_paths = [mask_by_stem[path.stem] for path in image_paths]
     return SegmentationDataset(image_paths, mask_paths, augment=augment)
 
 
@@ -47,6 +67,15 @@ notable_iou = 0.85
 patience = 20
 n_epochs = 200
 use_attention = True
+seed = 0
+
+# Seed every source of randomness the training loop touches: augmentation uses the
+# `random` module, weight initialization and dropout use torch. Set this before the
+# datasets and model are constructed. Runs remain only approximately reproducible on
+# GPU unless deterministic kernels are also enabled.
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 checkpoint_dir = PROJECT_ROOT / "checkpoints_exp"
 checkpoint_dir.mkdir(parents=True, exist_ok=True)

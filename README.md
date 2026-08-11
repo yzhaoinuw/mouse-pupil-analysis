@@ -108,6 +108,7 @@ For the end-to-end methodology—from segmentation probabilities through pupil-c
 | `--max_frames`      | Optional. Limits the maximum number of frames to extract from a video (default: 10,000). Useful for long recordings.        |
 | `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for classifying a pixel as belonging to the pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel only if model confidence exceeds 0.7. Increase it if the resulting segmentation overpredicts the pupil; reduce it if the resulting segmentation only finds part of the pupil. |  
 | `--calculate_velocity` | Optional. Analyzes every encoded source frame and appends pupil-center, speed, and segmentation-quality fields and plot panels to the unified analysis outputs. |
+| `--num_workers`     | Optional. Number of dataloader worker processes (default: up to 4, capped by CPU count). Use `0` to load frames in the main process, which is often faster for short recordings. |
 | `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. In velocity mode this is required with `--image_dir`; with video input it defaults to the video header rate when omitted. |
 
 ---
@@ -206,13 +207,29 @@ After running, you’ll typically find:
 
 | File | Description |
 |------|--------------|
-| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
+| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter in both model and video pixels. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
 | `*_pupil_analysis.png` | Unified frame-indexed plot. Velocity mode appends x/y center, speed, and valid/warning/invalid quality-control panels below pupil diameter. |
 | *(optional)* Mask images in `output_mask_dir` | PNGs with a translucent yellow-orange-red confidence heatmap over threshold-passing pupil pixels. Velocity mode also marks the raw pupil center with a thin translucent cross: cyan for accepted candidates and yellow for rejected candidates. |
+
+### Units
+
+Pupil diameter is reported twice, in two different units:
+
+- `estimated_pupil_diameter` is measured in the 148 x 148 model image. Because every
+  frame is rescaled to that size, this value is **not comparable between recordings**
+  with different resolution or cropping. It is kept for continuity with earlier results.
+- `pupil_diameter_video_pixels` inverts the resize-and-pad geometry to express the same
+  measurement in original-video pixels. **Use this one when comparing across recordings.**
+
+Both are equivalent-circle diameters: the diameter of a circle whose area matches the
+segmented pupil mask, `sqrt(4 / pi * area)`.
 
 Pupil-center coordinates are reported in original-video pixels. The x
 coordinate increases to the right and the y coordinate increases downward.
 Velocity is reported in pixels per second.
+
+Neither unit is physical. Converting to millimeters requires a scale factor from your
+own optics, which this package does not attempt to infer.
 
 The compact analysis CSV reports `tracking_status` as `valid`, `warning`, or
 `invalid`, with `quality_reason` identifying suspicious or rejected frames.
