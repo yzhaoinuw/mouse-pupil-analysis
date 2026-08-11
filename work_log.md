@@ -4,6 +4,35 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Broaden CI coverage and guard release metadata (Claude Code, Opus 5)
+
+- Added Windows and macOS jobs to CI and extended the Python range to 3.13. Windows is the primary development platform and had never been covered by CI.
+- Aligned the pre-commit black and ruff pins with the dev extra (they had drifted to 24.10.0 and v0.12.9 against 25.1.0 and 0.14.14) and added a pre-commit job so the hooks and CI can no longer disagree about formatting.
+- Added `tests/test_metadata.py` asserting that `__version__`, `pyproject.toml`, `CITATION.cff`, and `CHANGELOG.md` agree, and that `__all__` matches the lazy export map. A DOI is only useful if the recorded version is real.
+- Caught while adding that test: it used `tomllib`, which is Python 3.11+, while `requires-python` allows 3.10 and CI tests it. The import is now guarded and the module skips on 3.10. Verified by executing the module header with `tomllib` blocked.
+- Moved the `media/make_gif.py` load into a fixture so a missing script skips instead of breaking collection.
+- Deleted `requirements.txt`, which duplicated `[project].dependencies` with no declared ownership.
+- Documented the macOS environment paths in `AGENTS.md` alongside the existing Windows ones, and recorded the console-script removal hazard when uninstalling the superseded distribution.
+- Verification:
+  - `ruff check .`, `black --check .` (28 files unchanged), `pytest` (`40 passed`).
+  - `pre-commit run --all-files` with the synced pins (`black Passed`, `ruff Passed`).
+  - Confirmed the previous push's CI run succeeded before layering these changes.
+
+### Report pupil diameter in video pixels and harden model loading (Claude Code, Opus 5)
+
+- Added a `pupil_diameter_video_pixels` output column. `estimated_pupil_diameter` measures the 148 x 148 model image, so it is not comparable between recordings with different resolution or cropping; the new column inverts the resize-and-pad geometry. The existing column is unchanged, per the additive approach the user chose.
+- Centralized the resize geometry in `preprocessing.resize_scale`, which `model_to_original_coordinates` now also uses, removing a duplicated derivation. Area-derived lengths convert by the geometric mean of the two axis scales, since areas scale by their product.
+- Replaced the assumption that every checkpoint uses spatial attention with inference from the checkpoint's own state-dict keys, so a non-attention `--checkpoint` loads and a genuinely incompatible file reports what failed. Chose this over the planned JSON sidecar manifest because it needs no new files and works for checkpoints that have none.
+- Fixed a silent correctness bug in `training/run_train.py`: images and masks were paired by sorting two directories independently, which trains against misaligned labels whenever the folders diverge. Pairing is now by filename stem, which `labelme_json2png.py` guarantees, with a loud error on mismatch. Added seeding for `random`, `numpy`, and `torch`.
+- Deliberately did not wrap `run_train.py` in a `main()` function, despite the original plan. The user runs these scripts cell by cell in an IDE, and moving module-level state into a function breaks that workflow. The pairing bug and the missing seed were the substantive issues.
+- Vectorized the frame-to-frame kinematics and moved per-frame image-size reads into the single inference pass.
+- Verification:
+  - `ruff check .`, `black --check .`, `pytest` (`35 passed`), `python -m build`.
+  - Differential test of the vectorized kinematics against the original row loop over 300 randomized cases covering source-index gaps, invalid segmentations, and acquisition rates of 10, 33.3333, and 100 fps: zero mismatches.
+  - Verified the diameter conversion on a real pipeline run: for a 200 x 160 frame the observed ratio was 1.35364 against an expected `1 / sqrt(0.7400 * 0.7375)` of 1.35364.
+  - Verified checkpoint loading for the packaged attention checkpoint, a freshly saved non-attention checkpoint, and a deliberately incompatible file.
+  - Verified the stem pairing and its error path against temporary directories with deliberately mismatched creation order.
+
 ### Add a public Python API and split the pipeline into focused modules (Claude Code, Opus 5)
 
 - Extracted orchestration out of the CLI into `api.py`. `AnalysisConfig` holds and validates every input; `run_analysis` returns an `AnalysisResult` carrying the analysis table, both output paths, frame metadata, and the internal tracking DataFrame. `analyze_video` and `analyze_frames` are the keyword front door.

@@ -4,7 +4,8 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Runtime modularization](#runtime-modularization) - streaming inference, optional tracking, and overlays now have separate boundaries; next assess result-table and plotting responsibilities.
+- [Packaging and distribution](#packaging-and-distribution) - the `refactor` branch renames the distribution and adds release automation; the PyPI publisher and Zenodo webhook still need account actions.
+- [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on the `refactor` branch.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
@@ -12,14 +13,28 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
-## Runtime Modularization
+## Packaging And Distribution
 
-Status: inference streams transient prediction records through one model pass; tracking and overlay accumulators consume them only when requested, while `run_pupil_analysis.py` owns workflow composition
+Status: implemented on the `refactor` branch; blocked on two account actions before a release can be cut
+
+The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
 Remaining work:
 
-- Review `save_analysis_results(...)` as the next possible extraction, keeping table and plotting responsibilities cohesive rather than splitting functions only to reduce file length.
-- Review the repository-root training and utility scripts separately after the active packaged runtime has clear module boundaries.
+- Register the pending PyPI publisher and enable the Zenodo webhook. Both are account actions; exact field values are in [`RELEASING.md`](RELEASING.md).
+- After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
+- Decide whether the packaging rename ships as `0.2.0`.
+
+## Runtime Modularization
+
+Status: complete on the `refactor` branch
+
+`api.py` owns orchestration behind `AnalysisConfig`/`run_analysis`, with `analyze_video` and `analyze_frames` as the public front door. `run_pupil_analysis.py` is argument parsing only. Table assembly and plotting live in `results.py` and `plotting.py`; `dataset.py` split into `preprocessing.py` and `augmentation.py` with a deprecating shim. Library code logs instead of printing.
+
+Remaining work:
+
+- Remove the `dataset.py` shim and the deprecated `generate_pupil_mask_prediction` after one release.
+- Decide whether the unified plot should show `pupil_diameter_video_pixels` instead of the model-pixel column, now that both are exported. This changes the appearance of the README demo, so it is deliberately deferred.
 
 ## Pupil-Center Velocity
 

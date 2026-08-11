@@ -10,19 +10,30 @@ At the beginning of a new chat or agent session, read this file first. Do not au
 
 ## Runtime Environment
 
-Use the local miniconda environment named `pupil_tracking`:
+Use the local miniconda environment named `pupil_tracking` on every platform:
 
 ```powershell
 conda activate pupil_tracking
 ```
 
-All environments are under `C:\Users\yzhao\miniconda3\envs\`. If `conda` is unavailable, run the environment Python directly:
+Windows is the primary development platform; a macOS environment is also in use. Check which one you are on before copying any absolute path below.
+
+**Windows.** Environments live under `C:\Users\yzhao\miniconda3\envs\`. If `conda` is unavailable, run the environment Python directly:
 
 ```powershell
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe
 ```
 
 For environment console scripts in plain PowerShell, prepend `C:\Users\yzhao\miniconda3\envs\pupil_tracking\Scripts` to `PATH`.
+
+**macOS.** Environments live under `/Users/yuezhao/miniconda3/envs/`. The equivalent direct interpreter and script directory are:
+
+```bash
+/Users/yuezhao/miniconda3/envs/pupil_tracking/bin/python
+/Users/yuezhao/miniconda3/envs/pupil_tracking/bin   # prepend to PATH for console scripts
+```
+
+If the environment does not exist yet, create it with `conda create -n pupil_tracking python=3.12` followed by `pip install -e ".[dev]"`.
 
 ## Common Tasks
 
@@ -53,6 +64,17 @@ For packaging changes, also run:
 ```powershell
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist
 ```
+
+On macOS or Linux the same checks are:
+
+```bash
+ruff check .
+black --check .
+pytest
+python -m build --wheel --sdist
+```
+
+Note that reinstalling under the current distribution name after an environment previously held the old `pupil-tracking` distribution requires `pip uninstall pupil-tracking` first, then `pip install -e ".[dev]"`. Both distributions declare the same console-script names, so uninstalling either one removes `run-pupil-analysis` and `extract-frames` until the remaining one is reinstalled.
 
 Before committing, confirm Ruff, Black, and Pytest are clean; package builds still contain the tracked checkpoint and training log when relevant; and `work_log.md` records the verification actually run.
 
