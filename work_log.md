@@ -4,6 +4,17 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Merge the sample fixture and add real-image regression coverage (Claude Code, Opus 5)
+
+- Merged `origin/dev` into `refactor` ahead of a pull request. `training/run_train.py` and `training/check_augmentation.py` auto-merged cleanly: dev's editable `DATA_ROOT` and this branch's stem-based image/mask pairing and seeding compose without conflict. Both branches had independently performed the same five-date work-log rotation and produced byte-identical archive files, so that did not conflict either. The three documentation conflicts were additive and resolved by keeping both sides.
+- Added `tests/test_real_images.py`, which runs the packaged checkpoint over `sample_data/`. This is the coverage that `test_end_to_end.py` cannot provide: a synthetic blob segments plausibly regardless of which weights are loaded, so only real frames detect a corrupted or swapped checkpoint or a `resize_with_pad` regression. Landmarks are asserted as ranges rather than exact values so the tests survive platform floating-point differences.
+- The two uncropped fixture recordings have different source resolutions, 284 x 156 and 304 x 176, which is what makes the video-pixel diameter conversion verifiable against real geometry rather than a synthetic frame.
+- **Corrected an inaccurate changelog claim.** The 0.1.4 entry stated that deriving the equivalent-circle constant from `4 / pi` instead of the rounded literal `1.27` left results unchanged. It does not: reported diameters are a factor of `sqrt(4 / pi / 1.27)` = 1.001275 larger, or +0.1275%. The discrepancy surfaced because the fixture's documented diameter range of 18.38 to 25.38 model pixels reproduced as 18.40 to 25.41, which is exactly that factor. The changelog now states the change and warns against pooling diameters across the version boundary; `sample_data/README.md` records the updated range and why it moved.
+- Verification:
+  - `ruff check .`, `black --check .` (30 files unchanged), `pytest` (`49 passed`).
+  - Reproduced every other documented velocity landmark after the refactor: 31 rows, 27 `valid` and 4 `warning`, all warnings `abrupt_area_change`, 30 of 30 possible speeds published, and timestamp spacing of exactly 1/97 s.
+  - `python -m build`; the source distribution carries the checkpoint and all 61 sample PNGs at 3.09 MB, while the wheel carries the checkpoint and no sample data at 1.78 MB.
+
 ### Add a portable real-data fixture (Codex, GPT-5)
 
 - Added `sample_data/` with eight curated training image/mask pairs, four validation pairs, six uncropped frames grouped by recording, and 31 consecutive velocity frames from source frames `07212`-`07242` at 97 Hz.
