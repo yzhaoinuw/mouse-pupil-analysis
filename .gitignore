@@ -57,10 +57,10 @@ build/
 checkpoints_exp/
 images_test*/
 images_test*_result/
-images_train/
-images_validation/
-masks_train/
-masks_validation/
+/images_train/
+/images_validation/
+/masks_train/
+/masks_validation/
 predicted_masks*/
 predictions_test/
 

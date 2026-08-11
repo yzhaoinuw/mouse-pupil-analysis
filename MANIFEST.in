@@ -1,3 +1,5 @@
 include pupil_tracking/checkpoints/*.pth
 include pupil_tracking/checkpoints/*.txt
+recursive-include sample_data *.csv *.md *.png
+recursive-include training *.md *.py
 prune pupil_tracking/checkpoints/archive

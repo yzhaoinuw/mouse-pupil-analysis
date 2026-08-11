@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PyPI project metadata: long description, keywords, trove classifiers, and project URLs.
 - End-to-end tests that run the packaged checkpoint over a synthetic video, covering
   frame extraction, inference, velocity mode, and overlay generation.
+- Real-image regression tests over the committed `sample_data/` fixture. Synthetic input
+  segments plausibly regardless of which weights are loaded, so these catch a corrupted
+  or swapped checkpoint and preprocessing regressions that the synthetic tests cannot.
 - `pupil_diameter_video_pixels`, a new output column reporting pupil diameter in
   original-video pixels. The existing `estimated_pupil_diameter` is measured in the
   148 x 148 model image and is therefore not comparable between recordings with
@@ -51,8 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   importing the package no longer touches the filesystem or fails when checkpoints are
   absent. Checkpoint lookup also no longer returns a path from an exited
   `importlib.resources.as_file` block.
-- The pupil-diameter conversion factor is derived from `4 / pi` and named, rather than
-  appearing as the literal `1.27`. Results are unchanged.
+- **Pupil diameters change by +0.1275%.** The equivalent-circle conversion factor was
+  the rounded literal `1.27`; it is now derived exactly as `4 / pi` (1.273240). Reported
+  diameters are therefore a factor of `sqrt(4 / pi / 1.27)` = 1.001275 larger than in
+  0.1.4. The difference is far below segmentation noise, but it is not nothing: do not
+  pool diameters computed across this version boundary without noting it.
 - Frame-to-frame kinematics are computed column-wise rather than row by row, which
   matters for long recordings. Verified equivalent to the previous implementation over
   randomized inputs covering gaps, invalid frames, and varied acquisition rates.

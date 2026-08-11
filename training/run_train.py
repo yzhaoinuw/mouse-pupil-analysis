@@ -18,6 +18,7 @@ from pupil_tracking.augmentation import SegmentationDataset
 from pupil_tracking.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
 
 # -------------------- Metrics -------------------- #
@@ -81,13 +82,13 @@ checkpoint_dir = PROJECT_ROOT / "checkpoints_exp"
 checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
 train_dataset = make_dataset(
-    PROJECT_ROOT / "images_train",
-    PROJECT_ROOT / "masks_train",
+    DATA_ROOT / "images_train",
+    DATA_ROOT / "masks_train",
     augment=True,
 )
 val_dataset = make_dataset(
-    PROJECT_ROOT / "images_validation",
-    PROJECT_ROOT / "masks_validation",
+    DATA_ROOT / "images_validation",
+    DATA_ROOT / "masks_validation",
     augment=False,
 )
 

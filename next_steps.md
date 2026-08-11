@@ -9,7 +9,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
-- [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - blocked on data-sharing permission; the user is emailing collaborators as of 2026-08-10.
+- [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
@@ -280,68 +280,38 @@ Remaining work:
 
 ## Sample Data For Examples And Regression Tests
 
-Status: blocked on data-sharing permission; the user is emailing collaborators for approval as of 2026-08-10
+Status: complete
 
-A small curated sample of training images and masks should be committed so the
-labeling workflow is concrete for outside users and so inference has a real-image
-regression test. This supersedes the fixture question parked under
-[Portable End-To-End Fixture](#portable-end-to-end-fixture).
+Redistribution permission was cleared and the fixture landed on `dev` as `sample_data/`:
+eight paired training crops, four paired validation crops, six uncropped frames from two
+recordings at 284 x 156 and 304 x 176, and 31 consecutive velocity frames at 97 Hz, with
+a provenance manifest.
 
-### Why Both Kinds Of Fixture Are Needed
-
-A synthetic frame generated in-test verifies plumbing only: array shapes, CSV
-schema, and files written. It cannot detect a corrupted checkpoint, a regression
-in `resize_with_pad`, or a silent architecture mismatch, because a synthetic blob
-segments plausibly either way. Keep the synthetic end-to-end test for wiring and
-add a real-image test that pins an expected diameter within tolerance.
-
-### Requested Contents
-
-- Four to six image/mask pairs, chosen for variety rather than volume: one clean
-  mid-dilation pupil, one strongly constricted, one strongly dilated, and one with
-  partial eyelid occlusion. The occlusion case doubles as a visual reference when a
-  user tunes `--pred_thresh`.
-- At least one full-resolution original video frame, not only the 148 x 148 crop.
-  Verifying the model-pixel to video-pixel inverse transform for the additive
-  diameter column requires a frame with real source dimensions.
-- Approximately 1 MB total. At 148 x 148 grayscale PNG this is not a binding limit.
-
-### Destination
-
-Commit to `examples/sample_data/images/` and `examples/sample_data/masks/`.
-
-Do not use `images_train/`, `masks_train/`, `images_validation/`, or
-`masks_validation/`. All four are ignored in `.gitignore`, so the sample would be
-silently dropped, and it would also mix into the local training data folders.
-
-### Scope Boundary
-
-The full training set stays local. Repository contents are archived permanently
-into every Zenodo release and into Git history. Deposit the complete dataset
-separately with its own data DOI so the software and data records cross-reference
-each other.
+`tests/test_real_images.py` runs the packaged checkpoint over that fixture. It is the
+only test that can detect a corrupted or swapped checkpoint, because synthetic input
+segments plausibly regardless of the weights. Having two source resolutions is what
+makes the video-pixel diameter conversion verifiable against real geometry.
 
 Remaining work:
 
-- Obtain redistribution permission before committing any frames; confirm no IACUC
-  or collaborator restriction applies.
-- Select and commit the pairs, then add the real-image inference regression test.
-- Decide whether the sample should also support an opt-in one-epoch CPU training
-  smoke test, since `training/run_train.py` currently has no coverage.
+- None. Keep the fixture compact; see the note under
+  [Portable End-To-End Fixture](#portable-end-to-end-fixture).
 
 ## Background / Paused
 
 ### Portable End-To-End Fixture
 
-Status: tracked media and training utilities now have dedicated root folders; ignored local sketches and generated analysis artifacts remain outside the maintained source layout
+Status: implemented with a compact public `sample_data/` fixture
 
-The current tests cover package import and CLI help. There is no small committed video/frame fixture for end-to-end inference.
+The repository now includes eight paired training crops, four paired validation crops, six uncropped inference frames, and a 31-frame consecutive velocity sequence. The sample guide covers clone-and-run segmentation, overlays, velocity, augmentation, and training plumbing; lightweight tests protect the fixture structure and provenance manifest.
 
-Superseded by [Sample Data For Examples And Regression Tests](#sample-data-for-examples-and-regression-tests), which resolves the curated-frame question and adds the real-image regression test. The synthetic-video half of the work is tracked there and remains unblocked.
+The fixture is intentionally an exploration and smoke-test resource rather than a benchmark or useful training dataset.
+
+Both halves of the original fixture question are now closed. `tests/test_end_to_end.py` covers the synthetic-video path, and `tests/test_real_images.py` runs the packaged checkpoint over `sample_data/`. No model download is involved, because the checkpoint ships as package data.
 
 Remaining work:
 
-- Add a synthetic-video smoke test that exercises inference without relying on large local data folders.
+- Keep the fixture compact and expand it only for a specific uncovered behavior.
 
 ### Local Artifact Cleanup
 
