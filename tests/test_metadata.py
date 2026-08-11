@@ -1,0 +1,63 @@
+"""Guard the metadata that a citation depends on.
+
+A DOI is only useful if the version recorded in the package, the build metadata,
+and the citation file all agree. These checks are cheap and catch drift before a
+release rather than after one is archived.
+"""
+
+import re
+from pathlib import Path
+
+import pytest
+
+import pupil_tracking
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 predates tomllib.
+    tomllib = None
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PYPROJECT = PROJECT_ROOT / "pyproject.toml"
+CITATION = PROJECT_ROOT / "CITATION.cff"
+
+pytestmark = pytest.mark.skipif(
+    not PYPROJECT.is_file() or tomllib is None,
+    reason="Metadata checks need a source checkout and tomllib (Python 3.11+).",
+)
+
+
+def _project() -> dict:
+    return tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
+
+
+def test_installed_version_matches_pyproject():
+    assert pupil_tracking.__version__ == _project()["version"]
+
+
+def test_citation_version_matches_pyproject():
+    citation = CITATION.read_text(encoding="utf-8")
+    match = re.search(r'^version:\s*"?([^"\n]+)"?\s*$', citation, re.MULTILINE)
+
+    assert match is not None, "CITATION.cff has no version field."
+    assert match.group(1).strip() == _project()["version"]
+
+
+def test_distribution_name_is_the_published_one():
+    # The import name and the distribution name intentionally differ; __init__
+    # looks the version up by distribution name, so a rename must update both.
+    assert _project()["name"] == "mouse-pupil-analysis"
+
+
+def test_public_api_matches_the_lazy_export_map():
+    expected = set(pupil_tracking._EXPORTS) | {"__version__"}
+
+    assert set(pupil_tracking.__all__) == expected
+    for name in pupil_tracking.__all__:
+        assert getattr(pupil_tracking, name) is not None
+
+
+def test_changelog_records_the_current_version():
+    changelog = (PROJECT_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    assert f"## [{_project()['version']}]" in changelog

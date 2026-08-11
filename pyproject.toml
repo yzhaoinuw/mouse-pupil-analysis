@@ -62,6 +62,10 @@ pupil_tracking = ["checkpoints/archive/*"]
 requires = ["setuptools>=80.9"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
 [tool.black]
 line-length = 100
 target-version = ["py310"]
@@ -80,6 +84,11 @@ exclude = ["archive", "sketch*.py"]
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+# tomllib is stdlib from 3.11; requires-python allows 3.10, where it is imported
+# defensively in tests. Classify it as stdlib so import order stays stable.
+extra-standard-library = ["tomllib"]
 
 [project.optional-dependencies]
 dev = [
