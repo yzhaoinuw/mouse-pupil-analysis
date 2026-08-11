@@ -6,6 +6,7 @@ import argparse
 import re
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -14,6 +15,12 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.ticker import MaxNLocator
 from PIL import Image
+
+# This script only writes a GIF; it never shows a window. Without this, pyplot picks
+# an interactive backend at first figure creation and fails on any machine with no
+# display or a broken Tk, such as a cluster node, a container, or SSH without X.
+# Backend resolution is lazy, so setting it after the imports is still in time.
+matplotlib.use("Agg")
 
 MEDIA_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = MEDIA_DIR.parent

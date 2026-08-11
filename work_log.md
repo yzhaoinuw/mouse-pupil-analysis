@@ -4,6 +4,15 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Make the demo GIF script headless-safe (Claude Code, Opus 5)
+
+- `media/make_gif.py` still created figures through `pyplot`, so it carried the same interactive-backend dependency that was removed from the package. It writes a GIF and never calls `plt.show()`, so it was requesting a GUI backend it never used and would fail on any machine without a display.
+- Pinned the backend with `matplotlib.use("Agg")`. Placed after the import block rather than between imports, because this repository's Ruff configuration enables `E402`; verified that backend resolution is lazy enough for that to still take effect before the first figure is created.
+- Chose the one-line backend pin over converting the script to direct `Figure` construction, as the user selected. It is a maintainer script rather than library code, and the script never displays anything, so nothing observable changes.
+- Verification:
+  - Loaded the script through `runpy` with `tkinter` and `_tkinter` imports blocked and `MPLBACKEND=TkAgg` forced, then rendered a figure at the same call site that previously failed. Backend resolved to `Agg`.
+  - `ruff check .`, `black --check .`, `pytest` (`60 passed`), and `make_gif.py --help` unchanged.
+
 ### Align center and speed unit wording with the diameter contract (Claude Code, Opus 5)
 
 - Applied the same input-image qualification to pupil-center coordinates and speed that the diameter column already carried. `model_to_original_coordinates` maps through `original_size`, which is the supplied image, so centers are source-video pixels only for video input; with `--image_dir` they follow whatever the caller prepared. Updated the README output table and units section, the tracking plot's center axis label, the `DiameterRow` and `resize_scale` docstrings, `sample_data/README.md`, `next_steps.md`, and three test comments. The calculation is unchanged; only the claims about it were wrong.
