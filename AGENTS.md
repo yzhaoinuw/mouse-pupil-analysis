@@ -68,6 +68,8 @@ Prefer `dev` for ordinary development unless the user requests another branch; `
 
 Treat commit + push + tag, "cut a release," or "publish version X" as a release. Clear the documentation/version/verification gate before tagging, then verify remote refs. See [Release Gate](treaty_conventions.md#release-gate).
 
+For the PyPI and Zenodo mechanics specific to this project — version metadata locations, the tag/citation/checkpoint checks enforced by `.github/workflows/release.yml`, and the DOI follow-up commit — see [`RELEASING.md`](RELEASING.md).
+
 ## Updating The Treaty
 
 Only update the treaty when the user asks. Use the stable treaty CLI to run `treaty diff`, preview with `treaty update --dry-run`, apply with `treaty update`, resolve any conflicts, and validate. See [Updating The Treaty](treaty_conventions.md#updating-the-treaty).
@@ -81,7 +83,10 @@ Read only what the task needs:
 - `next_steps.md`: unfinished work; "Currently Hot" identifies active threads.
 - `work_log.md` and `work_log_archive/`: recent decisions and verification evidence; read the two latest dates when history matters.
 - `README.md`: user-facing installation, usage, packaging, and I/O expectations.
+- `RELEASING.md`: PyPI Trusted Publishing setup, Zenodo archiving, and the per-release sequence.
+- `CHANGELOG.md`: user-facing change history; update the `Unreleased` section as features land.
 - `.github/workflows/ci.yml`: lint, format, test, and build expectations.
+- `.github/workflows/release.yml`: tag-triggered build, metadata consistency checks, and PyPI publication.
 
 ## Commit Message Guidelines
 

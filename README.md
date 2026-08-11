@@ -14,17 +14,53 @@ You can start directly from a video file or from an existing folder of extracted
 ---
 
 ## 📦 Installation
-It is recommended that you first create a dedicated virtual environment, for example, with [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install). Then in the virtual environment, navigate to a desired working directory and follow the steps below. 
-### 1. Clone the repository
+
+It is recommended that you first create a dedicated virtual environment, for example with [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install):
+
+```bash
+conda create -n pupil_tracking python=3.12
+conda activate pupil_tracking
+```
+
+Then install the package:
+
+```bash
+pip install mouse-pupil-analysis
+```
+
+The trained model checkpoint ships with the package, so there is nothing else to download.
+
+> **Note on names.** The distribution is `mouse-pupil-analysis`, but the import name is `pupil_tracking`:
+> `pip install mouse-pupil-analysis` then `import pupil_tracking`. The shorter name `pupil-tracking` on
+> PyPI belongs to an unrelated project by a different author.
+
+### GPU / CPU builds of PyTorch
+
+On **Windows and macOS**, the command above installs a CPU-only build of PyTorch (~120 MB), which is all this package needs to run. No action required.
+
+On **Linux**, the default PyPI wheel bundles CUDA and is roughly 500 MB. If you do not have an NVIDIA GPU, install the CPU-only build first to avoid the download:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install mouse-pupil-analysis
+```
+
+To use an **NVIDIA GPU**, install the matching CUDA build first, replacing `cu124` with your CUDA version (see [pytorch.org](https://pytorch.org/get-started/locally/)):
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install mouse-pupil-analysis
+```
+
+Inference selects the GPU automatically when one is available and falls back to CPU otherwise.
+
+### Installing for development
+
 ```bash
 git clone https://github.com/yzhaoinuw/pupil_tracking.git
 cd pupil_tracking
+pip install -e ".[dev]"
 ```
-### 2. Install dependencies
-```bash
-pip install -e .
-```
-The default model checkpoint is included with the package installation.
 
 
 ## 🏃 Basic Usage
@@ -140,11 +176,13 @@ movie_frames_result/
 
 ## Citation
 
-If you use this software in a paper or other scholarly work, please cite the version you used. GitHub will show citation metadata from [`CITATION.cff`](CITATION.cff).
+If you use this software in a paper or other scholarly work, please cite the version you used. GitHub renders citation metadata from [`CITATION.cff`](CITATION.cff), and the “Cite this repository” button produces BibTeX directly.
 
 Recommended citation:
 
-> Yue Zhao. *pupil-tracking: Automated mouse pupil segmentation and diameter analysis using UNet*. Version 0.1.4. https://github.com/yzhaoinuw/pupil_tracking
+> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.1.4. https://github.com/yzhaoinuw/pupil_tracking
+
+Each release is archived on Zenodo with its own DOI. Cite the DOI of the specific version you ran, so your analysis stays reproducible against that exact code. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
 
 ## License
 

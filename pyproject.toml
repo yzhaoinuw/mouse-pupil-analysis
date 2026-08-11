@@ -1,11 +1,31 @@
 [project]
-name = "pupil-tracking"
+name = "mouse-pupil-analysis"
 version = "0.1.4"
-description = "Automated mouse pupil segmentation and diameter analysis using UNet."
+description = "Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet."
 authors = [{ name = "Yue Zhao" }]
 license = "MIT"
 license-files = ["LICENSE"]
+readme = "README.md"
 requires-python = ">=3.10"
+keywords = [
+  "pupillometry",
+  "pupil-tracking",
+  "segmentation",
+  "unet",
+  "neuroscience",
+  "mouse",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+]
 
 dependencies = [
   "opencv-python>=4.12",
@@ -17,6 +37,12 @@ dependencies = [
   "torch>=2.8",
   "torchvision>=0.23",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yzhaoinuw/pupil_tracking"
+Repository = "https://github.com/yzhaoinuw/pupil_tracking"
+Issues = "https://github.com/yzhaoinuw/pupil_tracking/issues"
+Changelog = "https://github.com/yzhaoinuw/pupil_tracking/blob/main/CHANGELOG.md"
 
 [project.scripts]
 extract-frames = "pupil_tracking.extract_frames:main"

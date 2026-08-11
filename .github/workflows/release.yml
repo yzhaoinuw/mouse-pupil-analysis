@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build and verify distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install -U pip build
+          python -m build
+
+      - name: Verify tag matches project version
+        run: |
+          python - <<'PY'
+          import os, pathlib, tomllib
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          project_version = pyproject["project"]["version"]
+          tag_version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          if project_version != tag_version:
+              raise SystemExit(
+                  f"Tag {tag_version!r} does not match pyproject version {project_version!r}."
+              )
+          print(f"Tag and project version agree: {project_version}")
+          PY
+
+      - name: Verify citation metadata matches project version
+        run: |
+          python - <<'PY'
+          import pathlib, re, tomllib
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          project_version = pyproject["project"]["version"]
+          citation = pathlib.Path("CITATION.cff").read_text()
+          match = re.search(r'^version:\s*"?([^"\n]+)"?\s*$', citation, re.MULTILINE)
+          if match is None:
+              raise SystemExit("CITATION.cff has no version field.")
+          if match.group(1).strip() != project_version:
+              raise SystemExit(
+                  f"CITATION.cff version {match.group(1)!r} does not match "
+                  f"pyproject version {project_version!r}."
+              )
+          print(f"Citation metadata agrees: {project_version}")
+          PY
+
+      - name: Verify the model checkpoint ships in both distributions
+        run: |
+          python - <<'PY'
+          import pathlib, tarfile, zipfile
+
+          def names(path):
+              if path.suffix == ".whl":
+                  with zipfile.ZipFile(path) as archive:
+                      return archive.namelist()
+              with tarfile.open(path) as archive:
+                  return archive.getnames()
+
+          distributions = sorted(pathlib.Path("dist").iterdir())
+          if not distributions:
+              raise SystemExit("No distributions were built.")
+
+          for distribution in distributions:
+              members = names(distribution)
+              checkpoints = [n for n in members if n.endswith(".pth")]
+              archived = [n for n in members if "checkpoints/archive/" in n]
+              if not checkpoints:
+                  raise SystemExit(f"{distribution.name} contains no .pth checkpoint.")
+              if archived:
+                  raise SystemExit(f"{distribution.name} leaks archived checkpoints: {archived}")
+              print(f"{distribution.name}: {len(checkpoints)} checkpoint(s) present")
+          PY
+
+      - name: Install the built wheel into a clean environment and smoke test
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/python -m pip install -U pip
+          /tmp/smoke/bin/python -m pip install dist/*.whl
+          /tmp/smoke/bin/python -c "import pupil_tracking; print('version', pupil_tracking.__version__)"
+          /tmp/smoke/bin/run-pupil-analysis --help
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Trusted Publishing exchanges this workflow's OIDC identity for a short-lived
+    # PyPI token, so no API token is stored in repository secrets. The publisher
+    # must be configured once on PyPI before the first release. See RELEASING.md.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mouse-pupil-analysis
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
