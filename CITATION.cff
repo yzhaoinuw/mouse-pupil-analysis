@@ -6,8 +6,8 @@ authors:
   - family-names: Zhao
     given-names: Yue
     orcid: "https://orcid.org/0000-0002-0819-5012"
-version: "0.1.4"
-date-released: "2026-06-12"
+version: "0.2.0"
+date-released: "2026-08-11"
 repository-code: "https://github.com/yzhaoinuw/pupil_tracking"
 url: "https://github.com/yzhaoinuw/pupil_tracking"
 license: MIT
