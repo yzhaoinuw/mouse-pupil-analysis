@@ -69,10 +69,13 @@ Zenodo mints two kinds of DOI:
 4. Run the local verification described in [AGENTS.md](AGENTS.md#common-tasks):
    Ruff, Black, Pytest, and `python -m build`.
 
-5. Commit, then tag and push. The tag must match the `pyproject.toml` version with a
-   leading `v`; the release workflow fails the build if they disagree.
+5. Merge the release commit into `main`, then tag it there and push. A PyPI version
+   number can never be reused, so the workflow refuses to publish a commit that has not
+   reached `main`. The tag must match the `pyproject.toml` version with a leading `v`;
+   the workflow fails the build if they disagree.
 
    ```bash
+   git switch main && git merge --ff-only dev && git push origin main
    git tag v0.2.0
    git push origin v0.2.0
    ```
@@ -83,8 +86,8 @@ Zenodo mints two kinds of DOI:
    - `CITATION.cff` records the same version;
    - both artifacts contain the exact checkpoint that inference will select, plus its
      matching training log, and no stray or archived checkpoints;
-   - the tagged commit is an ancestor of `origin/main` or `origin/dev`, so a release
-     cannot be cut from an unmerged branch;
+   - the tagged commit is an ancestor of `origin/main`, so a published version always
+     corresponds to code that reached the default branch;
    - the wheel installs and runs in a clean environment.
 
    Only then does it publish to PyPI. Because the checkpoint check resolves the single

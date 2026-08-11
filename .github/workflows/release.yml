@@ -103,17 +103,17 @@ jobs:
               print(f"{distribution.name}: {expected_checkpoint} and its training log present")
           PY
 
-      - name: Verify the tag is on an integration branch
+      - name: Verify the tag is on the default branch
         run: |
-          git fetch origin main dev --depth=50 || true
-          for branch in origin/main origin/dev; do
-            if git merge-base --is-ancestor "$GITHUB_SHA" "$branch" 2>/dev/null; then
-              echo "Tagged commit is contained in $branch."
-              exit 0
-            fi
-          done
-          echo "::error::Tagged commit is not an ancestor of origin/main or origin/dev."
-          echo "Merge the release commit before tagging so published code matches an integration branch."
+          # A PyPI version number can never be reused, so a published release must
+          # correspond to code that reached main. Merge dev into main before tagging.
+          git fetch origin main || true
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main 2>/dev/null; then
+            echo "Tagged commit is contained in origin/main."
+            exit 0
+          fi
+          echo "::error::Tagged commit is not an ancestor of origin/main."
+          echo "Merge the release commit into main before tagging; see RELEASING.md."
           exit 1
 
       - name: Install the built wheel into a clean environment and smoke test
