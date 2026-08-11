@@ -2,10 +2,14 @@
 """Generate pupil-segmentation predictions from PNG images.
 
 The public functions in this module can be imported by another workflow or run
-directly from Spyder using the editable configuration at the bottom of the file.
+directly from an IDE using the editable configuration at the bottom of the file.
 """
 
+import logging
+import math
+import os
 import re
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from importlib import resources
@@ -18,14 +22,25 @@ from PIL import Image, ImageDraw
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from pupil_tracking.dataset import PupilDataset, resize_with_pad
 from pupil_tracking.extract_frames import ExtractedFrame
+from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, InferenceDataset, resize_with_pad
 from pupil_tracking.unet import UNet
+
+logger = logging.getLogger(__name__)
 
 _IOU_RE = re.compile(r"iou=(0\.\d+)")
 _NUMERIC_SUFFIX_RE = re.compile(r"(\d+)$")
 _CENTER_MARKER_OPACITY = 0.35
 _CENTER_MARKER_RADIUS = 3
+
+# A binary mask gives pupil area; the reported diameter is that of the circle with
+# the same area, so diameter = sqrt(4 / pi * area).
+_EQUIVALENT_CIRCLE_FACTOR = 4.0 / math.pi
+
+
+def default_num_workers() -> int:
+    """Cap dataloader workers at the historical default without oversubscribing."""
+    return min(4, os.cpu_count() or 1)
 
 
 @dataclass(frozen=True)
@@ -44,22 +59,39 @@ class PupilPrediction:
 
 def find_default_checkpoint() -> Path:
     """Return the packaged checkpoint with the highest IoU in its filename."""
-    best: tuple[float, Path] | None = None
-    with resources.as_file(resources.files("pupil_tracking") / "checkpoints") as ckpt_dir:
-        for checkpoint_path in ckpt_dir.glob("*.pth"):
-            match = _IOU_RE.search(checkpoint_path.name)
-            if not match:
-                continue
-            iou = float(match.group(1))
-            if best is None or iou > best[0]:
-                best = (iou, checkpoint_path)
+    checkpoint_dir = resources.files("pupil_tracking") / "checkpoints"
+    best: tuple[float, str] | None = None
+    for entry in checkpoint_dir.iterdir():
+        if not entry.name.endswith(".pth"):
+            continue
+        match = _IOU_RE.search(entry.name)
+        if not match:
+            continue
+        iou = float(match.group(1))
+        if best is None or iou > best[0]:
+            best = (iou, entry.name)
 
     if best is None:
         raise FileNotFoundError("No packaged checkpoints found.")
-    return best[1]
+
+    # torch.load needs a real filesystem path. Resolving it here, rather than inside
+    # a resources.as_file() block, avoids handing back a path whose temporary file
+    # has already been cleaned up.
+    checkpoint = checkpoint_dir / best[1]
+    if not hasattr(checkpoint, "__fspath__"):
+        raise RuntimeError(
+            "The packaged checkpoint is not available as a real file, which happens "
+            "when the package is imported from a zipped archive. Install "
+            "mouse-pupil-analysis normally, or pass an explicit checkpoint path."
+        )
+    return Path(checkpoint)
 
 
-DEFAULT_CHECKPOINT = find_default_checkpoint()
+def __getattr__(name: str):
+    """Resolve ``DEFAULT_CHECKPOINT`` on first access rather than at import time."""
+    if name == "DEFAULT_CHECKPOINT":
+        return find_default_checkpoint()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _numeric_suffix(path: Path) -> tuple[int, str]:
@@ -143,7 +175,7 @@ def _save_mask_overlays(
             continue
 
         original = Image.open(frame.image_path).convert("L")
-        resized = resize_with_pad(original, target_size=148)
+        resized = resize_with_pad(original, target_size=MODEL_IMAGE_SIZE)
         grayscale = np.asarray(resized, dtype=np.uint8)
         rgb = np.stack([grayscale] * 3, axis=-1)
         confidence_map = confidence_maps[image_name]
@@ -237,23 +269,31 @@ def iter_pupil_predictions(
     image_frames: list[ExtractedFrame],
     pred_thresh: float = 0.7,
     batch_size: int = 32,
+    num_workers: int | None = None,
 ) -> Iterator[PupilPrediction]:
     """Yield predictions from one model pass without retaining float maps."""
+    if num_workers is None:
+        num_workers = default_num_workers()
     if not image_frames:
         raise FileNotFoundError("No PNG images were provided for pupil analysis.")
 
     image_paths = [frame.image_path for frame in image_frames]
     frame_by_name = {frame.image_path.name: frame for frame in image_frames}
 
-    print(f"Building dataloader with batch size = {batch_size}.")
-    test_dataset = PupilDataset(image_paths)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+    logger.info("Building dataloader with batch size = %d.", batch_size)
+    test_dataset = InferenceDataset(image_paths)
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
 
-    print("Loading UNet model...")
+    logger.info("Loading UNet model...")
     model = UNet(use_attention=True)
     device_name = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device_name)
-    print(f"Using inference device: {device}.")
+    logger.info("Using inference device: %s.", device)
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.to(device)
     model.eval()
@@ -265,7 +305,8 @@ def iter_pupil_predictions(
                 images = images.to(device)
                 probabilities = torch.sigmoid(model(images)).cpu().numpy()
                 batch_binary_masks = probabilities > pred_thresh
-                pupil_diameters = np.sqrt(np.sum(batch_binary_masks, axis=(1, 2, 3)) * 1.27)
+                pupil_areas = np.sum(batch_binary_masks, axis=(1, 2, 3))
+                pupil_diameters = np.sqrt(pupil_areas * _EQUIVALENT_CIRCLE_FACTOR)
 
                 for index, (name, diameter) in enumerate(zip(names, pupil_diameters)):
                     yield PupilPrediction(
@@ -320,7 +361,19 @@ def generate_pupil_mask_prediction(
     batch_size: int = 32,
     mask_transparency: float = 0.1,
 ) -> list[tuple[str, float]]:
-    """Generate diameter results for the PNG files in an image directory."""
+    """Deprecated. Prefer :func:`pupil_tracking.analyze_frames`.
+
+    Kept as a thin wrapper over ``generate_pupil_predictions`` for existing scripts.
+    ``analyze_frames`` additionally writes the analysis table and plot and returns a
+    DataFrame instead of a list of tuples.
+    """
+    warnings.warn(
+        "generate_pupil_mask_prediction is deprecated; use pupil_tracking.analyze_frames "
+        "for the full pipeline, or frames_from_image_directory plus "
+        "generate_pupil_predictions for diameters only.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     image_frames = frames_from_image_directory(Path(image_dir))
     return generate_pupil_predictions(
         checkpoint_path,
@@ -333,10 +386,10 @@ def generate_pupil_mask_prediction(
 
 
 if __name__ == "__main__":
-    # Spyder: edit these values, then use "Run file".
+    # Edit these values, then run this file directly from an IDE.
     project_root = Path(__file__).resolve().parents[1]
     image_dir = project_root / "images_test_1"
-    checkpoint_path = DEFAULT_CHECKPOINT
+    checkpoint_path = find_default_checkpoint()
     output_mask_dir = project_root / "predictions_test"
     pred_thresh = 0.7
     batch_size = 32
@@ -351,4 +404,4 @@ if __name__ == "__main__":
         batch_size=batch_size,
         mask_transparency=mask_transparency,
     )
-    print(f"Generated predictions for {len(predictions)} images.")
+    logger.info("Generated predictions for %d images.", len(predictions))

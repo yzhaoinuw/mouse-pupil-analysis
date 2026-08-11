@@ -16,9 +16,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A public Python API. `analyze_video(...)`, `analyze_frames(...)`, `run_analysis(...)`,
+  `AnalysisConfig`, and `AnalysisResult` are importable from `pupil_tracking` and return
+  the analysis table as a DataFrame instead of requiring the CSV to be read back.
+  Names resolve lazily, so `import pupil_tracking` no longer loads PyTorch.
+- `--num_workers` on the CLI and `num_workers` in the API. The dataloader worker count
+  was previously hardcoded to 4; it now defaults to at most 4, capped by CPU count.
 - `pupil_tracking.__version__`, resolved from installed distribution metadata so the
   package, `pyproject.toml`, and `CITATION.cff` cannot silently disagree.
 - PyPI project metadata: long description, keywords, trove classifiers, and project URLs.
+- End-to-end tests that run the packaged checkpoint over a synthetic video, covering
+  frame extraction, inference, velocity mode, and overlay generation.
+
+### Changed
+
+- Library modules log through the standard `logging` module instead of printing, so
+  embedding applications can silence or capture output. Console scripts configure a
+  plain handler, leaving terminal output unchanged.
+- Invalid command-line argument combinations now print usage text and exit, instead of
+  raising an uncaught `ValueError` traceback.
+- `pupil_tracking.dataset` split into `pupil_tracking.preprocessing` (inference) and
+  `pupil_tracking.augmentation` (training). The polymorphic `PupilDataset`, which
+  returned either `(image, name)` or `(image, mask)`, is replaced by `InferenceDataset`
+  and `SegmentationDataset`.
+- Output table assembly and plotting moved into `pupil_tracking.results` and
+  `pupil_tracking.plotting`. Plot functions return figures so they can be reused.
+- The packaged checkpoint is now located on first use rather than at import time, so
+  importing the package no longer touches the filesystem or fails when checkpoints are
+  absent. Checkpoint lookup also no longer returns a path from an exited
+  `importlib.resources.as_file` block.
+- The pupil-diameter conversion factor is derived from `4 / pi` and named, rather than
+  appearing as the literal `1.27`. Results are unchanged.
+
+### Deprecated
+
+- `pupil_tracking.dataset` and its `PupilDataset`; import from `pupil_tracking.preprocessing`
+  or `pupil_tracking.augmentation` instead.
+- `generate_pupil_mask_prediction`; use `analyze_frames` for the full pipeline.
 
 ## [0.1.4] - 2026-06-12
 

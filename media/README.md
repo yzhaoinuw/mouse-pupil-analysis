@@ -5,7 +5,7 @@ This folder owns the animated pupil-analysis demo shown in the repository README
 - `pupil_diameter_analysis_result_demo.gif` is the promoted, tracked asset.
 - `make_gif.py` builds the animation from a completed velocity analysis and its overlay images.
 
-Run the commands below from the repository root. The script also works directly from Spyder because its default paths are resolved relative to the repository rather than the current working directory.
+Run the commands below from the repository root. The script also works when run directly from an IDE because its default paths are resolved relative to the repository rather than the current working directory.
 
 Activate the project environment first:
 
@@ -67,7 +67,7 @@ The selected range and sampling interval must produce at least two frames. The m
 
 Run `python media\make_gif.py --help` for the full interface.
 
-## Spyder workflow
+## IDE workflow
 
 Open `make_gif.py`, change `DEFAULT_CSV`, `DEFAULT_OVERLAY_DIR`, and `DEFAULT_OUTPUT` near the top, then use **Run file**. The `if __name__ == "__main__":` block invokes the same command-line workflow, so the generated animation behaves identically.
 

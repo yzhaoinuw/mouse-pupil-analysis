@@ -6,12 +6,17 @@ Created on Thu Oct  2 15:27:03 2025
 """
 
 import argparse
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
 import numpy as np
 from tqdm import tqdm
+
+from pupil_tracking.logging_utils import configure_cli_logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -79,7 +84,7 @@ def extract_selected_frames(
 
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"Total frames: {frame_count}. Original FPS: {fps:.2f}")
+    logger.info("Total frames: %d. Original FPS: %.2f", frame_count, fps)
 
     selected_frames = select_frame_indices(
         frame_count,
@@ -89,18 +94,20 @@ def extract_selected_frames(
         extract_all=extract_all,
     )
     if extract_all and len(selected_frames) < frame_count:
-        print(
-            f"Warning: --max_frames limits full-frame extraction to "
-            f"the first {len(selected_frames)} of {frame_count} source frames."
+        logger.warning(
+            "--max_frames limits full-frame extraction to the first %d of %d source frames.",
+            len(selected_frames),
+            frame_count,
         )
     if extract_all:
-        print(f"Extracting consecutive source frames ({len(selected_frames)} frames).")
+        logger.info("Extracting consecutive source frames (%d frames).", len(selected_frames))
     else:
         duration = frame_count / fps
         effective_extraction_fps = len(selected_frames) / duration
-        print(
-            f"Extracting {len(selected_frames)} frames at "
-            f"~{effective_extraction_fps:.2f} encoded-video fps"
+        logger.info(
+            "Extracting %d frames at ~%.2f encoded-video fps",
+            len(selected_frames),
+            effective_extraction_fps,
         )
 
     extracted_frames = []
@@ -118,12 +125,12 @@ def extract_selected_frames(
             cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_idx))
         ret, frame = cap.read()
         if not ret:
-            print(f"Warning: could not read frame {frame_idx}")
+            logger.warning("Could not read frame %s", frame_idx)
             continue
 
         out_path = out_dir / source_frame_image_name(video_name, int(frame_idx))
         if not cv2.imwrite(str(out_path), frame):
-            print(f"Warning: could not write {out_path}")
+            logger.warning("Could not write %s", out_path)
             continue
         extracted_frames.append(
             ExtractedFrame(
@@ -134,7 +141,7 @@ def extract_selected_frames(
         )
 
     cap.release()
-    print(f"Extracted {len(extracted_frames)} frames into {out_dir}")
+    logger.info("Extracted %d frames into %s", len(extracted_frames), out_dir)
     return extracted_frames
 
 
@@ -168,6 +175,7 @@ def main():
     )
 
     args = parser.parse_args()
+    configure_cli_logging()
     extract_selected_frames(
         args.video_path,
         args.out_dir,

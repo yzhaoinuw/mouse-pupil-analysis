@@ -5,7 +5,7 @@ import pandas as pd
 
 from pupil_tracking.extract_frames import ExtractedFrame
 from pupil_tracking.pupil_predictions import frames_from_image_directory
-from pupil_tracking.run_pupil_analysis import save_analysis_results
+from pupil_tracking.results import write_analysis_outputs
 
 
 def _frames(tmp_path: Path) -> list[ExtractedFrame]:
@@ -32,7 +32,7 @@ def test_image_directory_uses_one_based_filename_as_source_frame(tmp_path: Path)
 
 
 def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
-    csv_path, plot_path = save_analysis_results(
+    _table, csv_path, plot_path = write_analysis_outputs(
         _results(),
         _frames(tmp_path),
         tmp_path,
@@ -64,7 +64,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
             "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
     )
-    csv_path, plot_path = save_analysis_results(
+    _table, csv_path, plot_path = write_analysis_outputs(
         _results(),
         _frames(tmp_path),
         tmp_path,

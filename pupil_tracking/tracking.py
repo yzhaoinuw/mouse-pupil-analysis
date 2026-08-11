@@ -13,8 +13,7 @@ import pandas as pd
 from PIL import Image
 
 from pupil_tracking.extract_frames import ExtractedFrame
-
-MODEL_IMAGE_SIZE = 148
+from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE
 
 MIN_COMPONENT_DOMINANCE = 0.80
 MIN_MEAN_COMPONENT_CONFIDENCE = 0.90
@@ -361,16 +360,16 @@ def build_tracking_dataframe(
 
 
 if __name__ == "__main__":
-    # Spyder: edit these values, then use "Run file".
+    # Edit these values, then run this file directly from an IDE.
     from pupil_tracking.pupil_predictions import (
-        DEFAULT_CHECKPOINT,
+        find_default_checkpoint,
         frames_from_image_directory,
         iter_pupil_predictions,
     )
 
     project_root = Path(__file__).resolve().parents[1]
     image_dir = project_root / "images_test_1"
-    checkpoint_path = DEFAULT_CHECKPOINT
+    checkpoint_path = find_default_checkpoint()
     pred_thresh = 0.7
     batch_size = 32
     acquisition_fps = 10.0  # Replace with the recording's actual acquisition rate.

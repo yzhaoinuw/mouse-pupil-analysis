@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from pupil_tracking.dataset import PupilDataset
+from pupil_tracking.augmentation import SegmentationDataset
 from pupil_tracking.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -38,7 +38,7 @@ def iou_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
 def make_dataset(image_dir, mask_dir, augment=False):
     image_paths = sorted(Path(image_dir).glob("*.png"))
     mask_paths = sorted(Path(mask_dir).glob("*.png"))
-    return PupilDataset(image_paths, mask_paths, augment=augment)
+    return SegmentationDataset(image_paths, mask_paths, augment=augment)
 
 
 # %% Hyperparameters setup

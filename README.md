@@ -135,6 +135,71 @@ run-pupil-analysis \
 
 ---
 
+## 🐍 Python API
+
+Everything the CLI does is available from Python, which is usually more convenient
+inside a notebook or a larger analysis script. The results come back as a DataFrame,
+so there is no need to read the CSV back in.
+
+```python
+from pupil_tracking import analyze_video
+
+result = analyze_video("data/mouse1.avi")
+print(result.analysis_table.head())
+print(result.csv_path, result.plot_path)
+```
+
+Velocity mode and every CLI flag are keyword arguments:
+
+```python
+result = analyze_video(
+    "data/mouse1.avi",
+    calculate_velocity=True,
+    acquisition_fps=33.3333333333,
+    output_mask_dir="data/masks_mouse1",
+)
+
+usable = result.analysis_table.query("tracking_status != 'invalid'")
+print(f"{len(usable)} of {len(result.analysis_table)} frames usable")
+```
+
+To start from frames you already extracted, use `analyze_frames` instead:
+
+```python
+from pupil_tracking import analyze_frames
+
+result = analyze_frames("data/mouse1_frames", acquisition_fps=33.3333333333)
+```
+
+`result` is an `AnalysisResult` with these fields:
+
+| Field | Description |
+|---|---|
+| `analysis_table` | The same compact table written to CSV, as a DataFrame. |
+| `csv_path`, `plot_path` | Locations of the written outputs. |
+| `tracking_dataframe` | Detailed per-frame quality evidence in velocity mode, otherwise `None`. Retains raw centers, component areas, confidence, circularity, and temporal-area calculations that the compact table omits. |
+| `image_frames` | Frame metadata linking each image name to its source-frame index. |
+
+For repeated runs with shared settings, build an `AnalysisConfig` once and pass it to
+`run_analysis`:
+
+```python
+from pupil_tracking import AnalysisConfig, run_analysis
+
+for video in Path("data").glob("*.avi"):
+    run_analysis(AnalysisConfig(video_path=video, pred_thresh=0.75))
+```
+
+Library code logs rather than prints, so it stays quiet by default. To see the same
+progress messages the CLI shows:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+---
+
 ## 📦 Output Files
 
 After running, you’ll typically find:
