@@ -13,6 +13,7 @@ import numpy as np
 from pupil_tracking.dataset import PupilDataset
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
 
 def show_augmented_samples(
@@ -36,6 +37,7 @@ def show_augmented_samples(
     overlay_mask : bool
         If True, overlay mask in red
     """
+    n_samples = min(n_samples, len(dataset))
     fig, axes = plt.subplots(
         n_samples,
         n_augs_per_sample,
@@ -77,8 +79,8 @@ def show_augmented_samples(
 
 
 # example paths
-image_paths = sorted((PROJECT_ROOT / "images_train").glob("*.png"))
-mask_paths = sorted((PROJECT_ROOT / "masks_train").glob("*.png"))
+image_paths = sorted((DATA_ROOT / "images_train").glob("*.png"))
+mask_paths = sorted((DATA_ROOT / "masks_train").glob("*.png"))
 
 dataset = PupilDataset(
     image_paths=image_paths,

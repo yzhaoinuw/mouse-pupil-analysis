@@ -56,6 +56,21 @@ container always represents experimental time.
 
 For the end-to-end methodology—from segmentation probabilities through pupil-center quality control and velocity—see [Segmentation-To-Velocity Method](project_overview.md#segmentation-to-velocity-method).
 
+## Try the Included Sample Data
+
+The repository includes a compact set of real images and hand-labeled masks under [`sample_data/`](sample_data/README.md). It supports clone-and-run checks of uncropped-frame inference, overlays, paired training data, augmentation, and a 31-frame pupil-velocity sequence.
+
+```bash
+run-pupil-analysis \
+  --image_dir sample_data/velocity_frames \
+  --result_dir results/sample_velocity \
+  --output_mask_dir results/sample_velocity/overlays \
+  --calculate_velocity \
+  --acquisition_fps 97
+```
+
+The fixture is intended for workflow exploration and debugging, not scientific model evaluation or useful model training. See the [sample-data guide](sample_data/README.md) for the uncropped-frame and training examples.
+
 ---
 
 ## ⚙️ Key Arguments

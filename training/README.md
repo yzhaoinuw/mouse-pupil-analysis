@@ -28,6 +28,14 @@ masks_validation/
 
 Images and masks must be PNG files whose sorted filenames correspond one-to-one. Keep the validation set independent of the training set. The dataset loader preserves aspect ratio and pads to the model's 148 x 148 input, so keep the eye centered and mostly visible in the source image.
 
+Each training utility defines an editable `DATA_ROOT` near the top. It defaults to the repository root for the full local dataset. To use the small public fixture included with a clone, change it to:
+
+```python
+DATA_ROOT = PROJECT_ROOT / "sample_data"
+```
+
+See [`sample_data/README.md`](../sample_data/README.md) for the fixture's scope and quick-start commands. Its eight training and four validation pairs are suitable for checking data flow and checkpoint writing, not for training a useful model.
+
 ## 1. Create masks with Labelme
 
 1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
@@ -51,7 +59,7 @@ Open `check_augmentation.py` in Spyder or run:
 python training\check_augmentation.py
 ```
 
-The script draws repeated augmented versions of training samples with the mask overlaid. Adjust `n_samples`, `n_augs_per_sample`, and `mask_transparency` in its final block as needed. Confirm that transforms keep the pupil mask aligned and do not create unrealistic crops before starting a long run.
+The script draws repeated augmented versions of training samples with the mask overlaid. Adjust `n_samples`, `n_augs_per_sample`, and `mask_transparency` in its final block as needed. The requested sample count is automatically capped at the available dataset size. Confirm that transforms keep the pupil mask aligned and do not create unrealistic crops before starting a long run.
 
 ## 3. Train a model from scratch
 

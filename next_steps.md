@@ -266,16 +266,16 @@ Remaining work:
 
 ### Portable End-To-End Fixture
 
-Status: tracked media and training utilities now have dedicated root folders; ignored local sketches and generated analysis artifacts remain outside the maintained source layout
+Status: implemented with a compact public `sample_data/` fixture
 
-The current tests cover package import and CLI help. There is no small committed video/frame fixture for end-to-end inference.
+The repository now includes eight paired training crops, four paired validation crops, six uncropped inference frames, and a 31-frame consecutive velocity sequence. The sample guide covers clone-and-run segmentation, overlays, velocity, augmentation, and training plumbing; lightweight tests protect the fixture structure and provenance manifest.
 
-Resume when the project needs stronger regression coverage for `run-pupil-analysis` outputs.
+The fixture is intentionally an exploration and smoke-test resource rather than a benchmark or useful training dataset.
 
 Remaining work:
 
-- Decide whether a tiny synthetic or curated frame set can be committed without bloating the repo.
-- Add a focused smoke test that exercises inference without relying on large local data folders.
+- Consider an opt-in checkpoint-backed integration test if its CI runtime and model-download assumptions remain acceptable.
+- Keep the fixture compact and expand it only for a specific uncovered behavior.
 
 ### Local Artifact Cleanup
 
