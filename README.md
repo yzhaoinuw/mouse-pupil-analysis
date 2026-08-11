@@ -229,7 +229,7 @@ After running, you’ll typically find:
 
 | File | Description |
 |------|--------------|
-| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter in both model and video pixels. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
+| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter in both model and input-image pixels. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
 | `*_pupil_analysis.png` | Unified frame-indexed plot. Velocity mode appends x/y center, speed, and valid/warning/invalid quality-control panels below pupil diameter. |
 | *(optional)* Mask images in `output_mask_dir` | PNGs with a translucent yellow-orange-red confidence heatmap over threshold-passing pupil pixels. Velocity mode also marks the raw pupil center with a thin translucent cross: cyan for accepted candidates and yellow for rejected candidates. |
 
@@ -252,9 +252,12 @@ Neither column is calibrated. `pupil_diameter_input_pixels` removes the model's 
 but two recordings still only compare directly if their optics and working distance match.
 Otherwise apply your own per-recording scale factor.
 
-Pupil-center coordinates are reported in original-video pixels. The x
-coordinate increases to the right and the y coordinate increases downward.
-Velocity is reported in pixels per second.
+Pupil-center coordinates and speed use the same input-image pixel scale as
+`pupil_diameter_input_pixels`: the source video frame with `--video_path`, and
+whatever you supplied with `--image_dir`. The x coordinate increases to the right
+and the y coordinate increases downward, and speed is in input-image pixels per
+second. The same calibration caveat applies, so speeds are only directly
+comparable between recordings whose optics and working distance match.
 
 Neither unit is physical. Converting to millimeters requires a scale factor from your
 own optics, which this package does not attempt to infer.

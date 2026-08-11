@@ -4,6 +4,16 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Align center and speed unit wording with the diameter contract (Claude Code, Opus 5)
+
+- Applied the same input-image qualification to pupil-center coordinates and speed that the diameter column already carried. `model_to_original_coordinates` maps through `original_size`, which is the supplied image, so centers are source-video pixels only for video input; with `--image_dir` they follow whatever the caller prepared. Updated the README output table and units section, the tracking plot's center axis label, the `DiameterRow` and `resize_scale` docstrings, `sample_data/README.md`, `next_steps.md`, and three test comments. The calculation is unchanged; only the claims about it were wrong.
+- **Correcting the previous entry's dismissal of the `git diff --check` warning.** That entry reported `git diff --check` clean, which was true but answered the wrong question: `git diff --check` compares the worktree to the index, whereas the pull-request diff is `git diff origin/dev...refactor`. Against the base there was a genuine `new blank line at EOF` warning on `work_log.md`, now removed. The earlier reasoning about the `\\ No newline at end of file` markers appearing on removed lines remains correct and is a separate matter.
+- Left the release workflow accepting ancestry from either `origin/main` or `origin/dev` pending a policy decision from the user, since requiring `main` specifically would prevent publishing before the release commit reaches the default branch.
+- Verification:
+  - `ruff check .`, `black --check .`, `pytest` (`60 passed`).
+  - `git diff origin/dev...HEAD --check` clean after committing.
+  - Confirmed no `video pixel` or `original-video` wording remains outside `work_log.md`, which is retained as an append-only historical record.
+
 ### Address the pull-request review on #2 (Claude Code, Opus 5)
 
 - Renamed `pupil_diameter_video_pixels` to `pupil_diameter_input_pixels`. The reviewer was right that the value derives from the supplied PNG's dimensions, not the source video; with `--image_dir` and already-preprocessed 148 x 148 frames it equals the model-pixel column, which one of this branch's own tests asserts. Narrowed the README claim: removing the model rescaling does not make recordings comparable unless their optics match.
@@ -112,4 +122,3 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - `ruff check .`, `black --check .`, `pytest -q` (`23 passed`) before and after the rename.
   - `python -m build`, then verified the checkpoint ships in both wheel and sdist with no `checkpoints/archive/` contents.
   - Installed the wheel into a clean venv; `pupil_tracking.__version__` resolved to `0.1.4` and `run-pupil-analysis --help` succeeded.
-

@@ -15,7 +15,7 @@ def _frames(tmp_path: Path) -> list[ExtractedFrame]:
 
 
 def _results() -> list[DiameterRow]:
-    # Frames are 296 x 148, so the model image is half scale and video-pixel
+    # Frames are 296 x 148, so the model image is half scale and input-pixel
     # diameters are twice the model-pixel values.
     return [
         DiameterRow("eye_00001.png", 10.0, 20.0),

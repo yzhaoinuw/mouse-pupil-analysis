@@ -48,7 +48,7 @@ def plot_diameter_and_tracking(analysis_table: pd.DataFrame, frame_numbers: np.n
 
     axes[1].plot(frame_numbers, analysis_table["center_x_pixels"], label="x", linewidth=0.8)
     axes[1].plot(frame_numbers, analysis_table["center_y_pixels"], label="y", linewidth=0.8)
-    axes[1].set_ylabel("Center\n(video pixels)")
+    axes[1].set_ylabel("Center\n(input pixels)")
     axes[1].legend(loc="upper right")
 
     axes[2].plot(frame_numbers, analysis_table["speed_pixels_per_second"], linewidth=0.8)

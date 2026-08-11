@@ -14,7 +14,7 @@ from pupil_tracking.plotting import plot_analysis
 
 
 class DiameterRow(NamedTuple):
-    """One frame's diameter measurements, in both model and video pixels."""
+    """One frame's diameter measurements, in both model and input-image pixels."""
 
     image_name: str
     estimated_pupil_diameter: float

@@ -46,7 +46,7 @@ Add opt-in pupil-center tracking and velocity calculation for REM analysis while
 For every acquired frame, report:
 
 - Image name containing the one-based source-frame number and the actual acquisition timestamp.
-- Pupil-center x and y coordinates in original-video pixels.
+- Pupil-center x and y coordinates in input-image pixels (the source video frame for video input).
 - Horizontal and vertical displacement from the immediately preceding frame.
 - Horizontal and vertical velocity in pixels per second.
 - Scalar pupil-center speed in pixels per second.
@@ -289,7 +289,7 @@ a provenance manifest.
 `tests/test_real_images.py` runs the packaged checkpoint over that fixture. It is the
 only test that can detect a corrupted or swapped checkpoint, because synthetic input
 segments plausibly regardless of the weights. Having two source resolutions is what
-makes the video-pixel diameter conversion verifiable against real geometry.
+makes the input-pixel diameter conversion verifiable against real geometry.
 
 Remaining work:
 

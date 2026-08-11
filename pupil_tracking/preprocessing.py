@@ -50,7 +50,10 @@ def resize_scale(
     """Return the x/y scale and left/top padding applied by :func:`resize_with_pad`.
 
     This is the single source of truth for inverting the model-space geometry, used
-    both to map centers back to video pixels and to convert areas and diameters.
+    both to map centers back to the supplied image's pixel scale and to convert
+    areas and diameters. That scale is the source video frame only when frames came
+    from video extraction; with a caller-supplied image directory it is whatever
+    those images already are.
     """
     if original_width <= 0 or original_height <= 0:
         raise ValueError("Original image dimensions must be positive.")

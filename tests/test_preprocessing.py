@@ -24,7 +24,7 @@ def test_resize_scale_matches_resize_with_pad_geometry():
 
 def test_model_to_input_length_undoes_uniform_downscale():
     # A 296 x 148 frame is halved to fit the 148 px model image, so a length
-    # measured in model pixels is twice as long in video pixels.
+    # measured in model pixels is twice as long in input-image pixels.
     assert model_to_input_length(10.0, 296, 148) == pytest.approx(20.0)
     assert model_to_input_length(10.0, 148, 296) == pytest.approx(20.0)
 

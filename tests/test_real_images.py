@@ -69,7 +69,7 @@ def test_video_pixel_diameter_undoes_the_downscale(recording, expected_size, tmp
         "estimated_pupil_diameter"
     ].to_numpy(dtype=float)
 
-    # Uncropped frames are larger than the model image, so video-pixel diameters must
+    # Uncropped frames are larger than the model image, so input-pixel diameters must
     # be strictly larger, by exactly the geometric mean of the two axis scales.
     assert expected_ratio > 1.0
     np.testing.assert_allclose(observed, expected_ratio, rtol=1e-9)
