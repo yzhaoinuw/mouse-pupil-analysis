@@ -10,7 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pupil_tracking.dataset import PupilDataset
+from pupil_tracking.augmentation import SegmentationDataset, paired_image_mask_paths
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
@@ -24,11 +24,11 @@ def show_augmented_samples(
     mask_transparency=0.1,
 ):
     """
-    Visualize augmented samples from a PupilDataset.
+    Visualize augmented samples from a SegmentationDataset.
 
     Parameters
     ----------
-    dataset : PupilDataset
+    dataset : SegmentationDataset
         Dataset with augment=True
     n_samples : int
         Number of distinct images to visualize
@@ -78,11 +78,13 @@ def show_augmented_samples(
     plt.show()
 
 
-# example paths
-image_paths = sorted((DATA_ROOT / "images_train").glob("*.png"))
-mask_paths = sorted((DATA_ROOT / "masks_train").glob("*.png"))
+# example paths, paired by filename stem rather than by independent sort order
+image_paths, mask_paths = paired_image_mask_paths(
+    DATA_ROOT / "images_train",
+    DATA_ROOT / "masks_train",
+)
 
-dataset = PupilDataset(
+dataset = SegmentationDataset(
     image_paths=image_paths,
     mask_paths=mask_paths,
     augment=True,

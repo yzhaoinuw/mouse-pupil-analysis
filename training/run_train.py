@@ -5,14 +5,16 @@ Created on Sun Sep 28 23:09:41 2025
 @author: yzhao
 """
 
+import random
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from pupil_tracking.dataset import PupilDataset
+from pupil_tracking.augmentation import SegmentationDataset, paired_image_mask_paths
 from pupil_tracking.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -37,9 +39,9 @@ def iou_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
 
 # -------------------- Data Preparation -------------------- #
 def make_dataset(image_dir, mask_dir, augment=False):
-    image_paths = sorted(Path(image_dir).glob("*.png"))
-    mask_paths = sorted(Path(mask_dir).glob("*.png"))
-    return PupilDataset(image_paths, mask_paths, augment=augment)
+    """Build a dataset from a stem-paired image and mask directory."""
+    image_paths, mask_paths = paired_image_mask_paths(image_dir, mask_dir)
+    return SegmentationDataset(image_paths, mask_paths, augment=augment)
 
 
 # %% Hyperparameters setup
@@ -48,6 +50,15 @@ notable_iou = 0.85
 patience = 20
 n_epochs = 200
 use_attention = True
+seed = 0
+
+# Seed every source of randomness the training loop touches: augmentation uses the
+# `random` module, weight initialization and dropout use torch. Set this before the
+# datasets and model are constructed. Runs remain only approximately reproducible on
+# GPU unless deterministic kernels are also enabled.
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 checkpoint_dir = PROJECT_ROOT / "checkpoints_exp"
 checkpoint_dir.mkdir(parents=True, exist_ok=True)

@@ -21,53 +21,68 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - Owns packaged-checkpoint selection, PNG frame discovery, UNet inference, pupil-diameter calculation, and confidence-heatmap overlays; it has no tracking or acquisition-time dependency.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
-- Includes an editable `if __name__ == "__main__":` block for direct Spyder runs with hardcoded local paths and inference settings.
+- Includes an editable `if __name__ == "__main__":` block for direct IDE runs with hardcoded local paths and inference settings.
 
-### 3. `pupil_tracking/run_pupil_analysis.py`
+### 3. `pupil_tracking/api.py`
 
-- Implements the main analysis CLI and coordinates extraction, inference, and result saving.
-- Accepts either `--video_path` or `--image_dir`.
+- Owns pipeline orchestration, independent of any command line.
+- `AnalysisConfig` collects every input and validates combinations in one place; `run_analysis(config)` returns an `AnalysisResult` carrying the analysis table, both output paths, the frame metadata, and the internal tracking DataFrame.
+- `analyze_video(...)` and `analyze_frames(...)` are keyword wrappers intended for notebook and script use.
 - If a video is provided, calls `extract_selected_frames(...)` before inference.
-- Composes the streaming inference iterator with optional tracking and overlay accumulators according to the CLI flags.
-- Writes one compact `*_pupil_analysis.csv` and one frame-indexed `*_pupil_analysis.png` into the result directory.
-- With `--calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and appends accepted center, speed, and three-state quality fields/panels to the unified outputs.
-- Optionally writes translucent yellow-orange-red confidence-heatmap overlays when `--output_mask_dir` is provided.
+- Composes the streaming inference iterator with optional tracking and overlay accumulators according to the configuration.
+- With `calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and appends accepted center, speed, and three-state quality fields/panels to the unified outputs.
 
-### 4. `pupil_tracking/extract_frames.py`
+### 4. `pupil_tracking/run_pupil_analysis.py`
+
+- Implements the `run-pupil-analysis` CLI only: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback.
+- Accepts either `--video_path` or `--image_dir`.
+- Enables console logging so terminal output matches the historical `print`-based behavior.
+
+### 5. `pupil_tracking/results.py` and `pupil_tracking/plotting.py`
+
+- `results.py` builds the compact user-facing table, derives the three-state `tracking_status`, and writes the CSV and figure. `DIAMETER_COLUMNS` and `VELOCITY_COLUMNS` are the authoritative output schemas.
+- `plotting.py` returns Matplotlib figures rather than saving them, so the standard panels can be restyled or embedded elsewhere.
+
+### 6. `pupil_tracking/extract_frames.py`
 
 - Implements the frame-extraction CLI and reusable `extract_selected_frames(...)`.
 - Samples evenly spaced frames from the input video with OpenCV.
 - Can extract consecutive source frames and return source-frame metadata for velocity analysis.
 - Honors `--extraction_fps` and `--max_frames`, reducing effective extraction FPS when needed.
 
-### 5. `pupil_tracking/tracking.py`
+### 7. `pupil_tracking/tracking.py`
 
 - Postprocesses UNet probability maps without changing the model or checkpoint.
 - `TrackingAccumulator` consumes transient predictions only when velocity mode is enabled, reuses their binary masks, and retains lightweight measurements for temporal processing.
 - Selects and measures pupil components, maps centers back to original-image pixels, applies explainable quality flags, and calculates frame-to-frame displacement and velocity.
 - Leaves published centers and velocities missing across rejected or non-consecutive frames rather than interpolating.
-- Includes an editable `if __name__ == "__main__":` block for direct Spyder inspection of the detailed tracking DataFrame.
+- Includes an editable `if __name__ == "__main__":` block for direct IDE inspection of the detailed tracking DataFrame.
 
-### 6. `pupil_tracking/dataset.py`
+### 8. `pupil_tracking/preprocessing.py` and `pupil_tracking/augmentation.py`
 
-- Handles image loading, preprocessing, padding/resizing, dataset construction, and training augmentations.
-- The 148 x 148 centered/padded image convention is load-bearing for the current trained model.
+- `preprocessing.py` owns `resize_with_pad`, `MODEL_IMAGE_SIZE`, and `InferenceDataset`. The 148 x 148 centered/padded convention defined here is load-bearing for the current trained model.
+- `augmentation.py` owns the training-only augmentations and `SegmentationDataset`; nothing in it runs during inference.
+- `dataset.py` remains only as a deprecated re-export shim. Its `PupilDataset` returned either `(image, name)` or `(image, mask)` depending on construction; the two dataset classes replace that.
 
-### 7. `pupil_tracking/unet.py`
+### 9. `pupil_tracking/unet.py`
 
 - Defines the segmentation model used by inference and training.
 
-### 8. `training/`
+### 10. `pupil_tracking/logging_utils.py`
+
+- Library modules log and never print, so an embedding application controls its own output. The console scripts call `configure_cli_logging()` to restore plain terminal output.
+
+### 11. `training/`
 
 - Contains the maintained local training workflow: model training, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional model promotion.
 - All scripts use package imports and resolve training data/output folders from the repository root, independent of the current working directory.
 - `training/run_train.py` writes experimental checkpoints to `checkpoints_exp/`.
 
-### 9. `media/`
+### 12. `media/`
 
 - Contains the tracked README animation and `media/make_gif.py`, the utility that regenerates it from local analysis results and overlays.
-- `media/README.md` documents the required analysis outputs, animation controls, Spyder workflow, and promotion review.
+- `media/README.md` documents the required analysis outputs, animation controls, IDE workflow, and promotion review.
 - The GIF is a deliberately promoted documentation asset; other generated videos and candidate media remain local.
 
 ### 10. `sample_data/`
@@ -95,11 +110,18 @@ Velocity mode is postprocessing around the existing pupil-segmentation model; it
 ```text
 pupil_tracking/
 |- pupil_tracking/
-|  |- run_pupil_analysis.py
+|  |- __init__.py            (public API, lazily imported)
+|  |- api.py                 (AnalysisConfig, run_analysis, analyze_video/frames)
+|  |- run_pupil_analysis.py  (CLI only)
 |  |- pupil_predictions.py
 |  |- extract_frames.py
 |  |- tracking.py
-|  |- dataset.py
+|  |- results.py
+|  |- plotting.py
+|  |- preprocessing.py
+|  |- augmentation.py
+|  |- dataset.py             (deprecated shim)
+|  |- logging_utils.py
 |  |- unet.py
 |  |- checkpoints/
 |- tests/
@@ -108,6 +130,7 @@ pupil_tracking/
 |  |- test_extract_frames.py
 |  |- test_outputs.py
 |  |- test_tracking.py
+|  |- test_end_to_end.py
 |  |- test_sample_data.py
 |- training/
 |  |- README.md
@@ -141,11 +164,17 @@ pupil_tracking/
 
 Active, package-facing files:
 
+- `pupil_tracking/__init__.py`
+- `pupil_tracking/api.py`
 - `pupil_tracking/run_pupil_analysis.py`
 - `pupil_tracking/pupil_predictions.py`
 - `pupil_tracking/extract_frames.py`
 - `pupil_tracking/tracking.py`
-- `pupil_tracking/dataset.py`
+- `pupil_tracking/results.py`
+- `pupil_tracking/plotting.py`
+- `pupil_tracking/preprocessing.py`
+- `pupil_tracking/augmentation.py`
+- `pupil_tracking/logging_utils.py`
 - `pupil_tracking/unet.py`
 - `pupil_tracking/checkpoints/`
 - `tests/`
@@ -195,7 +224,9 @@ The test suite is intentionally lightweight:
 - `tests/test_extract_frames.py` verifies sampled/full-frame source-index selection.
 - `tests/test_outputs.py` verifies 1-based source-frame naming, compact unified schemas, three-state tracking status, and plot creation.
 - `tests/test_tracking.py` verifies coordinate mapping, component measurements, quality flags, timing, and kinematics with synthetic inputs.
+- `tests/test_end_to_end.py` runs the real pipeline against the packaged checkpoint on a synthetic video generated in a fixture: extraction, the UNet forward pass, diameter and velocity outputs, overlays, and video-versus-image-directory agreement. Synthetic input verifies wiring rather than segmentation accuracy.
 - `tests/test_sample_data.py` verifies paired sample counts, matching masks, raw-frame dimensions, the consecutive 31-frame velocity contract, and manifest coverage.
+- `tests/test_real_images.py` runs the packaged checkpoint over the committed `sample_data/` frames, which is what actually detects a corrupted checkpoint or a preprocessing regression.
 - `.github/workflows/ci.yml` runs Ruff, Black, Pytest, and a wheel smoke check across Python 3.10, 3.11, and 3.12 where appropriate.
 
 `sample_data/` is the canonical portable fixture for manual end-to-end exploration. It deliberately avoids a video binary: uncropped PNGs exercise normal inference, while a short consecutive PNG sequence exercises temporal tracking with an explicit acquisition rate.
@@ -222,10 +253,10 @@ For most maintenance tasks, read in this order:
 1. `AGENTS.md`
 2. `README.md`
 3. `pyproject.toml`
-4. `pupil_tracking/run_pupil_analysis.py`
+4. `pupil_tracking/api.py`
 5. `pupil_tracking/pupil_predictions.py`
 6. `pupil_tracking/extract_frames.py`
-7. `pupil_tracking/dataset.py`
+7. `pupil_tracking/preprocessing.py`
 8. `tests/` and `.github/workflows/ci.yml`
 
 ## Questions Worth Clarifying Later

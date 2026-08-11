@@ -1,301 +1,78 @@
-# -*- coding: utf-8 -*-
+"""Deprecated compatibility shim.
+
+The contents of this module moved in favor of a clearer split:
+
+- :mod:`pupil_tracking.preprocessing` holds ``resize_with_pad`` and
+  ``InferenceDataset``, the parts that run during inference.
+- :mod:`pupil_tracking.augmentation` holds the training-time augmentations and
+  ``SegmentationDataset``.
+
+``PupilDataset`` returned either ``(image, name)`` or ``(image, mask)`` depending
+on whether ``mask_paths`` was supplied. The two dataset classes replace that
+single polymorphic class. This shim will be removed in a future release.
+
+Note that ``PupilDataset`` is now a factory function, not a class. Calls with the
+original positional or keyword arguments behave as before, but uses that treat it
+as a type -- ``isinstance(obj, PupilDataset)``, subclassing, or annotating with it
+-- no longer work. Migrate those to ``InferenceDataset`` or ``SegmentationDataset``.
 """
-Created on Tue Sep 30 14:19:02 2025
 
-@author: yzhao
-"""
+import warnings
 
+from pupil_tracking.augmentation import (
+    RandomAffinePair,
+    SegmentationDataset,
+    random_pad_and_crop_pil,
+    random_zoom_translate_pil,
+)
+from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, InferenceDataset, resize_with_pad
 
-import random
+__all__ = [
+    "InferenceDataset",
+    "MODEL_IMAGE_SIZE",
+    "PupilDataset",
+    "RandomAffinePair",
+    "SegmentationDataset",
+    "random_pad_and_crop_pil",
+    "random_zoom_translate_pil",
+    "resize_with_pad",
+]
 
-import torchvision.transforms.functional as TF
-import torchvision.transforms.v2 as transforms
-from PIL import Image
-from torch.utils.data import Dataset
-from torchvision.transforms import (
-    InterpolationMode as InterpMode,
-)  # note: NOT v2 InterpolationMode
-
-
-class RandomAffinePair:
-    """
-    Apply the SAME random affine to (img, mask), but:
-      - img uses BILINEAR interpolation (smooth, natural)
-      - mask uses NEAREST interpolation (keeps labels crisp)
-    Works on PIL Images.
-    """
-
-    def __init__(
-        self,
-        degrees=8,
-        translate=(0, 0),
-        scale=(0.95, 1.05),
-        shear=None,
-        fill_img=0,
-        fill_mask=0,
-        p=0.7,
-    ):
-        self.degrees = degrees
-        self.translate = translate
-        self.scale = scale
-        self.shear = shear
-        self.fill_img = fill_img
-        self.fill_mask = fill_mask
-        self.p = p
-
-    def __call__(self, img, mask):
-        if random.random() > self.p:
-            return img, mask
-
-        angle = random.uniform(-self.degrees, self.degrees)
-
-        # translate is specified as fraction of image size
-        max_dx = self.translate[0] * img.size[0]
-        max_dy = self.translate[1] * img.size[1]
-        translations = (
-            int(round(random.uniform(-max_dx, max_dx))),
-            int(round(random.uniform(-max_dy, max_dy))),
-        )
-
-        sc = random.uniform(self.scale[0], self.scale[1])
-
-        # shear can be None, float, or (min,max). Keep None unless you have a reason.
-        shear = self.shear
-        if isinstance(shear, (tuple, list)) and len(shear) == 2:
-            shear = random.uniform(shear[0], shear[1])
-
-        img2 = TF.affine(
-            img,
-            angle=angle,
-            translate=translations,
-            scale=sc,
-            shear=shear if shear is not None else 0.0,
-            interpolation=InterpMode.BILINEAR,
-            fill=self.fill_img,
-        )
-        mask2 = TF.affine(
-            mask,
-            angle=angle,
-            translate=translations,
-            scale=sc,
-            shear=shear if shear is not None else 0.0,
-            interpolation=InterpMode.NEAREST,
-            fill=self.fill_mask,
-        )
-        return img2, mask2
+warnings.warn(
+    "pupil_tracking.dataset is deprecated; import from pupil_tracking.preprocessing "
+    "or pupil_tracking.augmentation instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
-def resize_with_pad(
-    img: Image.Image,
-    target_size: int = 148,
-    fill: int = 0,
-    resample=Image.BILINEAR,
-) -> Image.Image:
-    w, h = img.size
-    if w >= h:
-        new_w = target_size
-        new_h = int(round(h * target_size / w))
-    else:
-        new_h = target_size
-        new_w = int(round(w * target_size / h))
-
-    img = img.resize((new_w, new_h), resample=resample)
-
-    pad_w = target_size - new_w
-    pad_h = target_size - new_h
-    left = pad_w // 2
-    top = pad_h // 2
-
-    padded = Image.new("L", (target_size, target_size), color=fill)
-    padded.paste(img, (left, top))
-    return padded
-
-
-def random_zoom_translate_pil(
-    img: Image.Image,
-    mask: Image.Image,
-    target_size: int = 148,
+def PupilDataset(
+    image_paths,
+    mask_paths=None,
+    augment=False,
+    target_size=MODEL_IMAGE_SIZE,
     scale_range=(0.85, 1.15),
-    fill_img: int = 0,
-    fill_mask: int = 0,
-    p: float = 0.5,
+    max_pad=12,
 ):
+    """Deprecated. Use ``InferenceDataset`` or ``SegmentationDataset`` directly.
+
+    The signature deliberately mirrors the removed class exactly, including the
+    positional order, so existing calls such as ``PupilDataset(images, masks, True)``
+    keep working through the deprecation release.
     """
-    With probability p:
-      - applies slight zoom in/out + random translation while keeping output size == target_size.
-    Otherwise returns (img, mask) unchanged.
-    """
-    if random.random() > p:
-        return img, mask
-
-    s = random.uniform(*scale_range)
-    new_size = int(round(target_size * s))
-    new_size = max(1, new_size)
-
-    img_rs = img.resize((new_size, new_size), resample=Image.BILINEAR)
-    mask_rs = mask.resize((new_size, new_size), resample=Image.NEAREST)
-
-    if new_size == target_size:
-        return img_rs, mask_rs
-
-    if new_size > target_size:
-        # zoom in: random crop
-        max_left = new_size - target_size
-        max_top = new_size - target_size
-        left = random.randint(0, max_left)
-        top = random.randint(0, max_top)
-        box = (left, top, left + target_size, top + target_size)
-        return img_rs.crop(box), mask_rs.crop(box)
-
-    # zoom out: random placement (translation + padding jitter)
-    canvas_img = Image.new("L", (target_size, target_size), color=fill_img)
-    canvas_mask = Image.new("L", (target_size, target_size), color=fill_mask)
-
-    max_left = target_size - new_size
-    max_top = target_size - new_size
-    left = random.randint(0, max_left)
-    top = random.randint(0, max_top)
-
-    canvas_img.paste(img_rs, (left, top))
-    canvas_mask.paste(mask_rs, (left, top))
-    return canvas_img, canvas_mask
-
-
-def random_pad_and_crop_pil(
-    img: Image.Image,
-    mask: Image.Image,
-    target_size: int = 148,
-    max_pad: int = 12,
-    fill_img: int = 0,
-    fill_mask: int = 0,
-    p: float = 0.5,
-):
-    """
-    With probability p:
-      - randomly pads each side by [0..max_pad], then random-crops back to target_size.
-    Otherwise returns (img, mask) unchanged.
-    """
-    if random.random() > p:
-        return img, mask
-
-    pad_l = random.randint(0, max_pad)
-    pad_r = random.randint(0, max_pad)
-    pad_t = random.randint(0, max_pad)
-    pad_b = random.randint(0, max_pad)
-
-    w, h = img.size  # expected (target_size, target_size)
-    new_w = w + pad_l + pad_r
-    new_h = h + pad_t + pad_b
-
-    padded_img = Image.new("L", (new_w, new_h), color=fill_img)
-    padded_mask = Image.new("L", (new_w, new_h), color=fill_mask)
-    padded_img.paste(img, (pad_l, pad_t))
-    padded_mask.paste(mask, (pad_l, pad_t))
-
-    max_left = new_w - target_size
-    max_top = new_h - target_size
-    left = random.randint(0, max_left)
-    top = random.randint(0, max_top)
-    box = (left, top, left + target_size, top + target_size)
-
-    return padded_img.crop(box), padded_mask.crop(box)
-
-
-class PupilDataset(Dataset):
-    def __init__(
-        self,
+    warnings.warn(
+        "PupilDataset is deprecated; use InferenceDataset for inference or "
+        "SegmentationDataset for training.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    if mask_paths is None:
+        return InferenceDataset(image_paths, target_size=target_size)
+    return SegmentationDataset(
         image_paths,
-        mask_paths=None,
-        augment=False,
-        target_size=148,
-        scale_range=(0.85, 1.15),
-        max_pad=12,
-    ):
-        self.image_paths = image_paths
-        self.mask_paths = mask_paths
-        self.augment = augment
-        self.target_size = target_size
-        self.scale_range = scale_range
-        self.max_pad = max_pad
-
-        self.pil_to_tensor = transforms.PILToTensor()
-
-        self.flip_h = transforms.RandomHorizontalFlip(p=0.2)
-        self.flip_v = transforms.RandomVerticalFlip(p=0.2)
-
-        # A single, paired affine that rotates/translates/scales cleanly
-        self.affine_pair = RandomAffinePair(
-            degrees=15,
-            scale=(0.95, 1.05),
-            shear=None,
-            fill_img=0,
-            fill_mask=0,
-            p=0.2,
-        )
-
-        # Photometric transforms for image only
-        self.transform_img = transforms.Compose(
-            [
-                transforms.RandomApply(
-                    [transforms.ColorJitter(brightness=0.2, contrast=0.2)],
-                    p=0.2,
-                ),
-                transforms.RandomApply(
-                    [transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0))],
-                    p=0.2,
-                ),
-            ]
-        )
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
-        img = Image.open(img_path).convert("L")
-        img = resize_with_pad(img, target_size=self.target_size, resample=Image.BILINEAR)
-
-        if self.mask_paths is None:
-            img = self.pil_to_tensor(img).float() / 255.0
-            return img, img_path.name
-
-        mask = Image.open(self.mask_paths[idx]).convert("L")
-        mask = resize_with_pad(mask, target_size=self.target_size, resample=Image.NEAREST)
-
-        if self.augment:
-            # zoom/translate/pad jitter
-            img, mask = random_zoom_translate_pil(
-                img,
-                mask,
-                target_size=self.target_size,
-                scale_range=self.scale_range,
-                fill_img=0,
-                fill_mask=0,
-                p=0.2,
-            )
-            img, mask = random_pad_and_crop_pil(
-                img,
-                mask,
-                target_size=self.target_size,
-                max_pad=self.max_pad,
-                fill_img=0,
-                fill_mask=0,
-                p=0.2,
-            )
-
-            # flips (paired, safe)
-            img, mask = self.flip_h(img, mask)
-            img, mask = self.flip_v(img, mask)
-
-            # affine (paired, bilinear img + nearest mask)
-            img, mask = self.affine_pair(img, mask)
-
-            # image-only photometric
-            img = self.transform_img(img)
-
-        img = self.pil_to_tensor(img).float() / 255.0
-
-        mask = self.pil_to_tensor(mask).float()
-        mask = (mask > 0).float()  # ensure {0,1}
-
-        return img, mask
+        mask_paths,
+        augment=augment,
+        target_size=target_size,
+        scale_range=scale_range,
+        max_pad=max_pad,
+    )

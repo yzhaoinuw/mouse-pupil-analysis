@@ -100,6 +100,7 @@ def test_tracking_accumulator_reuses_streamed_binary_mask(tmp_path: Path):
         probability_map=probability_map,
         binary_mask=binary_mask,
         estimated_pupil_diameter=10.0,
+        original_size=(148, 148),
     )
 
     accumulator = TrackingAccumulator(pred_thresh=0.99, acquisition_fps=10.0)

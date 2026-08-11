@@ -5,7 +5,7 @@ import pandas as pd
 
 from pupil_tracking.extract_frames import ExtractedFrame
 from pupil_tracking.pupil_predictions import frames_from_image_directory
-from pupil_tracking.run_pupil_analysis import save_analysis_results
+from pupil_tracking.results import DiameterRow, write_analysis_outputs
 
 
 def _frames(tmp_path: Path) -> list[ExtractedFrame]:
@@ -14,11 +14,13 @@ def _frames(tmp_path: Path) -> list[ExtractedFrame]:
     ]
 
 
-def _results() -> list[tuple[str, float]]:
+def _results() -> list[DiameterRow]:
+    # Frames are 296 x 148, so the model image is half scale and input-pixel
+    # diameters are twice the model-pixel values.
     return [
-        ("eye_00001.png", 10.0),
-        ("eye_00002.png", 11.0),
-        ("eye_00003.png", 12.0),
+        DiameterRow("eye_00001.png", 10.0, 20.0),
+        DiameterRow("eye_00002.png", 11.0, 22.0),
+        DiameterRow("eye_00003.png", 12.0, 24.0),
     ]
 
 
@@ -32,7 +34,7 @@ def test_image_directory_uses_one_based_filename_as_source_frame(tmp_path: Path)
 
 
 def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
-    csv_path, plot_path = save_analysis_results(
+    _table, csv_path, plot_path = write_analysis_outputs(
         _results(),
         _frames(tmp_path),
         tmp_path,
@@ -40,7 +42,12 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
     )
 
     dataframe = pd.read_csv(csv_path)
-    assert dataframe.columns.tolist() == ["image_name", "estimated_pupil_diameter"]
+    assert dataframe.columns.tolist() == [
+        "image_name",
+        "estimated_pupil_diameter",
+        "pupil_diameter_input_pixels",
+    ]
+    assert dataframe["pupil_diameter_input_pixels"].tolist() == [20.0, 22.0, 24.0]
     assert dataframe["image_name"].tolist() == [
         "eye_00001.png",
         "eye_00002.png",
@@ -60,11 +67,12 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
             "center_y_pixels": [80.0, 81.0, np.nan],
             "speed_pixels_per_second": [np.nan, 47.0, np.nan],
             "estimated_pupil_diameter": [10.0, 11.0, 12.0],
+            "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
             "segmentation_valid": [True, True, False],
             "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
     )
-    csv_path, plot_path = save_analysis_results(
+    _table, csv_path, plot_path = write_analysis_outputs(
         _results(),
         _frames(tmp_path),
         tmp_path,
@@ -76,6 +84,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
     assert dataframe.columns.tolist() == [
         "image_name",
         "estimated_pupil_diameter",
+        "pupil_diameter_input_pixels",
         "timestamp_seconds",
         "center_x_pixels",
         "center_y_pixels",

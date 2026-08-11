@@ -1,6 +1,6 @@
 # Model Training and Fine-Tuning
 
-This folder contains the maintained local workflow for preparing masks, reviewing augmentation, training the UNet, and promoting a selected checkpoint. These are editable research scripts rather than installed command-line tools, so their configuration is intentionally kept near the top of each file for terminal or Spyder runs.
+This folder contains the maintained local workflow for preparing masks, reviewing augmentation, training the UNet, and promoting a selected checkpoint. These are editable research scripts rather than installed command-line tools, so their configuration is intentionally kept near the top of each file for terminal or IDE runs.
 
 Run commands from the repository root. All paths in the scripts are anchored to that root.
 
@@ -53,7 +53,7 @@ Before training, compare the filenames and counts in each image/mask pair. A mas
 
 ## 2. Inspect augmentation
 
-Open `check_augmentation.py` in Spyder or run:
+Open `check_augmentation.py` in your IDE or run:
 
 ```powershell
 python training\check_augmentation.py
@@ -72,7 +72,7 @@ Edit the hyperparameter block in `run_train.py`, especially:
 - `use_attention`: must match the desired UNet architecture.
 - DataLoader batch size and Adam learning rate, currently `8` and `1e-3`.
 
-Then run the file in Spyder or execute:
+Then run the file in your IDE or execute:
 
 ```powershell
 python training\run_train.py

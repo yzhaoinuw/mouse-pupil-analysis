@@ -14,17 +14,56 @@ You can start directly from a video file or from an existing folder of extracted
 ---
 
 ## 📦 Installation
-It is recommended that you first create a dedicated virtual environment, for example, with [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install). Then in the virtual environment, navigate to a desired working directory and follow the steps below. 
-### 1. Clone the repository
+
+It is recommended that you first create a dedicated virtual environment, for example with [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install):
+
+```bash
+conda create -n pupil_tracking python=3.12
+conda activate pupil_tracking
+```
+
+Then install the package:
+
+```bash
+pip install mouse-pupil-analysis
+```
+
+The trained model checkpoint ships with the package, so there is nothing else to download.
+
+> **Note on names.** The distribution is `mouse-pupil-analysis`, but the import name is `pupil_tracking`:
+> `pip install mouse-pupil-analysis` then `import pupil_tracking`. The shorter name `pupil-tracking` on
+> PyPI belongs to an unrelated project by a different author.
+
+### GPU / CPU builds of PyTorch
+
+On **Windows and macOS**, the command above installs a CPU-only build of PyTorch, which is all this package needs to run. No action required.
+
+On **Linux**, the default PyPI wheel bundles CUDA and is several times larger. If you do not have an NVIDIA GPU, install the CPU-only build first to avoid the download:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install mouse-pupil-analysis
+```
+
+To use an **NVIDIA GPU**, install a matching CUDA build first. This package requires
+`torch>=2.8`, which is served by the `cu126`, `cu128`, and `cu129` indexes; older
+indexes such as `cu124` stop at PyTorch 2.6 and will not satisfy that floor. Pick the
+index matching your driver with the [official selector](https://pytorch.org/get-started/locally/):
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+pip install mouse-pupil-analysis
+```
+
+Inference selects the GPU automatically when one is available and falls back to CPU otherwise.
+
+### Installing for development
+
 ```bash
 git clone https://github.com/yzhaoinuw/pupil_tracking.git
 cd pupil_tracking
+pip install -e ".[dev]"
 ```
-### 2. Install dependencies
-```bash
-pip install -e .
-```
-The default model checkpoint is included with the package installation.
 
 
 ## 🏃 Basic Usage
@@ -37,7 +76,7 @@ This will:
 
 1. Extract evenly spaced frames from the video into a folder like `movie_frames/`
 2. Run pupil segmentation and diameter estimation on those frames
-3. Save the results (CSV + plot) into `movie_frames_result/`
+3. Save the results (CSV + plot) into `movie_result/`
 
 To calculate pupil-center position and velocity from every encoded frame, add
 `--calculate_velocity` and provide the actual acquisition rate when it differs
@@ -80,13 +119,14 @@ The fixture is intended for workflow exploration and debugging, not scientific m
 | `--video_path`      | Path to the input video file. If provided, frames will automatically be extracted before analysis.                |
 | `--out_dir`         | Optional. Directory to save extracted frames. If not given, defaults to `<video_stem>_frames/` next to the video. |
 | `--image_dir`       | Optional alternative to `--video_path`. Use this if you already have extracted PNG frames.                        |
-| `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<image_dir>_result/`.            |
+| `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir` input. |
 | `--checkpoint`      | Optional. Path to a custom model checkpoint. If not provided, the packaged checkpoint is used.                   |
 | `--output_mask_dir` | Optional. If provided, saves translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
 | `--extraction_fps`  | Optional. Specifies the number of frames per second at which to extract the frames from the video (default: 5). If `--max_frames` is provided, and if the number of frames to be extracted at `--extraction_fps` would exceed `--max_frames`, then the actual `--extraction_fps` will be automatically reduced so that `--max_frames` number of frames will be extracted. |
 | `--max_frames`      | Optional. Limits the maximum number of frames to extract from a video (default: 10,000). Useful for long recordings.        |
 | `--pred_thresh`     | Optional. Ranging from 0 to 1, it specifies the confidence threshold for classifying a pixel as belonging to the pupil. For example, a value of 0.7 means that a pixel will be classified as a pupil pixel only if model confidence exceeds 0.7. Increase it if the resulting segmentation overpredicts the pupil; reduce it if the resulting segmentation only finds part of the pupil. |  
 | `--calculate_velocity` | Optional. Analyzes every encoded source frame and appends pupil-center, speed, and segmentation-quality fields and plot panels to the unified analysis outputs. |
+| `--num_workers`     | Optional. Number of dataloader worker processes (default: up to 4, capped by CPU count). Use `0` to load frames in the main process, which is often faster for short recordings. |
 | `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. In velocity mode this is required with `--image_dir`; with video input it defaults to the video header rate when omitted. |
 
 ---
@@ -114,19 +154,113 @@ run-pupil-analysis \
 
 ---
 
+## 🐍 Python API
+
+Everything the CLI does is available from Python, which is usually more convenient
+inside a notebook or a larger analysis script. The results come back as a DataFrame,
+so there is no need to read the CSV back in.
+
+```python
+from pupil_tracking import analyze_video
+
+result = analyze_video("data/mouse1.avi")
+print(result.analysis_table.head())
+print(result.csv_path, result.plot_path)
+```
+
+Velocity mode and every CLI flag are keyword arguments:
+
+```python
+result = analyze_video(
+    "data/mouse1.avi",
+    calculate_velocity=True,
+    acquisition_fps=33.3333333333,
+    output_mask_dir="data/masks_mouse1",
+)
+
+usable = result.analysis_table.query("tracking_status != 'invalid'")
+print(f"{len(usable)} of {len(result.analysis_table)} frames usable")
+```
+
+To start from frames you already extracted, use `analyze_frames` instead:
+
+```python
+from pupil_tracking import analyze_frames
+
+result = analyze_frames(
+    "data/mouse1_frames",
+    calculate_velocity=True,
+    acquisition_fps=33.3333333333,
+)
+```
+
+`result` is an `AnalysisResult` with these fields:
+
+| Field | Description |
+|---|---|
+| `analysis_table` | The same compact table written to CSV, as a DataFrame. |
+| `csv_path`, `plot_path` | Locations of the written outputs. |
+| `tracking_dataframe` | Detailed per-frame quality evidence in velocity mode, otherwise `None`. Retains raw centers, component areas, confidence, circularity, and temporal-area calculations that the compact table omits. |
+| `image_frames` | Frame metadata linking each image name to its source-frame index. |
+
+For repeated runs with shared settings, build an `AnalysisConfig` once and pass it to
+`run_analysis`:
+
+```python
+from pupil_tracking import AnalysisConfig, run_analysis
+
+for video in Path("data").glob("*.avi"):
+    run_analysis(AnalysisConfig(video_path=video, pred_thresh=0.75))
+```
+
+Library code logs rather than prints, so it stays quiet by default. To see the same
+progress messages the CLI shows:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+---
+
 ## 📦 Output Files
 
 After running, you’ll typically find:
 
 | File | Description |
 |------|--------------|
-| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
+| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter in both model and input-image pixels. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
 | `*_pupil_analysis.png` | Unified frame-indexed plot. Velocity mode appends x/y center, speed, and valid/warning/invalid quality-control panels below pupil diameter. |
 | *(optional)* Mask images in `output_mask_dir` | PNGs with a translucent yellow-orange-red confidence heatmap over threshold-passing pupil pixels. Velocity mode also marks the raw pupil center with a thin translucent cross: cyan for accepted candidates and yellow for rejected candidates. |
 
-Pupil-center coordinates are reported in original-video pixels. The x
-coordinate increases to the right and the y coordinate increases downward.
-Velocity is reported in pixels per second.
+### Units
+
+Pupil diameter is reported twice, in two different units:
+
+- `estimated_pupil_diameter` is measured in the 148 x 148 model image. Because every
+  frame is rescaled to that size, this value is **not comparable between recordings**
+  with different resolution or cropping. It is kept for continuity with earlier results.
+- `pupil_diameter_input_pixels` inverts the resize-and-pad geometry to express the same
+  measurement at the scale of **the image you supplied**. With `--video_path` that is the
+  source video frame. With `--image_dir` it is whatever you prepared: if your frames were
+  already cropped or resized to 148 x 148, this column equals `estimated_pupil_diameter`.
+
+Both are equivalent-circle diameters: the diameter of a circle whose area matches the
+segmented pupil mask, `sqrt(4 / pi * area)`.
+
+Neither column is calibrated. `pupil_diameter_input_pixels` removes the model's rescaling,
+but two recordings still only compare directly if their optics and working distance match.
+Otherwise apply your own per-recording scale factor.
+
+Pupil-center coordinates and speed use the same input-image pixel scale as
+`pupil_diameter_input_pixels`: the source video frame with `--video_path`, and
+whatever you supplied with `--image_dir`. The x coordinate increases to the right
+and the y coordinate increases downward, and speed is in input-image pixels per
+second. The same calibration caveat applies, so speeds are only directly
+comparable between recordings whose optics and working distance match.
+
+Neither unit is physical. Converting to millimeters requires a scale factor from your
+own optics, which this package does not attempt to infer.
 
 The compact analysis CSV reports `tracking_status` as `valid`, `warning`, or
 `invalid`, with `quality_reason` identifying suspicious or rejected frames.
@@ -146,7 +280,7 @@ movie_frames/
     movie_00001.png
     movie_00002.png
     ...
-movie_frames_result/
+movie_result/
     movie_pupil_analysis.csv
     movie_pupil_analysis.png
 ```
@@ -155,11 +289,13 @@ movie_frames_result/
 
 ## Citation
 
-If you use this software in a paper or other scholarly work, please cite the version you used. GitHub will show citation metadata from [`CITATION.cff`](CITATION.cff).
+If you use this software in a paper or other scholarly work, please cite the version you used. GitHub renders citation metadata from [`CITATION.cff`](CITATION.cff), and the “Cite this repository” button produces BibTeX directly.
 
 Recommended citation:
 
-> Yue Zhao. *pupil-tracking: Automated mouse pupil segmentation and diameter analysis using UNet*. Version 0.1.4. https://github.com/yzhaoinuw/pupil_tracking
+> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.2.0. https://github.com/yzhaoinuw/pupil_tracking
+
+Zenodo archiving is planned but not yet enabled, so no DOI exists yet; see [`RELEASING.md`](RELEASING.md). Once it is, cite the DOI of the specific version you ran so your analysis stays reproducible against that exact code. Until then, cite the version number and commit. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
 
 ## License
 
