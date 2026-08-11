@@ -2,11 +2,16 @@
 
 These functions return a Matplotlib figure rather than saving it, so they can be
 reused to restyle or embed the standard panels elsewhere.
+
+They construct ``Figure`` objects directly instead of going through ``pyplot``.
+pyplot selects an interactive backend on import, which fails outright on headless
+machines whose Tk installation is absent or broken, and it registers every figure
+in a global list that a library has no business touching. Building the figure
+directly avoids both, and needs no ``plt.close()`` to stay leak-free.
 """
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
@@ -22,7 +27,8 @@ STATUS_STYLES = (
 
 def plot_diameter(analysis_table: pd.DataFrame, frame_numbers: np.ndarray) -> Figure:
     """Plot pupil diameter against the one-based source-frame number."""
-    figure, axis = plt.subplots(figsize=(10, 6))
+    figure = Figure(figsize=(10, 6))
+    axis = figure.subplots()
     axis.plot(frame_numbers, analysis_table["estimated_pupil_diameter"], linewidth=1)
     axis.set_ylabel("Estimated pupil diameter\n(model pixels)")
     axis.set_title("Pupil Analysis")
@@ -33,7 +39,8 @@ def plot_diameter(analysis_table: pd.DataFrame, frame_numbers: np.ndarray) -> Fi
 
 def plot_diameter_and_tracking(analysis_table: pd.DataFrame, frame_numbers: np.ndarray) -> Figure:
     """Plot diameter, center, speed, and quality control on a shared frame axis."""
-    figure, axes = plt.subplots(4, 1, figsize=(12, 11), sharex=True)
+    figure = Figure(figsize=(12, 11))
+    axes = figure.subplots(4, 1, sharex=True)
 
     axes[0].plot(frame_numbers, analysis_table["estimated_pupil_diameter"], linewidth=0.8)
     axes[0].set_ylabel("Diameter\n(model pixels)")

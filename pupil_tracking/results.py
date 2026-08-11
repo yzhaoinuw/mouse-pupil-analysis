@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 from typing import NamedTuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -131,8 +130,8 @@ def write_analysis_outputs(
         include_tracking=tracking_dataframe is not None,
     )
     plot_path = result_dir / f"{exp_name}_pupil_analysis.png"
+    # Figure was built without pyplot, so there is no global registry to clean up.
     figure.savefig(plot_path, dpi=200)
-    plt.close(figure)
 
     logger.info("Saved analysis CSV:  %s", csv_path)
     logger.info("Saved analysis plot: %s", plot_path)
