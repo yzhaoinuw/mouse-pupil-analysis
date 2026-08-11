@@ -65,7 +65,7 @@ def test_video_pixel_diameter_undoes_the_downscale(recording, expected_size, tmp
 
     scale_x, scale_y, _, _ = resize_scale(*expected_size)
     expected_ratio = 1.0 / np.sqrt(scale_x * scale_y)
-    observed = table["pupil_diameter_video_pixels"].to_numpy(dtype=float) / table[
+    observed = table["pupil_diameter_input_pixels"].to_numpy(dtype=float) / table[
         "estimated_pupil_diameter"
     ].to_numpy(dtype=float)
 
@@ -87,7 +87,7 @@ def test_already_model_sized_frames_need_no_diameter_conversion(tmp_path):
 
     # These frames are already 148 x 148, so the two diameter columns must agree.
     np.testing.assert_allclose(
-        table["pupil_diameter_video_pixels"].to_numpy(dtype=float),
+        table["pupil_diameter_input_pixels"].to_numpy(dtype=float),
         table["estimated_pupil_diameter"].to_numpy(dtype=float),
         rtol=1e-9,
     )

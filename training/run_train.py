@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from pupil_tracking.augmentation import SegmentationDataset
+from pupil_tracking.augmentation import SegmentationDataset, paired_image_mask_paths
 from pupil_tracking.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -39,26 +39,8 @@ def iou_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
 
 # -------------------- Data Preparation -------------------- #
 def make_dataset(image_dir, mask_dir, augment=False):
-    """Pair each image with the mask sharing its filename stem.
-
-    Sorting the two directories independently silently misaligns images and masks
-    as soon as the folders diverge, which trains the model against wrong labels
-    without any error. labelme_json2png.py writes each mask as <image stem>.png,
-    so the stem is the reliable key.
-    """
-    image_paths = sorted(Path(image_dir).glob("*.png"))
-    if not image_paths:
-        raise FileNotFoundError(f"No PNG images found in {image_dir}")
-
-    mask_by_stem = {path.stem: path for path in Path(mask_dir).glob("*.png")}
-    unmatched = [path.name for path in image_paths if path.stem not in mask_by_stem]
-    if unmatched:
-        raise FileNotFoundError(
-            f"{len(unmatched)} image(s) in {image_dir} have no mask in {mask_dir}, "
-            f"starting with {unmatched[0]!r}."
-        )
-
-    mask_paths = [mask_by_stem[path.stem] for path in image_paths]
+    """Build a dataset from a stem-paired image and mask directory."""
+    image_paths, mask_paths = paired_image_mask_paths(image_dir, mask_dir)
     return SegmentationDataset(image_paths, mask_paths, augment=augment)
 
 

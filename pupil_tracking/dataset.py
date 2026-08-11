@@ -10,6 +10,11 @@ The contents of this module moved in favor of a clearer split:
 ``PupilDataset`` returned either ``(image, name)`` or ``(image, mask)`` depending
 on whether ``mask_paths`` was supplied. The two dataset classes replace that
 single polymorphic class. This shim will be removed in a future release.
+
+Note that ``PupilDataset`` is now a factory function, not a class. Calls with the
+original positional or keyword arguments behave as before, but uses that treat it
+as a type -- ``isinstance(obj, PupilDataset)``, subclassing, or annotating with it
+-- no longer work. Migrate those to ``InferenceDataset`` or ``SegmentationDataset``.
 """
 
 import warnings
@@ -41,8 +46,20 @@ warnings.warn(
 )
 
 
-def PupilDataset(image_paths, mask_paths=None, **kwargs):
-    """Deprecated. Use ``InferenceDataset`` or ``SegmentationDataset`` directly."""
+def PupilDataset(
+    image_paths,
+    mask_paths=None,
+    augment=False,
+    target_size=MODEL_IMAGE_SIZE,
+    scale_range=(0.85, 1.15),
+    max_pad=12,
+):
+    """Deprecated. Use ``InferenceDataset`` or ``SegmentationDataset`` directly.
+
+    The signature deliberately mirrors the removed class exactly, including the
+    positional order, so existing calls such as ``PupilDataset(images, masks, True)``
+    keep working through the deprecation release.
+    """
     warnings.warn(
         "PupilDataset is deprecated; use InferenceDataset for inference or "
         "SegmentationDataset for training.",
@@ -50,8 +67,12 @@ def PupilDataset(image_paths, mask_paths=None, **kwargs):
         stacklevel=2,
     )
     if mask_paths is None:
-        return InferenceDataset(
-            image_paths,
-            target_size=kwargs.get("target_size", MODEL_IMAGE_SIZE),
-        )
-    return SegmentationDataset(image_paths, mask_paths, **kwargs)
+        return InferenceDataset(image_paths, target_size=target_size)
+    return SegmentationDataset(
+        image_paths,
+        mask_paths,
+        augment=augment,
+        target_size=target_size,
+        scale_range=scale_range,
+        max_pad=max_pad,
+    )

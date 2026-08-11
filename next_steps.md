@@ -23,7 +23,6 @@ Remaining work:
 
 - Register the pending PyPI publisher and enable the Zenodo webhook. Both are account actions; exact field values are in [`RELEASING.md`](RELEASING.md).
 - After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
-- Decide whether the packaging rename ships as `0.2.0`.
 
 ## Runtime Modularization
 
@@ -34,7 +33,7 @@ Status: complete on the `refactor` branch
 Remaining work:
 
 - Remove the `dataset.py` shim and the deprecated `generate_pupil_mask_prediction` after one release.
-- Decide whether the unified plot should show `pupil_diameter_video_pixels` instead of the model-pixel column, now that both are exported. This changes the appearance of the README demo, so it is deliberately deferred.
+- Decide whether the unified plot should show `pupil_diameter_input_pixels` instead of the model-pixel column, now that both are exported. This changes the appearance of the README demo, so it is deliberately deferred.
 
 ## Pupil-Center Velocity
 

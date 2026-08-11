@@ -49,6 +49,9 @@ class AnalysisConfig:
     calculate_velocity: bool = False
     acquisition_fps: float | None = None
     num_workers: int | None = None
+    # Off by default: a library should not write to stderr unless asked. The
+    # console scripts set this to True.
+    show_progress: bool = False
 
     def __post_init__(self) -> None:
         for name in (
@@ -116,6 +119,7 @@ def _resolve_frames(config: AnalysisConfig) -> tuple[list[ExtractedFrame], Analy
             config.extraction_fps,
             config.max_frames,
             extract_all=config.calculate_velocity,
+            show_progress=config.show_progress,
         )
         config.image_dir = config.out_dir
 
@@ -177,12 +181,13 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         pred_thresh=config.pred_thresh,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
+        show_progress=config.show_progress,
     ):
         results.append(
             DiameterRow(
                 prediction.image_name,
                 prediction.estimated_pupil_diameter,
-                prediction.pupil_diameter_video_pixels,
+                prediction.pupil_diameter_input_pixels,
             )
         )
         if tracking_accumulator is not None:

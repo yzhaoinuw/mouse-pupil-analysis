@@ -77,9 +77,19 @@ Zenodo mints two kinds of DOI:
    git push origin v0.2.0
    ```
 
-6. The `Release` workflow builds both distributions, verifies that the tag, the
-   citation metadata, and the packaged checkpoint are all consistent, smoke-tests the
-   wheel in a clean environment, and then publishes to PyPI.
+6. The `Release` workflow builds both distributions and refuses to publish unless:
+
+   - the tag matches `[project].version`;
+   - `CITATION.cff` records the same version;
+   - both artifacts contain the exact checkpoint that inference will select, plus its
+     matching training log, and no stray or archived checkpoints;
+   - the tagged commit is an ancestor of `origin/main` or `origin/dev`, so a release
+     cannot be cut from an unmerged branch;
+   - the wheel installs and runs in a clean environment.
+
+   Only then does it publish to PyPI. Because the checkpoint check resolves the single
+   packaged `.pth` rather than accepting any `.pth`, changing the packaging policy to
+   ship more than one checkpoint requires updating that step deliberately.
 
 7. Create the GitHub Release for that tag. This is what triggers Zenodo; pushing the
    tag alone does not.

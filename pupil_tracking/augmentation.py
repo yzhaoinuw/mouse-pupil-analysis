@@ -5,6 +5,7 @@ workflow under ``training/`` only.
 """
 
 import random
+from pathlib import Path
 
 import torchvision.transforms.functional as TF
 import torchvision.transforms.v2 as transforms
@@ -15,6 +16,51 @@ from torchvision.transforms import (
 )  # note: NOT v2 InterpolationMode
 
 from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, resize_with_pad
+
+
+def paired_image_mask_paths(
+    image_dir,
+    mask_dir,
+    allow_orphan_masks: bool = False,
+) -> tuple[list[Path], list[Path]]:
+    """Pair every training image with the mask sharing its filename stem.
+
+    Sorting the two directories independently silently misaligns images and masks as
+    soon as the folders diverge, which trains the model against wrong labels without
+    raising anything. ``labelme_json2png.py`` writes each mask as ``<image stem>.png``,
+    so the stem is the reliable key.
+
+    Both directions are checked. An image with no mask is always an error. A mask with
+    no image usually means its image was deleted or renamed, so it is an error too
+    unless ``allow_orphan_masks`` is set.
+    """
+    image_dir = Path(image_dir)
+    mask_dir = Path(mask_dir)
+
+    image_paths = sorted(image_dir.glob("*.png"))
+    if not image_paths:
+        raise FileNotFoundError(f"No PNG images found in {image_dir}")
+
+    mask_by_stem = {path.stem: path for path in mask_dir.glob("*.png")}
+
+    missing_masks = [path.name for path in image_paths if path.stem not in mask_by_stem]
+    if missing_masks:
+        raise FileNotFoundError(
+            f"{len(missing_masks)} image(s) in {image_dir} have no mask in {mask_dir}, "
+            f"starting with {missing_masks[0]!r}."
+        )
+
+    if not allow_orphan_masks:
+        image_stems = {path.stem for path in image_paths}
+        orphans = sorted(name for stem, name in mask_by_stem.items() if stem not in image_stems)
+        if orphans:
+            raise FileNotFoundError(
+                f"{len(orphans)} mask(s) in {mask_dir} have no image in {image_dir}, "
+                f"starting with {Path(orphans[0]).name!r}. Pass allow_orphan_masks=True "
+                "to ignore them."
+            )
+
+    return image_paths, [mask_by_stem[path.stem] for path in image_paths]
 
 
 class RandomAffinePair:

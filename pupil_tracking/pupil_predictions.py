@@ -26,7 +26,7 @@ from pupil_tracking.extract_frames import ExtractedFrame
 from pupil_tracking.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
-    model_to_video_length,
+    model_to_input_length,
     resize_with_pad,
 )
 from pupil_tracking.unet import UNet
@@ -63,15 +63,25 @@ class PupilPrediction:
         return self.frame.image_path.name
 
     @property
-    def pupil_diameter_video_pixels(self) -> float:
-        """Equivalent-circle diameter expressed in original-video pixels.
+    def pupil_diameter_input_pixels(self) -> float:
+        """Equivalent-circle diameter expressed in *input-image* pixels.
 
-        ``estimated_pupil_diameter`` is measured in the 148 x 148 model image, so it
-        is not comparable across recordings with different resolution or cropping.
-        This property inverts the resize-and-pad geometry to give a diameter that is.
+        ``estimated_pupil_diameter`` is measured in the 148 x 148 model image, whose
+        scale depends on the input frame's dimensions. This property inverts the
+        resize-and-pad geometry to restore the scale of the image that was supplied.
+
+        The unit is the supplied image, not necessarily the source video. Frames
+        extracted from a video are full source frames, so the two coincide. Frames
+        passed through ``image_dir`` are whatever the caller prepared: if they were
+        already cropped or resized to 148 x 148, this equals
+        ``estimated_pupil_diameter``.
+
+        Pixels are still not physically calibrated. Comparing across recordings is
+        only meaningful when their optics and working distance match, or after
+        applying a per-recording scale factor this package does not infer.
         """
         width, height = self.original_size
-        return model_to_video_length(self.estimated_pupil_diameter, width, height)
+        return model_to_input_length(self.estimated_pupil_diameter, width, height)
 
 
 def find_default_checkpoint() -> Path:
@@ -318,8 +328,13 @@ def iter_pupil_predictions(
     pred_thresh: float = 0.7,
     batch_size: int = 32,
     num_workers: int | None = None,
+    show_progress: bool = False,
 ) -> Iterator[PupilPrediction]:
-    """Yield predictions from one model pass without retaining float maps."""
+    """Yield predictions from one model pass without retaining float maps.
+
+    ``show_progress`` is off by default so importing code stays quiet. The console
+    scripts turn it on.
+    """
     if num_workers is None:
         num_workers = default_num_workers()
     if not image_frames:
@@ -349,7 +364,12 @@ def iter_pupil_predictions(
     logger.info("Using inference device: %s.", device)
     model = load_unet_checkpoint(checkpoint_path, device)
 
-    progress = tqdm(total=len(test_dataset), desc="Segmenting pupil images...", unit="image")
+    progress = tqdm(
+        total=len(test_dataset),
+        desc="Segmenting pupil images...",
+        unit="image",
+        disable=not show_progress,
+    )
     try:
         with torch.inference_mode():
             for images, names in test_loader:
@@ -379,6 +399,7 @@ def generate_pupil_predictions(
     pred_thresh: float = 0.7,
     batch_size: int = 32,
     mask_transparency: float = 0.1,
+    show_progress: bool = False,
 ) -> list[tuple[str, float]]:
     """Generate diameter results and optional overlays without tracking."""
     overlay_accumulator = None
@@ -395,6 +416,7 @@ def generate_pupil_predictions(
         image_frames,
         pred_thresh=pred_thresh,
         batch_size=batch_size,
+        show_progress=show_progress,
     ):
         diameter_results.append((prediction.image_name, prediction.estimated_pupil_diameter))
         if overlay_accumulator is not None:

@@ -36,7 +36,7 @@ class PupilPredictionLike(Protocol):
     def image_name(self) -> str: ...
 
     @property
-    def pupil_diameter_video_pixels(self) -> float: ...
+    def pupil_diameter_input_pixels(self) -> float: ...
 
 
 def model_to_original_coordinates(
@@ -210,7 +210,7 @@ class TrackingAccumulator:
                 "image_name": prediction.image_name,
                 "source_frame_index": prediction.frame.source_frame_index,
                 "estimated_pupil_diameter": prediction.estimated_pupil_diameter,
-                "pupil_diameter_video_pixels": prediction.pupil_diameter_video_pixels,
+                "pupil_diameter_input_pixels": prediction.pupil_diameter_input_pixels,
             }
         )
         self.measurements.append(measurement)

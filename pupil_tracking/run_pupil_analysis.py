@@ -91,6 +91,7 @@ def main():
         max_frames=args.max_frames,
         calculate_velocity=args.calculate_velocity,
         acquisition_fps=args.acquisition_fps,
+        show_progress=True,
     )
 
     try:

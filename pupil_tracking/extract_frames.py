@@ -71,8 +71,13 @@ def extract_selected_frames(
     extraction_fps=5,
     max_frames=10000,
     extract_all=False,
+    show_progress=False,
 ):
-    """Extract video frames and return their paths and original source indices."""
+    """Extract video frames and return their paths and original source indices.
+
+    ``show_progress`` is off by default so importing code stays quiet. The console
+    scripts turn it on.
+    """
     video_path = Path(video_path)
     video_name = video_path.stem
     out_dir = Path(out_dir)
@@ -120,6 +125,7 @@ def extract_selected_frames(
         total=len(selected_frames),
         desc="Extracting frames",
         unit="frame",
+        disable=not show_progress,
     ):
         if not sequential_read:
             cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame_idx))
@@ -182,6 +188,7 @@ def main():
         args.extraction_fps,
         args.max_frames,
         extract_all=args.all_frames,
+        show_progress=True,
     )
 
 

@@ -36,19 +36,22 @@ The trained model checkpoint ships with the package, so there is nothing else to
 
 ### GPU / CPU builds of PyTorch
 
-On **Windows and macOS**, the command above installs a CPU-only build of PyTorch (~120 MB), which is all this package needs to run. No action required.
+On **Windows and macOS**, the command above installs a CPU-only build of PyTorch, which is all this package needs to run. No action required.
 
-On **Linux**, the default PyPI wheel bundles CUDA and is roughly 500 MB. If you do not have an NVIDIA GPU, install the CPU-only build first to avoid the download:
+On **Linux**, the default PyPI wheel bundles CUDA and is several times larger. If you do not have an NVIDIA GPU, install the CPU-only build first to avoid the download:
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install mouse-pupil-analysis
 ```
 
-To use an **NVIDIA GPU**, install the matching CUDA build first, replacing `cu124` with your CUDA version (see [pytorch.org](https://pytorch.org/get-started/locally/)):
+To use an **NVIDIA GPU**, install a matching CUDA build first. This package requires
+`torch>=2.8`, which is served by the `cu126`, `cu128`, and `cu129` indexes; older
+indexes such as `cu124` stop at PyTorch 2.6 and will not satisfy that floor. Pick the
+index matching your driver with the [official selector](https://pytorch.org/get-started/locally/):
 
 ```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 pip install mouse-pupil-analysis
 ```
 
@@ -73,7 +76,7 @@ This will:
 
 1. Extract evenly spaced frames from the video into a folder like `movie_frames/`
 2. Run pupil segmentation and diameter estimation on those frames
-3. Save the results (CSV + plot) into `movie_frames_result/`
+3. Save the results (CSV + plot) into `movie_result/`
 
 To calculate pupil-center position and velocity from every encoded frame, add
 `--calculate_velocity` and provide the actual acquisition rate when it differs
@@ -116,7 +119,7 @@ The fixture is intended for workflow exploration and debugging, not scientific m
 | `--video_path`      | Path to the input video file. If provided, frames will automatically be extracted before analysis.                |
 | `--out_dir`         | Optional. Directory to save extracted frames. If not given, defaults to `<video_stem>_frames/` next to the video. |
 | `--image_dir`       | Optional alternative to `--video_path`. Use this if you already have extracted PNG frames.                        |
-| `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<image_dir>_result/`.            |
+| `--result_dir`      | Optional. Directory to save the CSV and plot outputs. If not given, defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir` input. |
 | `--checkpoint`      | Optional. Path to a custom model checkpoint. If not provided, the packaged checkpoint is used.                   |
 | `--output_mask_dir` | Optional. If provided, saves translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
 | `--extraction_fps`  | Optional. Specifies the number of frames per second at which to extract the frames from the video (default: 5). If `--max_frames` is provided, and if the number of frames to be extracted at `--extraction_fps` would exceed `--max_frames`, then the actual `--extraction_fps` will be automatically reduced so that `--max_frames` number of frames will be extracted. |
@@ -184,7 +187,11 @@ To start from frames you already extracted, use `analyze_frames` instead:
 ```python
 from pupil_tracking import analyze_frames
 
-result = analyze_frames("data/mouse1_frames", acquisition_fps=33.3333333333)
+result = analyze_frames(
+    "data/mouse1_frames",
+    calculate_velocity=True,
+    acquisition_fps=33.3333333333,
+)
 ```
 
 `result` is an `AnalysisResult` with these fields:
@@ -233,11 +240,17 @@ Pupil diameter is reported twice, in two different units:
 - `estimated_pupil_diameter` is measured in the 148 x 148 model image. Because every
   frame is rescaled to that size, this value is **not comparable between recordings**
   with different resolution or cropping. It is kept for continuity with earlier results.
-- `pupil_diameter_video_pixels` inverts the resize-and-pad geometry to express the same
-  measurement in original-video pixels. **Use this one when comparing across recordings.**
+- `pupil_diameter_input_pixels` inverts the resize-and-pad geometry to express the same
+  measurement at the scale of **the image you supplied**. With `--video_path` that is the
+  source video frame. With `--image_dir` it is whatever you prepared: if your frames were
+  already cropped or resized to 148 x 148, this column equals `estimated_pupil_diameter`.
 
 Both are equivalent-circle diameters: the diameter of a circle whose area matches the
 segmented pupil mask, `sqrt(4 / pi * area)`.
+
+Neither column is calibrated. `pupil_diameter_input_pixels` removes the model's rescaling,
+but two recordings still only compare directly if their optics and working distance match.
+Otherwise apply your own per-recording scale factor.
 
 Pupil-center coordinates are reported in original-video pixels. The x
 coordinate increases to the right and the y coordinate increases downward.
@@ -264,7 +277,7 @@ movie_frames/
     movie_00001.png
     movie_00002.png
     ...
-movie_frames_result/
+movie_result/
     movie_pupil_analysis.csv
     movie_pupil_analysis.png
 ```
@@ -277,9 +290,9 @@ If you use this software in a paper or other scholarly work, please cite the ver
 
 Recommended citation:
 
-> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.1.4. https://github.com/yzhaoinuw/pupil_tracking
+> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.2.0. https://github.com/yzhaoinuw/pupil_tracking
 
-Each release is archived on Zenodo with its own DOI. Cite the DOI of the specific version you ran, so your analysis stays reproducible against that exact code. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
+Zenodo archiving is planned but not yet enabled, so no DOI exists yet; see [`RELEASING.md`](RELEASING.md). Once it is, cite the DOI of the specific version you ran so your analysis stays reproducible against that exact code. Until then, cite the version number and commit. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
 
 ## License
 

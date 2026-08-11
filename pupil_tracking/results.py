@@ -19,17 +19,17 @@ class DiameterRow(NamedTuple):
 
     image_name: str
     estimated_pupil_diameter: float
-    pupil_diameter_video_pixels: float
+    pupil_diameter_input_pixels: float
 
 
 logger = logging.getLogger(__name__)
 
-DIAMETER_COLUMNS = ["image_name", "estimated_pupil_diameter", "pupil_diameter_video_pixels"]
+DIAMETER_COLUMNS = ["image_name", "estimated_pupil_diameter", "pupil_diameter_input_pixels"]
 
 VELOCITY_COLUMNS = [
     "image_name",
     "estimated_pupil_diameter",
-    "pupil_diameter_video_pixels",
+    "pupil_diameter_input_pixels",
     "timestamp_seconds",
     "center_x_pixels",
     "center_y_pixels",
@@ -78,7 +78,7 @@ def build_analysis_table(
         {
             "image_name": row.image_name,
             "estimated_pupil_diameter": row.estimated_pupil_diameter,
-            "pupil_diameter_video_pixels": row.pupil_diameter_video_pixels,
+            "pupil_diameter_input_pixels": row.pupil_diameter_input_pixels,
             "source_frame_index": source_index_by_name[row.image_name],
         }
         for row in results

@@ -45,9 +45,9 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
     assert dataframe.columns.tolist() == [
         "image_name",
         "estimated_pupil_diameter",
-        "pupil_diameter_video_pixels",
+        "pupil_diameter_input_pixels",
     ]
-    assert dataframe["pupil_diameter_video_pixels"].tolist() == [20.0, 22.0, 24.0]
+    assert dataframe["pupil_diameter_input_pixels"].tolist() == [20.0, 22.0, 24.0]
     assert dataframe["image_name"].tolist() == [
         "eye_00001.png",
         "eye_00002.png",
@@ -67,7 +67,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
             "center_y_pixels": [80.0, 81.0, np.nan],
             "speed_pixels_per_second": [np.nan, 47.0, np.nan],
             "estimated_pupil_diameter": [10.0, 11.0, 12.0],
-            "pupil_diameter_video_pixels": [20.0, 22.0, 24.0],
+            "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
             "segmentation_valid": [True, True, False],
             "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
@@ -84,7 +84,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
     assert dataframe.columns.tolist() == [
         "image_name",
         "estimated_pupil_diameter",
-        "pupil_diameter_video_pixels",
+        "pupil_diameter_input_pixels",
         "timestamp_seconds",
         "center_x_pixels",
         "center_y_pixels",

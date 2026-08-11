@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the branch-ancestry check below can resolve merge bases.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -53,7 +56,7 @@ jobs:
           print(f"Citation metadata agrees: {project_version}")
           PY
 
-      - name: Verify the model checkpoint ships in both distributions
+      - name: Verify the intended checkpoint and training log ship in both distributions
         run: |
           python - <<'PY'
           import pathlib, tarfile, zipfile
@@ -65,20 +68,53 @@ jobs:
               with tarfile.open(path) as archive:
                   return archive.getnames()
 
+          # Resolve what the installed package would actually select, so a release
+          # cannot ship a different checkpoint than the one inference will load.
+          checkpoint_dir = pathlib.Path("pupil_tracking/checkpoints")
+          repo_checkpoints = sorted(p.name for p in checkpoint_dir.glob("*.pth"))
+          if len(repo_checkpoints) != 1:
+              raise SystemExit(
+                  f"Expected exactly one packaged checkpoint, found {repo_checkpoints}. "
+                  "Update this check deliberately if the packaging policy changed."
+              )
+          expected_checkpoint = repo_checkpoints[0]
+          expected_log = f"training_log_{pathlib.Path(expected_checkpoint).stem}.txt"
+          if not (checkpoint_dir / expected_log).is_file():
+              raise SystemExit(f"Missing training log {expected_log} for {expected_checkpoint}.")
+
           distributions = sorted(pathlib.Path("dist").iterdir())
           if not distributions:
               raise SystemExit("No distributions were built.")
 
           for distribution in distributions:
               members = names(distribution)
-              checkpoints = [n for n in members if n.endswith(".pth")]
-              archived = [n for n in members if "checkpoints/archive/" in n]
-              if not checkpoints:
-                  raise SystemExit(f"{distribution.name} contains no .pth checkpoint.")
-              if archived:
-                  raise SystemExit(f"{distribution.name} leaks archived checkpoints: {archived}")
-              print(f"{distribution.name}: {len(checkpoints)} checkpoint(s) present")
+              if not any(n.endswith(f"checkpoints/{expected_checkpoint}") for n in members):
+                  raise SystemExit(f"{distribution.name} is missing {expected_checkpoint}.")
+              if not any(n.endswith(f"checkpoints/{expected_log}") for n in members):
+                  raise SystemExit(f"{distribution.name} is missing {expected_log}.")
+              stray = [
+                  n for n in members
+                  if n.endswith(".pth") and not n.endswith(f"checkpoints/{expected_checkpoint}")
+              ]
+              if stray:
+                  raise SystemExit(f"{distribution.name} ships unexpected checkpoints: {stray}")
+              if [n for n in members if "checkpoints/archive/" in n]:
+                  raise SystemExit(f"{distribution.name} leaks archived checkpoints.")
+              print(f"{distribution.name}: {expected_checkpoint} and its training log present")
           PY
+
+      - name: Verify the tag is on an integration branch
+        run: |
+          git fetch origin main dev --depth=50 || true
+          for branch in origin/main origin/dev; do
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$branch" 2>/dev/null; then
+              echo "Tagged commit is contained in $branch."
+              exit 0
+            fi
+          done
+          echo "::error::Tagged commit is not an ancestor of origin/main or origin/dev."
+          echo "Merge the release commit before tagging so published code matches an integration branch."
+          exit 1
 
       - name: Install the built wheel into a clean environment and smoke test
         run: |

@@ -69,16 +69,19 @@ def resize_scale(
     return resized_width / original_width, resized_height / original_height, pad_left, pad_top
 
 
-def model_to_video_length(
+def model_to_input_length(
     model_length: float,
     original_width: int,
     original_height: int,
     target_size: int = MODEL_IMAGE_SIZE,
 ) -> float:
-    """Convert a model-space length to original-video pixels.
+    """Convert a model-space length back to the supplied image's pixel scale.
 
-    Areas scale by ``scale_x * scale_y``, so a length derived from an area (such as
-    an equivalent-circle diameter) converts by the geometric mean of the two scales.
+    ``original_width`` and ``original_height`` are the dimensions of the image that
+    was fed in, which is the source video frame only when frames came from video
+    extraction. Areas scale by ``scale_x * scale_y``, so a length derived from an
+    area (such as an equivalent-circle diameter) converts by the geometric mean of
+    the two scales.
     """
     scale_x, scale_y, _, _ = resize_scale(original_width, original_height, target_size)
     return float(model_length / math.sqrt(scale_x * scale_y))
