@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Packaging and distribution](#packaging-and-distribution) - the permanent rename, pending PyPI publisher, and post-rename Zenodo connection are complete; merge the final namespace guard, then finish the `dev` to `main` release flow.
+- [Packaging and distribution](#packaging-and-distribution) - the permanent rename, namespace guard, pending PyPI publisher, and post-rename Zenodo connection are complete; finish the `dev` to `main` release flow.
 - [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
@@ -15,7 +15,7 @@ When a new thread starts, add a short bullet here with a link to its section bel
 
 ## Packaging And Distribution
 
-Status: account setup complete; final namespace-guard follow-up is in PR #3
+Status: release preparation complete on `dev`; ready for `main`, tag, and publication
 
 The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
@@ -23,8 +23,8 @@ The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` o
 
 Remaining work:
 
-- Merge PR #3 into `dev`, merge the release-ready `dev` branch into `main`, tag
-  `v0.2.0`, and publish the GitHub Release according to [`RELEASING.md`](RELEASING.md).
+- Merge the release-ready `dev` branch into `main`, tag `v0.2.0`, and publish the
+  GitHub Release according to [`RELEASING.md`](RELEASING.md).
 - After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
 
 ## Runtime Modularization

@@ -2,11 +2,25 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-12
+
+### Finalize the package namespace and release gate (Codex, GPT-5)
+
+- The user confirmed that the pending PyPI publisher is registered with the renamed repository and that Zenodo remains enabled after the GitHub rename. Those account actions no longer block the release.
+- Audited PR #3's first namespace guard and found that it rejected wheel paths but accidentally exempted an sdist path because the archive root itself contains `mouse_pupil_analysis`. Replaced the duplicated inline checks with `scripts/verify_distribution_namespaces.py`, which checks complete path components, and added explicit wheel-layout, sdist-layout, and false-positive regressions. Included the verifier in the sdist alongside the tests that import it, while keeping it out of the installed wheel.
+- The first pushed regression imported the repository-only verifier as an ordinary package. Local `python -m pytest` placed the repository root on `sys.path`, but CI's `pytest` console entry point did not, so collection failed across the matrix. The test now loads the exact verifier file explicitly and passes under both invocation styles without installing release tooling into the wheel.
+- Moved the ignored historical checkpoint archive under `mouse_pupil_analysis/checkpoints/archive/`, removed the stale legacy Python cache, and merged the fully green PR #3 into `dev` as `1f9d5b2`.
+- Updated the 0.2.0 changelog and citation release date to the verified local date, 2026-08-12.
+- Verification:
+  - `ruff check .`, `black --check .`, Treaty validation, and `git diff --check` passed.
+  - The full local Pytest suite passed (`65 passed`), including a direct `pytest` console-entry run of the namespace regressions.
+  - A clean wheel and sdist passed the shared verifier, contained no `pupil_tracking/` members, and retained the packaged checkpoint and both unchanged console commands. A clean wheel installation exposed only `mouse_pupil_analysis`.
+  - Both GitHub Actions runs passed across lint, wheel smoke, Ubuntu Python 3.10-3.13, Windows 3.12, and macOS 3.12.
+
 ## 2026-08-11
 
 ### Drop the legacy namespace instead of hardening it (Claude Code, Opus 5)
 
-- The user confirmed on 2026-08-12 that the pending PyPI publisher is registered with the renamed repository and that Zenodo remains enabled after the GitHub rename. Those account actions no longer block the release.
 - Reviewed the rename commit and found that the compatibility wrappers re-exported with `import *`, which honors `__all__`. Because the rename added `__all__` to `mouse_pupil_analysis/run_pupil_analysis.py`, `from pupil_tracking.run_pupil_analysis import run_analysis` raised `ImportError` even though the commit's stated goal was preserving legacy imports. Opened #3 fixing that by forwarding through a module-level `__getattr__`.
 - **Superseded that fix in favor of removing the shim, per review.** The reviewer's objection was decisive and correct: the unrelated PyPI distribution `pupil-tracking==1.0.1` installs the exact path `pupil_tracking/__init__.py`, so shipping the shim would give two distributions ownership of one import namespace. Verified against the published wheel rather than assuming, and measured the consequence in clean virtual environments:
   - Installing `pupil-tracking` then `mouse-pupil-analysis` silently overwrote the unrelated project's `__init__.py` with our shim, leaving `pip list` reporting `pupil-tracking 1.0.1` as installed.
@@ -14,13 +28,11 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - The reverse order broke our own shim instead: `pupil_tracking.analyze_video` raised `AttributeError`. Both orders fail, and pip reports success throughout.
 - Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `AGENTS.md`, and `project_overview.md`.
 - Added regressions so the namespace cannot return: `tests/test_metadata.py` asserts the packaging config and working tree never reintroduce it and that both console scripts still target `mouse_pupil_analysis`, and CI plus the release workflow fail on any `pupil_tracking/` member in a built wheel or sdist. The release check runs before publication, since a PyPI version can never be reused.
-- A follow-up audit found that the first inline artifact check correctly rejected wheel paths but accidentally exempted an sdist path because the archive root itself contains `mouse_pupil_analysis`. Replaced both copies with `scripts/verify_distribution_namespaces.py`, which checks complete path components, added explicit wheel-layout, sdist-layout, and false-positive regression cases, and included the verifier in the sdist alongside the tests that import it.
-- The first pushed regression imported the repository-only verifier as an ordinary package. Local `python -m pytest` placed the repository root on `sys.path`, but CI's `pytest` console entry point did not, so collection failed across the matrix. The test now loads the exact verifier file explicitly and passes under both invocation styles without installing release tooling into the wheel.
 - Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
 - Left commit `23cab15`'s literal `\n` characters alone, per the maintainer's decision not to rewrite the already-pushed shared `dev` branch.
 - Verification:
-  - `ruff check .`, `black --check .`, and the full Pytest suite passed (`65 passed`).
-  - A clean wheel and sdist build passed the shared namespace verifier, contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
+  - `ruff check .`, `black --check .`, and the full Pytest suite passed (`62 passed`).
+  - A clean wheel and sdist build contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
   - Installed the wheel into a clean environment alongside `pupil-tracking==1.0.1` in both orders and confirmed the two distributions no longer share any file.
 
 ### Adopt the permanent mouse-pupil-analysis identity (Codex, GPT-5)

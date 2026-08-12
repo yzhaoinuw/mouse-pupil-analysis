@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-08-11
+## [0.2.0] - 2026-08-12
 
 Everything between the `v0.1.4` tag (2026-06-12) and this release, including the
 pupil-center velocity feature, first ships here. Version 0.1.3 was never released.
