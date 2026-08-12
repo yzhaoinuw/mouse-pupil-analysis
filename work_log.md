@@ -4,6 +4,20 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-12
 
+### Re-cut the README on maintainer review (Claude Code, Opus 5)
+
+- The first restructure was accepted only in part. Reworked it against the maintainer's specific objections rather than patching around them.
+- **The Zenodo badge endpoint is why the DOI badge rendered late.** `zenodo.org/badge/DOI/...svg` answers through a redirect in ~0.46 s against ~0.14 s for an equivalent `img.shields.io` static badge, and GitHub's image proxy caches the redirecting variant poorly on first view. Swapped to `img.shields.io/badge/DOI-10.5281%2Fzenodo.21897795-1682D4.svg`. The badge target is unchanged, so the concept DOI still resolves to the newest version.
+- Cut the badge row from five to two, keeping only the DOI and the treaty badge. The PyPI version, Python version, and license badges duplicated facts the Install section and `LICENSE` already state.
+- Moved the demo GIF above the prose description, per the maintainer's point that the animation carries more than the paragraph does.
+- Replaced the "If you want to... / Go to" contents table with a plain nested list. The maintainer's test is worth recording: **if a section needs a gloss explaining when to read it, the heading is wrong and the section may not deserve to exist.** Applied that test to the whole file.
+- Deleted the "Will this work on my recordings?" section under that test. Its load-bearing content survives in two better places: the 148 x 148 framing precondition is now a short blockquote at the end of Usage, where it is a precondition rather than an aside, and the overlay-and-threshold diagnostic became the first FAQ entry.
+- Reordered the body to follow what a user does: Install, Usage, Pupil center and velocity, Output, CLI reference, then Python API. Velocity mode now follows Usage directly because it is a primary use, not an advanced option. Output moved up because it describes what exists on disk immediately after a run, and the folder tree moved with it instead of sitting inside Usage.
+- Verification:
+  - `ruff check .`, `black --check .` (34 files unchanged), `pytest` (`65 passed`), and `git diff --check` passed.
+  - Rendered through `readme_renderer[md]` in a separate virtual environment, as PyPI does: 29,100 characters, GIF and both badges present, four tables intact, no unresolved reference links, and 18 of 18 in-document anchors resolving. A bare `twine check` still cannot substitute for this; see the previous entry.
+  - Asserted programmatically that the contents list matches the `##` heading sequence exactly, so the two cannot drift.
+
 ### Record the Zenodo DOIs and restructure the README (Claude Code, Opus 5)
 
 - Retrieved the minted identifiers from the public Zenodo API rather than waiting on the web UI: concept DOI `10.5281/zenodo.21897795` and v0.2.0 version DOI `10.5281/zenodo.21897796`. `RELEASING.md` step 8 now carries that one-line query so the next release does not have to rediscover it.

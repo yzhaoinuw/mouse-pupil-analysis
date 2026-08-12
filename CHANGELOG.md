@@ -16,11 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Reorganized `README.md` so installation and a first run come before optional
-  features, added a linked contents table, and moved environment setup, PyTorch
-  CPU/GPU builds, and packaging-name background into a later section. No
-  documented behavior changed. `--batch_size` and `--mask_transparency`, which the
-  CLI has always accepted, are now documented.
+- Rewrote `README.md` around the order a user actually needs: install, run, velocity
+  mode, output, then the full CLI reference, with a plain linked contents list above
+  them. Environment setup, PyTorch CPU/GPU builds, and troubleshooting moved into
+  later sections and an FAQ. No documented behavior changed. `--batch_size` and
+  `--mask_transparency`, which the CLI has always accepted, are now documented.
 
 ## [0.2.0] - 2026-08-12
 
