@@ -32,8 +32,9 @@ The trained model checkpoint ships with the package, so there is nothing else to
 
 > **Note on names.** The repository and distribution are `mouse-pupil-analysis`, the Python import is
 > `mouse_pupil_analysis`, and the established console commands remain `run-pupil-analysis` and
-> `extract-frames`. The old `pupil_tracking` import is retained as a deprecated compatibility shim.
-> The shorter name `pupil-tracking` on PyPI belongs to an unrelated project by a different author.
+> `extract-frames`. The shorter name `pupil-tracking` on PyPI belongs to an unrelated project by a
+> different author, and it installs its own `pupil_tracking` module, so this project deliberately
+> claims no `pupil_tracking` import namespace of any kind.
 > Existing Conda environments do not need to be renamed; environment names are local only.
 
 ### GPU / CPU builds of PyTorch

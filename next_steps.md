@@ -19,6 +19,8 @@ Status: implemented on `dev`; the pending PyPI publisher is the only release blo
 
 The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
+**Settled: this project ships no `pupil_tracking` module, and no compatibility shim.** The unrelated `pupil-tracking` distribution installs its own `pupil_tracking/__init__.py`, so claiming that path here would give two distributions one import namespace. That was measured, not assumed: installing both in either order silently overwrites one `__init__.py` with the other's, and uninstalling either deletes the shared file while `pip list` still reports the survivor as installed. `mouse-pupil-analysis` had not yet been published to PyPI and the previous public release documented the CLI rather than a Python API, so the one-package namespace was established before it could break a published contract. CI and the release workflow both fail if `pupil_tracking/` reappears in a built artifact.
+
 Remaining work:
 
 - After the GitHub repository rename, confirm Zenodo still shows

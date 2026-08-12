@@ -73,12 +73,36 @@ jobs:
           python -m pip install -U pip build
           python -m build
 
+      - name: Distributions claim only the mouse_pupil_analysis namespace
+        run: |
+          python - <<'PY'
+          import pathlib, tarfile, zipfile
+
+          def names(path):
+              if path.suffix == ".whl":
+                  with zipfile.ZipFile(path) as archive:
+                      return archive.namelist()
+              with tarfile.open(path) as archive:
+                  return archive.getnames()
+
+          # The unrelated PyPI distribution `pupil-tracking` owns
+          # `pupil_tracking/__init__.py`. Shipping that path from here would let
+          # either distribution overwrite or delete the other's file on install
+          # and uninstall, so it must never reappear in a built artifact.
+          for distribution in sorted(pathlib.Path("dist").iterdir()):
+              leaked = [
+                  n for n in names(distribution)
+                  if "pupil_tracking/" in n and "mouse_pupil_analysis" not in n
+              ]
+              if leaked:
+                  raise SystemExit(f"{distribution.name} ships legacy namespace: {leaked}")
+              print(f"{distribution.name}: no pupil_tracking namespace")
+          PY
+
       - name: Install wheel into clean env + smoke test
         run: |
           python -m pip install -U pip
           python -m pip install dist/*.whl
           python -c "import mouse_pupil_analysis; print('version', mouse_pupil_analysis.__version__)"
-          # The deprecated shim ships in the wheel, so it has to be exercised from
-          # an installed distribution and not only from a source checkout.
-          python -c "import pupil_tracking, mouse_pupil_analysis; assert pupil_tracking.analyze_video is mouse_pupil_analysis.analyze_video; print('legacy shim forwards')"
           run-pupil-analysis --help
+          extract-frames --help

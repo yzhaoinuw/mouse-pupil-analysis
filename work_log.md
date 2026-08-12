@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Drop the legacy namespace instead of hardening it (Claude Code, Opus 5)
+
+- Reviewed the rename commit and found that the compatibility wrappers re-exported with `import *`, which honors `__all__`. Because the rename added `__all__` to `mouse_pupil_analysis/run_pupil_analysis.py`, `from pupil_tracking.run_pupil_analysis import run_analysis` raised `ImportError` even though the commit's stated goal was preserving legacy imports. Opened #3 fixing that by forwarding through a module-level `__getattr__`.
+- **Superseded that fix in favor of removing the shim, per review.** The reviewer's objection was decisive and correct: the unrelated PyPI distribution `pupil-tracking==1.0.1` installs the exact path `pupil_tracking/__init__.py`, so shipping the shim would give two distributions ownership of one import namespace. Verified against the published wheel rather than assuming, and measured the consequence in clean virtual environments:
+  - Installing `pupil-tracking` then `mouse-pupil-analysis` silently overwrote the unrelated project's `__init__.py` with our shim, leaving `pip list` reporting `pupil-tracking 1.0.1` as installed.
+  - Uninstalling `mouse-pupil-analysis` then deleted the shared file, leaving `pupil-tracking 1.0.1` still listed while `import pupil_tracking` raised `ModuleNotFoundError`. An unrelated third-party package was destroyed by our uninstall.
+  - The reverse order broke our own shim instead: `pupil_tracking.analyze_video` raised `AttributeError`. Both orders fail, and pip reports success throughout.
+- Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `AGENTS.md`, and `project_overview.md`.
+- Added regressions so the namespace cannot return: `tests/test_metadata.py` asserts the packaging config and working tree never reintroduce it and that both console scripts still target `mouse_pupil_analysis`, and CI plus the release workflow fail on any `pupil_tracking/` member in a built wheel or sdist. The release check runs before publication, since a PyPI version can never be reused.
+- Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
+- Left commit `23cab15`'s literal `\n` characters alone, per the maintainer's decision not to rewrite the already-pushed shared `dev` branch.
+- Verification:
+  - `ruff check .`, `black --check .`, and the full Pytest suite passed.
+  - A clean wheel and sdist build contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
+  - Installed the wheel into a clean environment alongside `pupil-tracking==1.0.1` in both orders and confirmed the two distributions no longer share any file.
+
 ### Adopt the permanent mouse-pupil-analysis identity (Codex, GPT-5)
 
 - Renamed the primary Python package from `pupil_tracking` to `mouse_pupil_analysis`, matching the already-selected `mouse-pupil-analysis` distribution and the forthcoming GitHub repository name. Kept `run-pupil-analysis` and `extract-frames` unchanged so existing command-line habits continue to work.

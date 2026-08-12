@@ -4,10 +4,11 @@
 
 This repository packages a mouse pupil segmentation, pupil-diameter, and opt-in pupil-center velocity analysis pipeline. It can extract sampled or consecutive full-frame images from video, run a trained attention UNet on centered eye images, and save pupil size, tracking, quality-control, and optional mask-overlay outputs.
 
-The distribution and repository are `mouse-pupil-analysis`; the primary Python
+The distribution and repository are `mouse-pupil-analysis`; the only Python
 package is `mouse_pupil_analysis`. The user-facing command line tools are
 `run-pupil-analysis` and `extract-frames`, both declared in `pyproject.toml`.
-The old `pupil_tracking` package is a deprecated compatibility layer only.
+This project ships no `pupil_tracking` module: that import path is owned by an
+unrelated PyPI distribution and must not be claimed here.
 
 ## Active Runtime Path
 
@@ -127,7 +128,6 @@ mouse-pupil-analysis/
 |  |- logging_utils.py
 |  |- unet.py
 |  |- checkpoints/
-|- pupil_tracking/          (deprecated import wrappers only)
 |- tests/
 |  |- test_imports.py
 |  |- test_cli_help.py
@@ -181,7 +181,6 @@ Active, package-facing files:
 - `mouse_pupil_analysis/logging_utils.py`
 - `mouse_pupil_analysis/unet.py`
 - `mouse_pupil_analysis/checkpoints/`
-- `pupil_tracking/` compatibility wrappers
 - `tests/`
 - `.github/workflows/ci.yml`
 - `pyproject.toml`

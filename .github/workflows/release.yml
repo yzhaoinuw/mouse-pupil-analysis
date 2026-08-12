@@ -103,6 +103,33 @@ jobs:
               print(f"{distribution.name}: {expected_checkpoint} and its training log present")
           PY
 
+      - name: Verify the distributions claim only the mouse_pupil_analysis namespace
+        run: |
+          python - <<'PY'
+          import pathlib, tarfile, zipfile
+
+          def names(path):
+              if path.suffix == ".whl":
+                  with zipfile.ZipFile(path) as archive:
+                      return archive.namelist()
+              with tarfile.open(path) as archive:
+                  return archive.getnames()
+
+          # The unrelated PyPI distribution `pupil-tracking` owns
+          # `pupil_tracking/__init__.py`. Publishing that path from here would let
+          # either distribution overwrite or delete the other's file on install and
+          # uninstall, while pip still reported the survivor as installed. A release
+          # is irreversible, so this is checked before anything is published.
+          for distribution in sorted(pathlib.Path("dist").iterdir()):
+              leaked = [
+                  n for n in names(distribution)
+                  if "pupil_tracking/" in n and "mouse_pupil_analysis" not in n
+              ]
+              if leaked:
+                  raise SystemExit(f"{distribution.name} ships legacy namespace: {leaked}")
+              print(f"{distribution.name}: no pupil_tracking namespace")
+          PY
+
       - name: Verify the tag is on the default branch
         run: |
           # A PyPI version number can never be reused, so a published release must
@@ -122,10 +149,8 @@ jobs:
           /tmp/smoke/bin/python -m pip install -U pip
           /tmp/smoke/bin/python -m pip install dist/*.whl
           /tmp/smoke/bin/python -c "import mouse_pupil_analysis; print('version', mouse_pupil_analysis.__version__)"
-          # The deprecated shim ships in the wheel, so it has to be exercised from
-          # an installed distribution and not only from a source checkout.
-          /tmp/smoke/bin/python -c "import pupil_tracking, mouse_pupil_analysis; assert pupil_tracking.analyze_video is mouse_pupil_analysis.analyze_video; print('legacy shim forwards')"
           /tmp/smoke/bin/run-pupil-analysis --help
+          /tmp/smoke/bin/extract-frames --help
 
       - uses: actions/upload-artifact@v4
         with:

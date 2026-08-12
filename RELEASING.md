@@ -4,9 +4,12 @@ This document covers the PyPI and Zenodo mechanics specific to this project. The
 general commit/push/tag discipline lives in
 [Release Gate](treaty_conventions.md#release-gate).
 
-The repository and distribution are **`mouse-pupil-analysis`**. The primary import
-is `mouse_pupil_analysis`; the established console commands remain unchanged, and
-`pupil_tracking` is shipped only as a deprecated compatibility package.
+The repository and distribution are **`mouse-pupil-analysis`**. The only import is
+`mouse_pupil_analysis`, and the established console commands remain unchanged.
+Nothing here may ship a `pupil_tracking` module: the unrelated PyPI distribution
+`pupil-tracking` already owns that import path, and two distributions writing one
+file corrupt each other on install and uninstall. The release workflow enforces
+this against the built artifacts.
 
 ## One-Time Setup
 
