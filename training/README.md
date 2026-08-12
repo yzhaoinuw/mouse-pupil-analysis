@@ -9,7 +9,7 @@ Run commands from the repository root. All paths in the scripts are anchored to 
 Use the project's environment and editable installation:
 
 ```powershell
-conda activate mouse_pupil_analysis
+conda activate pupil_tracking
 python -m pip install -e .
 ```
 

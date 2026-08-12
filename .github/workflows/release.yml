@@ -122,6 +122,9 @@ jobs:
           /tmp/smoke/bin/python -m pip install -U pip
           /tmp/smoke/bin/python -m pip install dist/*.whl
           /tmp/smoke/bin/python -c "import mouse_pupil_analysis; print('version', mouse_pupil_analysis.__version__)"
+          # The deprecated shim ships in the wheel, so it has to be exercised from
+          # an installed distribution and not only from a source checkout.
+          /tmp/smoke/bin/python -c "import pupil_tracking, mouse_pupil_analysis; assert pupil_tracking.analyze_video is mouse_pupil_analysis.analyze_video; print('legacy shim forwards')"
           /tmp/smoke/bin/run-pupil-analysis --help
 
       - uses: actions/upload-artifact@v4

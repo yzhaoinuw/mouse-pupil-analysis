@@ -10,7 +10,7 @@ Run the commands below from the repository root. The script also works when run 
 Activate the project environment first:
 
 ```powershell
-conda activate mouse_pupil_analysis
+conda activate pupil_tracking
 ```
 
 ## 1. Create the source analysis
