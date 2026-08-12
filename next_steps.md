@@ -4,28 +4,28 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Packaging and distribution](#packaging-and-distribution) - the permanent rename, namespace guard, pending PyPI publisher, and post-rename Zenodo connection are complete; finish the `dev` to `main` release flow.
+- [Packaging and distribution](#packaging-and-distribution) - complete; version 0.2.0 is published on PyPI and GitHub under the permanent project identity.
 - [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
-- [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
+- [DOI archival](#doi-archival) - the GitHub Release has triggered Zenodo; wait for the archive record, then add its DOI metadata.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
 ## Packaging And Distribution
 
-Status: release preparation complete on `dev`; ready for `main`, tag, and publication
+Status: version 0.2.0 published on PyPI and GitHub
 
 The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
 **Settled: this project ships no `pupil_tracking` module, and no compatibility shim.** The unrelated `pupil-tracking` distribution installs its own `pupil_tracking/__init__.py`, so claiming that path here would give two distributions one import namespace. That was measured, not assumed: installing both in either order silently overwrites one `__init__.py` with the other's, and uninstalling either deletes the shared file while `pip list` still reports the survivor as installed. `mouse-pupil-analysis` had not yet been published to PyPI and the previous public release documented the CLI rather than a Python API, so the one-package namespace was established before it could break a published contract. CI and the release workflow both fail if `pupil_tracking/` reappears in a built artifact.
 
-Remaining work:
+Release outcome:
 
-- Merge the release-ready `dev` branch into `main`, tag `v0.2.0`, and publish the
-  GitHub Release according to [`RELEASING.md`](RELEASING.md).
-- After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
+- Tag `v0.2.0` points to the release commit on `main`.
+- PyPI contains both the wheel and source distribution for `mouse-pupil-analysis==0.2.0`.
+- The GitHub Release is live and has triggered the already-enabled Zenodo integration.
 
 ## Runtime Modularization
 
@@ -271,15 +271,14 @@ Remaining work:
 
 ## DOI Archival
 
-Status: ready for user/account action
+Status: GitHub Release published; Zenodo archive processing
 
 The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display citation metadata for tagged releases. Zenodo is enabled; the first DOI will be minted after the first GitHub Release is published and processed.
 
 Remaining work:
 
-- After the citable version tag is pushed, publish the GitHub Release to trigger
-  the already-confirmed Zenodo integration.
-- Mint a DOI for the release and add it to `CITATION.cff` and `README.md`.
+- Wait for Zenodo to expose the archive record and DOI; no matching public record was indexed during the first several minutes after the GitHub Release.
+- Add the version DOI to `CITATION.cff` and the concept-DOI badge to `README.md`.
 
 ## Sample Data For Examples And Regression Tests
 

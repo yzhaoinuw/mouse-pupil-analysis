@@ -11,6 +11,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - The first pushed regression imported the repository-only verifier as an ordinary package. Local `python -m pytest` placed the repository root on `sys.path`, but CI's `pytest` console entry point did not, so collection failed across the matrix. The test now loads the exact verifier file explicitly and passes under both invocation styles without installing release tooling into the wheel.
 - Moved the ignored historical checkpoint archive under `mouse_pupil_analysis/checkpoints/archive/`, removed the stale legacy Python cache, and merged the fully green PR #3 into `dev` as `1f9d5b2`.
 - Updated the 0.2.0 changelog and citation release date to the verified local date, 2026-08-12.
+- Fast-forwarded the fully verified `dev` release commit `3de4360` to `main`, confirmed the separate `main` CI run passed, and published annotated tag `v0.2.0` at that exact commit.
+- The tag-triggered release workflow built and verified both distributions, passed its clean-wheel smoke test, and published `mouse-pupil-analysis==0.2.0` through PyPI Trusted Publishing. The public PyPI record exposes `mouse_pupil_analysis-0.2.0-py3-none-any.whl` and `mouse_pupil_analysis-0.2.0.tar.gz`.
+- Published the curated GitHub Release for `v0.2.0`, triggering the enabled Zenodo integration. Zenodo had not exposed a matching public record during the first several minutes, so the DOI metadata update remains an explicit follow-up rather than recording an unverified identifier.
 - Verification:
   - `ruff check .`, `black --check .`, Treaty validation, and `git diff --check` passed.
   - The full local Pytest suite passed (`65 passed`), including a direct `pytest` console-entry run of the namespace regressions.
