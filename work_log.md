@@ -4,6 +4,16 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-12
 
+### Refocus the README and add the minted DOI (Codex, GPT-5)
+
+- Reordered the public documentation around a first-time user's decision path: a compact purpose statement and linked content overview now lead directly to a two-command quick start and expected outputs. Input suitability follows before optional sample, velocity, CLI, API, and interpretation detail.
+- Moved Conda setup, PyTorch variants, troubleshooting, package-name clarification, and contributor installation behind the fast path. Consolidated repeated CLI examples and removed the duplicated training-data walkthrough in favor of the guide that owns it.
+- Kept internal methodology and repository architecture in `project_overview.md`; the README links there instead of restating it. Converted repository links and the demo image to absolute GitHub URLs so the packaged README also works when rendered on PyPI.
+- Verified through DataCite that `10.5281/zenodo.21897795` is the all-versions concept DOI and `10.5281/zenodo.21897796` is the DOI for v0.2.0. Added the version DOI to `CITATION.cff`, the concept DOI badge to the README, and the exact-version DOI to the recommended citation.
+- Verification:
+  - README internal navigation and PyPI-portable repository links were checked mechanically; DataCite reports the version DOI as findable and related to the concept DOI through `IsVersionOf`.
+  - Ruff, Black, Treaty validation, the full Pytest suite, and a clean wheel/sdist build were run for the final documentation state.
+
 ### Finalize the package namespace and release gate (Codex, GPT-5)
 
 - The user confirmed that the pending PyPI publisher is registered with the renamed repository and that Zenodo remains enabled after the GitHub rename. Those account actions no longer block the release.

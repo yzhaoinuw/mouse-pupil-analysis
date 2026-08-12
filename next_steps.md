@@ -8,7 +8,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
-- [DOI archival](#doi-archival) - the GitHub Release has triggered Zenodo; wait for the archive record, then add its DOI metadata.
+- [DOI archival](#doi-archival) - complete; Zenodo minted the concept and v0.2.0 DOIs, and the public citation metadata now records them.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
@@ -271,14 +271,9 @@ Remaining work:
 
 ## DOI Archival
 
-Status: GitHub Release published; Zenodo archive processing
+Status: complete
 
-The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display citation metadata for tagged releases. Zenodo is enabled; the first DOI will be minted after the first GitHub Release is published and processed.
-
-Remaining work:
-
-- Wait for Zenodo to expose the archive record and DOI; no matching public record was indexed during the first several minutes after the GitHub Release.
-- Add the version DOI to `CITATION.cff` and the concept-DOI badge to `README.md`.
+Zenodo minted concept DOI `10.5281/zenodo.21897795` and version DOI `10.5281/zenodo.21897796` for v0.2.0. `CITATION.cff` records the version DOI, while the README badge uses the concept DOI and its recommended citation links the exact released version.
 
 ## Sample Data For Examples And Regression Tests
 
