@@ -18,8 +18,8 @@ You can start directly from a video file or from an existing folder of extracted
 It is recommended that you first create a dedicated virtual environment, for example with [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install):
 
 ```bash
-conda create -n pupil_tracking python=3.12
-conda activate pupil_tracking
+conda create -n mouse_pupil_analysis python=3.12
+conda activate mouse_pupil_analysis
 ```
 
 Then install the package:
@@ -30,9 +30,11 @@ pip install mouse-pupil-analysis
 
 The trained model checkpoint ships with the package, so there is nothing else to download.
 
-> **Note on names.** The distribution is `mouse-pupil-analysis`, but the import name is `pupil_tracking`:
-> `pip install mouse-pupil-analysis` then `import pupil_tracking`. The shorter name `pupil-tracking` on
-> PyPI belongs to an unrelated project by a different author.
+> **Note on names.** The repository and distribution are `mouse-pupil-analysis`, the Python import is
+> `mouse_pupil_analysis`, and the established console commands remain `run-pupil-analysis` and
+> `extract-frames`. The old `pupil_tracking` import is retained as a deprecated compatibility shim.
+> The shorter name `pupil-tracking` on PyPI belongs to an unrelated project by a different author.
+> Existing Conda environments do not need to be renamed; environment names are local only.
 
 ### GPU / CPU builds of PyTorch
 
@@ -60,8 +62,8 @@ Inference selects the GPU automatically when one is available and falls back to 
 ### Installing for development
 
 ```bash
-git clone https://github.com/yzhaoinuw/pupil_tracking.git
-cd pupil_tracking
+git clone https://github.com/yzhaoinuw/mouse-pupil-analysis.git
+cd mouse-pupil-analysis
 pip install -e ".[dev]"
 ```
 
@@ -161,7 +163,7 @@ inside a notebook or a larger analysis script. The results come back as a DataFr
 so there is no need to read the CSV back in.
 
 ```python
-from pupil_tracking import analyze_video
+from mouse_pupil_analysis import analyze_video
 
 result = analyze_video("data/mouse1.avi")
 print(result.analysis_table.head())
@@ -185,7 +187,7 @@ print(f"{len(usable)} of {len(result.analysis_table)} frames usable")
 To start from frames you already extracted, use `analyze_frames` instead:
 
 ```python
-from pupil_tracking import analyze_frames
+from mouse_pupil_analysis import analyze_frames
 
 result = analyze_frames(
     "data/mouse1_frames",
@@ -207,7 +209,7 @@ For repeated runs with shared settings, build an `AnalysisConfig` once and pass 
 `run_analysis`:
 
 ```python
-from pupil_tracking import AnalysisConfig, run_analysis
+from mouse_pupil_analysis import AnalysisConfig, run_analysis
 
 for video in Path("data").glob("*.avi"):
     run_analysis(AnalysisConfig(video_path=video, pred_thresh=0.75))
@@ -293,9 +295,9 @@ If you use this software in a paper or other scholarly work, please cite the ver
 
 Recommended citation:
 
-> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.2.0. https://github.com/yzhaoinuw/pupil_tracking
+> Yue Zhao. *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet*. Version 0.2.0. https://github.com/yzhaoinuw/mouse-pupil-analysis
 
-Zenodo archiving is planned but not yet enabled, so no DOI exists yet; see [`RELEASING.md`](RELEASING.md). Once it is, cite the DOI of the specific version you ran so your analysis stays reproducible against that exact code. Until then, cite the version number and commit. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
+Zenodo archiving is enabled, but no DOI exists until the first GitHub Release is published; see [`RELEASING.md`](RELEASING.md). Once Zenodo processes that release, cite the DOI of the specific version you ran so your analysis stays reproducible against that exact code. Until then, cite the version number and commit. See [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
 
 ## License
 
@@ -310,8 +312,8 @@ This project is released under the MIT License. See [`LICENSE`](LICENSE).
 The complete data-preparation, augmentation, fresh-training, fine-tuning, and checkpoint-promotion workflow is documented in [`training/README.md`](training/README.md).
 
 #### Making Training Data
-Create two folders in *pupil_tracking/*, *images_train/* and *masks_train/* if you haven't. Place your training images in *images_train/*. Once you have done this once, you can just add new training images to *images_train/*.
-1. In Terminal/Anaconda Powershell Prompt, activate environment pupil_tracking, then run `labelme.exe`
+Create two folders in *mouse-pupil-analysis/*, *images_train/* and *masks_train/* if you haven't. Place your training images in *images_train/*. Once you have done this once, you can just add new training images to *images_train/*.
+1. In Terminal/Anaconda Powershell Prompt, activate your project environment, then run `labelme.exe`
 to open the labelme interface to label images.
 2. After you are done, **labelme** should have saved your labels as json files in *images_train/* along with your training images. Now run `python .\training\labelme_json2png.py`, which will create the masks (png files) and move them to *masks_train/*.
 3. To create the validation set, create *images_validation/* and *masks_validation/* and then follow the same steps above, but remember to change **dataset_type** in **training/labelme_json2png.py** accordingly.

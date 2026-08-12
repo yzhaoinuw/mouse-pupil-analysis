@@ -8,8 +8,8 @@ authors:
     orcid: "https://orcid.org/0000-0002-0819-5012"
 version: "0.2.0"
 date-released: "2026-08-11"
-repository-code: "https://github.com/yzhaoinuw/pupil_tracking"
-url: "https://github.com/yzhaoinuw/pupil_tracking"
+repository-code: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+url: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
 license: MIT
 keywords:
   - pupillometry

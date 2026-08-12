@@ -1,23 +1,3 @@
-"""Logging setup for the command-line entry points.
+"""Deprecated compatibility wrapper for :mod:`mouse_pupil_analysis.logging_utils`."""
 
-Library code in this package logs and never prints, so an embedding application
-controls its own output. The console scripts opt in to a plain handler here, which
-keeps terminal output looking the way it always has.
-"""
-
-import logging
-
-PACKAGE_LOGGER_NAME = "pupil_tracking"
-
-
-def configure_cli_logging(level: int = logging.INFO) -> None:
-    """Attach a plain stderr handler to the package logger for console use."""
-    logger = logging.getLogger(PACKAGE_LOGGER_NAME)
-    logger.setLevel(level)
-    if any(getattr(handler, "_pupil_tracking_cli", False) for handler in logger.handlers):
-        return
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    handler._pupil_tracking_cli = True
-    logger.addHandler(handler)
-    logger.propagate = False
+from mouse_pupil_analysis.logging_utils import *  # noqa: F401,F403

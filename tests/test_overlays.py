@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.pupil_predictions import (
+from mouse_pupil_analysis.extract_frames import ExtractedFrame
+from mouse_pupil_analysis.pupil_predictions import (
     _encode_thresholded_confidence,
     _save_mask_overlays,
 )

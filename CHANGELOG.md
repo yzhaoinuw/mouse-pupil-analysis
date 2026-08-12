@@ -23,9 +23,9 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 - Translucent yellow-orange-red confidence-heatmap overlays via `--output_mask_dir`,
   with center markers distinguishing accepted from rejected candidates.
 - A public Python API. `analyze_video(...)`, `analyze_frames(...)`, `run_analysis(...)`,
-  `AnalysisConfig`, and `AnalysisResult` are importable from `pupil_tracking` and return
+  `AnalysisConfig`, and `AnalysisResult` are importable from `mouse_pupil_analysis` and return
   the analysis table as a DataFrame instead of requiring the CSV to be read back.
-  Names resolve lazily, so `import pupil_tracking` no longer loads PyTorch.
+  Names resolve lazily, so `import mouse_pupil_analysis` does not load PyTorch.
 - `pupil_diameter_input_pixels`, reporting pupil diameter at the scale of the image that
   was supplied rather than the 148 x 148 model image. For video input that is the source
   frame; for `image_dir` input it is whatever the caller prepared. Pixels remain
@@ -39,7 +39,7 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
   The architecture is read from the checkpoint's own weights, and a genuinely
   incompatible file now reports which checkpoint failed and why instead of raising a
   raw state-dict key error.
-- `pupil_tracking.__version__`, resolved from installed distribution metadata so the
+- `mouse_pupil_analysis.__version__`, resolved from installed distribution metadata so the
   package, `pyproject.toml`, and `CITATION.cff` cannot silently disagree.
 - PyPI project metadata: long description, keywords, trove classifiers, and project URLs.
 - A `sample_data/` fixture of real pupil images published with permission, plus
@@ -52,7 +52,10 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 - **Breaking (packaging).** The distribution is renamed from `pupil-tracking` to
   `mouse-pupil-analysis`. The name `pupil-tracking` on PyPI belongs to an unrelated
   project by a different author. Install with `pip install mouse-pupil-analysis`.
-  The import name is unchanged, so existing code keeps using `import pupil_tracking`.
+  The primary import is now `mouse_pupil_analysis`, matching the permanent project
+  identity. The established `run-pupil-analysis` and `extract-frames` commands are
+  unchanged, and a deprecated `pupil_tracking` compatibility package preserves legacy
+  imports during the transition.
 - **Pupil diameters change by +0.1275%.** The equivalent-circle conversion factor was
   the rounded literal `1.27`; it is now derived exactly as `4 / pi` (1.273240). Reported
   diameters are therefore a factor of `sqrt(4 / pi / 1.27)` = 1.001275 larger than in
@@ -89,10 +92,12 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 ### Deprecated
 
-- `pupil_tracking.dataset` and its `PupilDataset`; import from `pupil_tracking.preprocessing`
-  or `pupil_tracking.augmentation` instead. The shim keeps the original call signature,
+- `mouse_pupil_analysis.dataset` and its `PupilDataset`; import from
+  `mouse_pupil_analysis.preprocessing` or `mouse_pupil_analysis.augmentation` instead.
+  The shim keeps the original call signature,
   but it is now a factory function rather than a class, so `isinstance` checks and
   subclassing no longer work.
+- The old `pupil_tracking` package name; import from `mouse_pupil_analysis` instead.
 - `generate_pupil_mask_prediction`; use `analyze_frames` for the full pipeline.
 
 ## [0.1.4] - 2026-06-12
@@ -117,7 +122,7 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 Changes before 0.1.2 predate this changelog; see the Git history for details.
 
-[Unreleased]: https://github.com/yzhaoinuw/pupil_tracking/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/yzhaoinuw/pupil_tracking/compare/v0.1.4...v0.2.0
-[0.1.4]: https://github.com/yzhaoinuw/pupil_tracking/compare/v0.1.2...v0.1.4
-[0.1.2]: https://github.com/yzhaoinuw/pupil_tracking/releases/tag/v0.1.2
+[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.4...v0.2.0
+[0.1.4]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.2...v0.1.4
+[0.1.2]: https://github.com/yzhaoinuw/mouse-pupil-analysis/releases/tag/v0.1.2

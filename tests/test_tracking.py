@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.pupil_predictions import PupilPrediction
-from pupil_tracking.tracking import (
+from mouse_pupil_analysis.extract_frames import ExtractedFrame
+from mouse_pupil_analysis.pupil_predictions import PupilPrediction
+from mouse_pupil_analysis.tracking import (
     TrackingAccumulator,
     build_tracking_dataframe,
     measure_probability_map,

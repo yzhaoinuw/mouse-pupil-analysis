@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from pupil_tracking.extract_frames import ExtractedFrame
-from pupil_tracking.pupil_predictions import frames_from_image_directory
-from pupil_tracking.results import DiameterRow, write_analysis_outputs
+from mouse_pupil_analysis.extract_frames import ExtractedFrame
+from mouse_pupil_analysis.pupil_predictions import frames_from_image_directory
+from mouse_pupil_analysis.results import DiameterRow, write_analysis_outputs
 
 
 def _frames(tmp_path: Path) -> list[ExtractedFrame]:

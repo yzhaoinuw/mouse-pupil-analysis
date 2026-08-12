@@ -39,24 +39,24 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yzhaoinuw/pupil_tracking"
-Repository = "https://github.com/yzhaoinuw/pupil_tracking"
-Issues = "https://github.com/yzhaoinuw/pupil_tracking/issues"
-Changelog = "https://github.com/yzhaoinuw/pupil_tracking/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+Repository = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+Issues = "https://github.com/yzhaoinuw/mouse-pupil-analysis/issues"
+Changelog = "https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/CHANGELOG.md"
 
 [project.scripts]
-extract-frames = "pupil_tracking.extract_frames:main"
-run-pupil-analysis = "pupil_tracking.run_pupil_analysis:main"
+extract-frames = "mouse_pupil_analysis.extract_frames:main"
+run-pupil-analysis = "mouse_pupil_analysis.run_pupil_analysis:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pupil_tracking*"]
+include = ["mouse_pupil_analysis*", "pupil_tracking*"]
 
 [tool.setuptools.package-data]
-pupil_tracking = ["checkpoints/*.pth", "checkpoints/*.txt"]
+mouse_pupil_analysis = ["checkpoints/*.pth", "checkpoints/*.txt"]
 
 [tool.setuptools.exclude-package-data]
-pupil_tracking = ["checkpoints/archive/*"]
+mouse_pupil_analysis = ["checkpoints/archive/*"]
 
 [build-system]
 requires = ["setuptools>=80.9"]

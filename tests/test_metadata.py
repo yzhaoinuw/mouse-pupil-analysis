@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-import pupil_tracking
+import mouse_pupil_analysis
 
 try:
     import tomllib
@@ -32,7 +32,7 @@ def _project() -> dict:
 
 
 def test_installed_version_matches_pyproject():
-    assert pupil_tracking.__version__ == _project()["version"]
+    assert mouse_pupil_analysis.__version__ == _project()["version"]
 
 
 def test_citation_version_matches_pyproject():
@@ -50,11 +50,11 @@ def test_distribution_name_is_the_published_one():
 
 
 def test_public_api_matches_the_lazy_export_map():
-    expected = set(pupil_tracking._EXPORTS) | {"__version__"}
+    expected = set(mouse_pupil_analysis._EXPORTS) | {"__version__"}
 
-    assert set(pupil_tracking.__all__) == expected
-    for name in pupil_tracking.__all__:
-        assert getattr(pupil_tracking, name) is not None
+    assert set(mouse_pupil_analysis.__all__) == expected
+    for name in mouse_pupil_analysis.__all__:
+        assert getattr(mouse_pupil_analysis, name) is not None
 
 
 def test_changelog_records_the_current_version():

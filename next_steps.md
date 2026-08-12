@@ -4,8 +4,8 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Packaging and distribution](#packaging-and-distribution) - the `refactor` branch renames the distribution and adds release automation; the PyPI publisher and Zenodo webhook still need account actions.
-- [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on the `refactor` branch.
+- [Packaging and distribution](#packaging-and-distribution) - the permanent project/package rename and release automation are on `dev`; the pending PyPI publisher remains the release blocker, while Zenodo is enabled and must be rechecked after the repository rename.
+- [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
 - [DOI archival](#doi-archival) - optional next step after a GitHub release exists.
@@ -15,18 +15,21 @@ When a new thread starts, add a short bullet here with a link to its section bel
 
 ## Packaging And Distribution
 
-Status: implemented on the `refactor` branch; blocked on two account actions before a release can be cut
+Status: implemented on `dev`; the pending PyPI publisher is the only release blocker
 
 The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
 Remaining work:
 
-- Register the pending PyPI publisher and enable the Zenodo webhook. Both are account actions; exact field values are in [`RELEASING.md`](RELEASING.md).
+- After the GitHub repository rename, confirm Zenodo still shows
+  `yzhaoinuw/mouse-pupil-analysis` as enabled.
+- Register the pending PyPI publisher using repository `mouse-pupil-analysis`; exact
+  field values are in [`RELEASING.md`](RELEASING.md).
 - After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
 
 ## Runtime Modularization
 
-Status: complete on the `refactor` branch
+Status: complete on `dev`
 
 `api.py` owns orchestration behind `AnalysisConfig`/`run_analysis`, with `analyze_video` and `analyze_frames` as the public front door. `run_pupil_analysis.py` is argument parsing only. Table assembly and plotting live in `results.py` and `plotting.py`; `dataset.py` split into `preprocessing.py` and `augmentation.py` with a deprecating shim. Library code logs instead of printing.
 
@@ -88,7 +91,7 @@ The accepted follow-up replaces the duplicate diameter and tracking artifacts wi
 
 ### Frame Extraction And Timing
 
-Update `pupil_tracking/extract_frames.py` so extraction returns metadata for every successfully written image:
+Update `mouse_pupil_analysis/extract_frames.py` so extraction returns metadata for every successfully written image:
 
 - Extracted image path/name.
 - Original source-frame index.
@@ -108,7 +111,7 @@ Use source-frame differences, not output-row differences, when checking whether 
 
 ### Segmentation Postprocessing
 
-Create a focused `pupil_tracking/tracking.py` module for testable postprocessing and kinematics. Do not change `pupil_tracking/unet.py` or the checkpoint.
+Create a focused `mouse_pupil_analysis/tracking.py` module for testable postprocessing and kinematics. Do not change `mouse_pupil_analysis/unet.py` or the checkpoint.
 
 Modify inference so it retains both:
 
@@ -193,11 +196,11 @@ When `--output_mask_dir` is supplied, render threshold-passing pixels as a trans
 
 ### Code Map
 
-- `pupil_tracking/tracking.py`
+- `mouse_pupil_analysis/tracking.py`
   - Component measurements, coordinate conversion, quality flags, temporal area validation, and kinematics.
-- `pupil_tracking/extract_frames.py`
+- `mouse_pupil_analysis/extract_frames.py`
   - Full-frame selection option and returned source-frame metadata.
-- `pupil_tracking/run_pupil_analysis.py`
+- `mouse_pupil_analysis/run_pupil_analysis.py`
   - CLI arguments, retained confidence maps, tracking integration, compact unified CSV/plot outputs, and cleanup of superseded duplicate outputs.
 - `tests/test_tracking.py`
   - Pure synthetic tests for centroids, component selection, quality flags, coordinate conversion, timing, and velocity gaps.
@@ -270,11 +273,13 @@ Remaining work:
 
 Status: ready for user/account action
 
-The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display citation metadata for tagged releases. A DOI still requires linking the GitHub repository to an archival service such as Zenodo and creating or syncing a release there.
+The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display citation metadata for tagged releases. Zenodo is enabled; the first DOI will be minted after the first GitHub Release is published and processed.
 
 Remaining work:
 
-- After the citable version tag is pushed, enable Zenodo or another archive for `yzhaoinuw/pupil_tracking`.
+- After the repository rename, confirm Zenodo still has
+  `yzhaoinuw/mouse-pupil-analysis` enabled; after the citable version tag is pushed,
+  publish the GitHub Release to trigger archival.
 - Mint a DOI for the release and add it to `CITATION.cff` and `README.md`.
 
 ## Sample Data For Examples And Regression Tests
@@ -323,7 +328,7 @@ Resume only when the user asks for repository cleanup or release preparation.
 Remaining work:
 
 - Inspect tracked vs. ignored files before deleting anything.
-- Keep `pupil_tracking/checkpoints/` package data intact.
+- Keep `mouse_pupil_analysis/checkpoints/` package data intact.
 
 ### Training Workflow Documentation
 

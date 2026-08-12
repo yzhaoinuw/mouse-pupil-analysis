@@ -4,26 +4,29 @@
 
 This repository packages a mouse pupil segmentation, pupil-diameter, and opt-in pupil-center velocity analysis pipeline. It can extract sampled or consecutive full-frame images from video, run a trained attention UNet on centered eye images, and save pupil size, tracking, quality-control, and optional mask-overlay outputs.
 
-The installable package is `pupil_tracking`. The user-facing command line tools are `run-pupil-analysis` and `extract-frames`, both declared in `pyproject.toml`.
+The distribution and repository are `mouse-pupil-analysis`; the primary Python
+package is `mouse_pupil_analysis`. The user-facing command line tools are
+`run-pupil-analysis` and `extract-frames`, both declared in `pyproject.toml`.
+The old `pupil_tracking` package is a deprecated compatibility layer only.
 
 ## Active Runtime Path
 
 ### 1. `pyproject.toml`
 
-- Declares the `pupil-tracking` package, Python `>=3.10`, runtime dependencies, dev tools, package data, and console scripts.
+- Declares the `mouse-pupil-analysis` distribution, Python `>=3.10`, runtime dependencies, dev tools, package data, and console scripts.
 - The console scripts are:
-  - `extract-frames = pupil_tracking.extract_frames:main`
-  - `run-pupil-analysis = pupil_tracking.run_pupil_analysis:main`
-- Package data includes `pupil_tracking/checkpoints/*.pth` and `pupil_tracking/checkpoints/*.txt`; archive checkpoints are excluded.
+  - `extract-frames = mouse_pupil_analysis.extract_frames:main`
+  - `run-pupil-analysis = mouse_pupil_analysis.run_pupil_analysis:main`
+- Package data includes `mouse_pupil_analysis/checkpoints/*.pth` and `mouse_pupil_analysis/checkpoints/*.txt`; archive checkpoints are excluded.
 
-### 2. `pupil_tracking/pupil_predictions.py`
+### 2. `mouse_pupil_analysis/pupil_predictions.py`
 
 - Owns packaged-checkpoint selection, PNG frame discovery, UNet inference, pupil-diameter calculation, and confidence-heatmap overlays; it has no tracking or acquisition-time dependency.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
 - Includes an editable `if __name__ == "__main__":` block for direct IDE runs with hardcoded local paths and inference settings.
 
-### 3. `pupil_tracking/api.py`
+### 3. `mouse_pupil_analysis/api.py`
 
 - Owns pipeline orchestration, independent of any command line.
 - `AnalysisConfig` collects every input and validates combinations in one place; `run_analysis(config)` returns an `AnalysisResult` carrying the analysis table, both output paths, the frame metadata, and the internal tracking DataFrame.
@@ -32,25 +35,25 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - Composes the streaming inference iterator with optional tracking and overlay accumulators according to the configuration.
 - With `calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and appends accepted center, speed, and three-state quality fields/panels to the unified outputs.
 
-### 4. `pupil_tracking/run_pupil_analysis.py`
+### 4. `mouse_pupil_analysis/run_pupil_analysis.py`
 
 - Implements the `run-pupil-analysis` CLI only: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback.
 - Accepts either `--video_path` or `--image_dir`.
 - Enables console logging so terminal output matches the historical `print`-based behavior.
 
-### 5. `pupil_tracking/results.py` and `pupil_tracking/plotting.py`
+### 5. `mouse_pupil_analysis/results.py` and `mouse_pupil_analysis/plotting.py`
 
 - `results.py` builds the compact user-facing table, derives the three-state `tracking_status`, and writes the CSV and figure. `DIAMETER_COLUMNS` and `VELOCITY_COLUMNS` are the authoritative output schemas.
 - `plotting.py` returns Matplotlib figures rather than saving them, so the standard panels can be restyled or embedded elsewhere.
 
-### 6. `pupil_tracking/extract_frames.py`
+### 6. `mouse_pupil_analysis/extract_frames.py`
 
 - Implements the frame-extraction CLI and reusable `extract_selected_frames(...)`.
 - Samples evenly spaced frames from the input video with OpenCV.
 - Can extract consecutive source frames and return source-frame metadata for velocity analysis.
 - Honors `--extraction_fps` and `--max_frames`, reducing effective extraction FPS when needed.
 
-### 7. `pupil_tracking/tracking.py`
+### 7. `mouse_pupil_analysis/tracking.py`
 
 - Postprocesses UNet probability maps without changing the model or checkpoint.
 - `TrackingAccumulator` consumes transient predictions only when velocity mode is enabled, reuses their binary masks, and retains lightweight measurements for temporal processing.
@@ -58,17 +61,17 @@ The installable package is `pupil_tracking`. The user-facing command line tools 
 - Leaves published centers and velocities missing across rejected or non-consecutive frames rather than interpolating.
 - Includes an editable `if __name__ == "__main__":` block for direct IDE inspection of the detailed tracking DataFrame.
 
-### 8. `pupil_tracking/preprocessing.py` and `pupil_tracking/augmentation.py`
+### 8. `mouse_pupil_analysis/preprocessing.py` and `mouse_pupil_analysis/augmentation.py`
 
 - `preprocessing.py` owns `resize_with_pad`, `MODEL_IMAGE_SIZE`, and `InferenceDataset`. The 148 x 148 centered/padded convention defined here is load-bearing for the current trained model.
 - `augmentation.py` owns the training-only augmentations and `SegmentationDataset`; nothing in it runs during inference.
 - `dataset.py` remains only as a deprecated re-export shim. Its `PupilDataset` returned either `(image, name)` or `(image, mask)` depending on construction; the two dataset classes replace that.
 
-### 9. `pupil_tracking/unet.py`
+### 9. `mouse_pupil_analysis/unet.py`
 
 - Defines the segmentation model used by inference and training.
 
-### 10. `pupil_tracking/logging_utils.py`
+### 10. `mouse_pupil_analysis/logging_utils.py`
 
 - Library modules log and never print, so an embedding application controls its own output. The console scripts call `configure_cli_logging()` to restore plain terminal output.
 
@@ -108,8 +111,8 @@ Velocity mode is postprocessing around the existing pupil-segmentation model; it
 ## Repo Structure Map
 
 ```text
-pupil_tracking/
-|- pupil_tracking/
+mouse-pupil-analysis/
+|- mouse_pupil_analysis/
 |  |- __init__.py            (public API, lazily imported)
 |  |- api.py                 (AnalysisConfig, run_analysis, analyze_video/frames)
 |  |- run_pupil_analysis.py  (CLI only)
@@ -124,6 +127,7 @@ pupil_tracking/
 |  |- logging_utils.py
 |  |- unet.py
 |  |- checkpoints/
+|- pupil_tracking/          (deprecated import wrappers only)
 |- tests/
 |  |- test_imports.py
 |  |- test_cli_help.py
@@ -164,19 +168,20 @@ pupil_tracking/
 
 Active, package-facing files:
 
-- `pupil_tracking/__init__.py`
-- `pupil_tracking/api.py`
-- `pupil_tracking/run_pupil_analysis.py`
-- `pupil_tracking/pupil_predictions.py`
-- `pupil_tracking/extract_frames.py`
-- `pupil_tracking/tracking.py`
-- `pupil_tracking/results.py`
-- `pupil_tracking/plotting.py`
-- `pupil_tracking/preprocessing.py`
-- `pupil_tracking/augmentation.py`
-- `pupil_tracking/logging_utils.py`
-- `pupil_tracking/unet.py`
-- `pupil_tracking/checkpoints/`
+- `mouse_pupil_analysis/__init__.py`
+- `mouse_pupil_analysis/api.py`
+- `mouse_pupil_analysis/run_pupil_analysis.py`
+- `mouse_pupil_analysis/pupil_predictions.py`
+- `mouse_pupil_analysis/extract_frames.py`
+- `mouse_pupil_analysis/tracking.py`
+- `mouse_pupil_analysis/results.py`
+- `mouse_pupil_analysis/plotting.py`
+- `mouse_pupil_analysis/preprocessing.py`
+- `mouse_pupil_analysis/augmentation.py`
+- `mouse_pupil_analysis/logging_utils.py`
+- `mouse_pupil_analysis/unet.py`
+- `mouse_pupil_analysis/checkpoints/`
+- `pupil_tracking/` compatibility wrappers
 - `tests/`
 - `.github/workflows/ci.yml`
 - `pyproject.toml`
@@ -197,7 +202,7 @@ Local/generated surfaces to treat carefully:
 - `checkpoints_exp/` holds experimental training checkpoints.
 - `build/`, `dist/`, `*.egg-info`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` are generated.
 - `archive/` and `sketch*.py` style files are not the active package path.
-- `pupil_tracking/checkpoints/archive/` contains historical checkpoint files excluded from package data.
+- `mouse_pupil_analysis/checkpoints/archive/` contains historical checkpoint files excluded from package data.
 
 ## Authored vs. Derived
 
@@ -205,12 +210,12 @@ Local/generated surfaces to treat carefully:
 
 - Package Python modules, training/media utilities, sample fixtures, tests, `pyproject.toml`, `MANIFEST.in`, and CI configuration are maintained source.
 - `README.md`, `AGENTS.md`, `project_overview.md`, `next_steps.md`, and `work_log.md` are maintained documentation. `treaty_conventions.md` is the exception: it is upstream-managed through `treaty update`.
-- The selection and packaging policy under `pupil_tracking/checkpoints/` is curated deliberately even though model binaries originate from training.
+- The selection and packaging policy under `mouse_pupil_analysis/checkpoints/` is curated deliberately even though model binaries originate from training.
 
 ### Derived - regenerate or intentionally promote
 
 - `build/`, `dist/`, `*.egg-info`, Python/tool caches, and local analysis/result folders are generated and should not be edited or staged.
-- `checkpoints_exp/` is produced by `training/run_train.py`; promote a model into `pupil_tracking/checkpoints/` only as an intentional, reviewed package change.
+- `checkpoints_exp/` is produced by `training/run_train.py`; promote a model into `mouse_pupil_analysis/checkpoints/` only as an intentional, reviewed package change.
 - `media/pupil_diameter_analysis_result_demo.gif` is generated by `media/make_gif.py` but intentionally tracked as the README's promoted demo asset.
 - `sample_data/velocity_frames/` contains generated 148 x 148 grayscale resize-and-pad outputs, intentionally tracked as a compact temporal fixture.
 - Local training images, masks, extracted frames, predictions, and plots are data or outputs, not repository source. The small curated files under `sample_data/` are the intentional exception.
@@ -253,10 +258,10 @@ For most maintenance tasks, read in this order:
 1. `AGENTS.md`
 2. `README.md`
 3. `pyproject.toml`
-4. `pupil_tracking/api.py`
-5. `pupil_tracking/pupil_predictions.py`
-6. `pupil_tracking/extract_frames.py`
-7. `pupil_tracking/preprocessing.py`
+4. `mouse_pupil_analysis/api.py`
+5. `mouse_pupil_analysis/pupil_predictions.py`
+6. `mouse_pupil_analysis/extract_frames.py`
+7. `mouse_pupil_analysis/preprocessing.py`
 8. `tests/` and `.github/workflows/ci.yml`
 
 ## Questions Worth Clarifying Later

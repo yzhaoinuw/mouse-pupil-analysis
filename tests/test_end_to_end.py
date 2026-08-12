@@ -13,8 +13,8 @@ import cv2
 import numpy as np
 import pytest
 
-from pupil_tracking import analyze_frames, analyze_video
-from pupil_tracking.results import DIAMETER_COLUMNS, VELOCITY_COLUMNS
+from mouse_pupil_analysis import analyze_frames, analyze_video
+from mouse_pupil_analysis.results import DIAMETER_COLUMNS, VELOCITY_COLUMNS
 
 FRAME_COUNT = 6
 FRAME_WIDTH = 200

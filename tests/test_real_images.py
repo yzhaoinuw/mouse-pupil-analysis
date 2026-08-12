@@ -16,8 +16,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pupil_tracking import analyze_frames
-from pupil_tracking.preprocessing import MODEL_IMAGE_SIZE, resize_scale
+from mouse_pupil_analysis import analyze_frames
+from mouse_pupil_analysis.preprocessing import MODEL_IMAGE_SIZE, resize_scale
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_ROOT = PROJECT_ROOT / "sample_data"

@@ -70,7 +70,7 @@ jobs:
 
           # Resolve what the installed package would actually select, so a release
           # cannot ship a different checkpoint than the one inference will load.
-          checkpoint_dir = pathlib.Path("pupil_tracking/checkpoints")
+          checkpoint_dir = pathlib.Path("mouse_pupil_analysis/checkpoints")
           repo_checkpoints = sorted(p.name for p in checkpoint_dir.glob("*.pth"))
           if len(repo_checkpoints) != 1:
               raise SystemExit(
@@ -121,7 +121,7 @@ jobs:
           python -m venv /tmp/smoke
           /tmp/smoke/bin/python -m pip install -U pip
           /tmp/smoke/bin/python -m pip install dist/*.whl
-          /tmp/smoke/bin/python -c "import pupil_tracking; print('version', pupil_tracking.__version__)"
+          /tmp/smoke/bin/python -c "import mouse_pupil_analysis; print('version', mouse_pupil_analysis.__version__)"
           /tmp/smoke/bin/run-pupil-analysis --help
 
       - uses: actions/upload-artifact@v4

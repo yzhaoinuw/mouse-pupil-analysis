@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from pupil_tracking.preprocessing import (
+from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     model_to_input_length,
     resize_scale,

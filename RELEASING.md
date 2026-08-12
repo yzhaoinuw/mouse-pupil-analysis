@@ -4,8 +4,9 @@ This document covers the PyPI and Zenodo mechanics specific to this project. The
 general commit/push/tag discipline lives in
 [Release Gate](treaty_conventions.md#release-gate).
 
-The distribution is published as **`mouse-pupil-analysis`**. The import name is
-`pupil_tracking` and does not change.
+The repository and distribution are **`mouse-pupil-analysis`**. The primary import
+is `mouse_pupil_analysis`; the established console commands remain unchanged, and
+`pupil_tracking` is shipped only as a deprecated compatibility package.
 
 ## One-Time Setup
 
@@ -23,7 +24,7 @@ publisher at <https://pypi.org/manage/account/publishing/>:
 |---|---|
 | PyPI project name | `mouse-pupil-analysis` |
 | Owner | `yzhaoinuw` |
-| Repository name | `pupil_tracking` |
+| Repository name | `mouse-pupil-analysis` |
 | Workflow name | `release.yml` |
 | Environment name | `pypi` |
 
@@ -38,10 +39,10 @@ input on the publish step.
 
 ### 2. Zenodo Archiving
 
-1. Sign in to <https://zenodo.org> with the GitHub account.
-2. Open <https://zenodo.org/account/settings/github/> and toggle
-   `yzhaoinuw/pupil_tracking` on.
-3. Zenodo archives every subsequent **GitHub Release** (not every tag).
+The GitHub integration was enabled for this repository on 2026-08-11. After the
+repository rename, confirm that `yzhaoinuw/mouse-pupil-analysis` remains enabled at
+<https://zenodo.org/account/settings/github/>. Zenodo archives every subsequent
+**GitHub Release** (not every tag).
 
 Zenodo mints two kinds of DOI:
 
@@ -60,7 +61,7 @@ Zenodo mints two kinds of DOI:
    - `pyproject.toml` → `[project].version`
    - `CITATION.cff` → `version` and `date-released`
 
-   `pupil_tracking.__version__` reads from installed distribution metadata, so it
+   `mouse_pupil_analysis.__version__` reads from installed distribution metadata, so it
    follows `pyproject.toml` automatically and needs no edit.
 
 3. Promote `## [Unreleased]` in `CHANGELOG.md` to the new version with its release
@@ -107,7 +108,7 @@ Zenodo mints two kinds of DOI:
 ```bash
 python -m venv /tmp/verify
 /tmp/verify/bin/python -m pip install mouse-pupil-analysis
-/tmp/verify/bin/python -c "import pupil_tracking; print(pupil_tracking.__version__)"
+/tmp/verify/bin/python -c "import mouse_pupil_analysis; print(mouse_pupil_analysis.__version__)"
 /tmp/verify/bin/run-pupil-analysis --help
 ```
 

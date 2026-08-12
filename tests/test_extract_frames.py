@@ -1,6 +1,6 @@
 import numpy as np
 
-from pupil_tracking.extract_frames import select_frame_indices, source_frame_image_name
+from mouse_pupil_analysis.extract_frames import select_frame_indices, source_frame_image_name
 
 
 def test_source_frame_image_name_is_one_based():

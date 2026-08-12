@@ -4,6 +4,18 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-11
 
+### Adopt the permanent mouse-pupil-analysis identity (Codex, GPT-5)
+
+- Renamed the primary Python package from `pupil_tracking` to `mouse_pupil_analysis`, matching the already-selected `mouse-pupil-analysis` distribution and the forthcoming GitHub repository name. Kept `run-pupil-analysis` and `extract-frames` unchanged so existing command-line habits continue to work.
+- Retained `pupil_tracking` as a deprecated forwarding package, including the former module paths and direct `python -m` entry points. New code, tests, training utilities, CI, release automation, package data, documentation, and citation metadata use `mouse_pupil_analysis`.
+- Updated release guidance for the repository rename. The remaining account work is to register the pending PyPI publisher with repository `mouse-pupil-analysis` and, after the rename, confirm that Zenodo still has the renamed repository enabled.
+- Verification:
+  - `ruff check .`, `black --check .` (45 files unchanged), and `git diff --check` passed.
+  - Full Pytest suite passed (`61 passed`); the expected `mouse_pupil_analysis.dataset` deprecation warning remains.
+  - A clean wheel and source distribution build each contained the checkpoint and matching training log only under `mouse_pupil_analysis/checkpoints/`. The source distribution also retained all 71 sample-data entries and four training entries.
+  - The wheel entry points remain `run-pupil-analysis` and `extract-frames`, both targeting `mouse_pupil_analysis`; both `--help` invocations passed from a clean wheel installation.
+  - Clean-install checks confirmed the primary import, the deprecated `pupil_tracking` forwarding import and warning, and version `0.2.0`.
+
 ### Make the demo GIF script headless-safe (Claude Code, Opus 5)
 
 - `media/make_gif.py` still created figures through `pyplot`, so it carried the same interactive-backend dependency that was removed from the package. It writes a GIF and never calls `plt.show()`, so it was requesting a GUI backend it never used and would fail on any machine without a display.

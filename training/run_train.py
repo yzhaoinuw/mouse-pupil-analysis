@@ -14,8 +14,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from pupil_tracking.augmentation import SegmentationDataset, paired_image_mask_paths
-from pupil_tracking.unet import UNet
+from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
+from mouse_pupil_analysis.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.

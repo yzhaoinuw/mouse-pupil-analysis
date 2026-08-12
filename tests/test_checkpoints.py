@@ -1,7 +1,7 @@
 import torch
 
-from pupil_tracking.pupil_predictions import find_default_checkpoint, load_unet_checkpoint
-from pupil_tracking.unet import UNet
+from mouse_pupil_analysis.pupil_predictions import find_default_checkpoint, load_unet_checkpoint
+from mouse_pupil_analysis.unet import UNet
 
 DEVICE = torch.device("cpu")
 
@@ -35,7 +35,7 @@ def test_incompatible_checkpoint_reports_a_useful_error(tmp_path):
 
 
 def test_default_checkpoint_is_resolved_lazily():
-    import pupil_tracking.pupil_predictions as module
+    import mouse_pupil_analysis.pupil_predictions as module
 
     # DEFAULT_CHECKPOINT is served by module __getattr__, not a module-level constant,
     # so importing the module does no filesystem work.

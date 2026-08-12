@@ -10,9 +10,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from pupil_tracking.augmentation import SegmentationDataset, paired_image_mask_paths
-from pupil_tracking.dataset import PupilDataset
-from pupil_tracking.preprocessing import InferenceDataset
+from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
+from mouse_pupil_analysis.dataset import PupilDataset
+from mouse_pupil_analysis.preprocessing import InferenceDataset
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_ROOT = PROJECT_ROOT / "sample_data"

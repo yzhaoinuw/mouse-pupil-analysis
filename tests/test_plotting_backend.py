@@ -14,8 +14,8 @@ import sys
 import numpy as np
 import pandas as pd
 
-from pupil_tracking.plotting import plot_analysis
-from pupil_tracking.results import DIAMETER_COLUMNS
+from mouse_pupil_analysis.plotting import plot_analysis
+from mouse_pupil_analysis.results import DIAMETER_COLUMNS
 
 
 def _diameter_table() -> tuple[pd.DataFrame, np.ndarray]:
@@ -31,7 +31,7 @@ def _diameter_table() -> tuple[pd.DataFrame, np.ndarray]:
 
 def test_package_does_not_import_pyplot():
     code = (
-        "import sys, pupil_tracking.plotting, pupil_tracking.results;"
+        "import sys, mouse_pupil_analysis.plotting, mouse_pupil_analysis.results;"
         "print('matplotlib.pyplot' in sys.modules)"
     )
     completed = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)

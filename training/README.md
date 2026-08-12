@@ -9,7 +9,7 @@ Run commands from the repository root. All paths in the scripts are anchored to 
 Use the project's environment and editable installation:
 
 ```powershell
-conda activate pupil_tracking
+conda activate mouse_pupil_analysis
 python -m pip install -e .
 ```
 
@@ -90,7 +90,7 @@ model = UNet(use_attention=use_attention).to(device)
 
 finetune_checkpoint = (
     PROJECT_ROOT
-    / "pupil_tracking"
+    / "mouse_pupil_analysis"
     / "checkpoints"
     / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
 )
@@ -105,13 +105,13 @@ This loads model weights only. It starts a new optimizer, learning-rate schedule
 
 ## 5. Review and promote a checkpoint
 
-Do not automatically place experimental output in `pupil_tracking/checkpoints/`. First:
+Do not automatically place experimental output in `mouse_pupil_analysis/checkpoints/`. First:
 
 1. Review training and validation curves in the generated log.
 2. Evaluate the checkpoint on recordings that were not used for training or validation.
 3. Inspect segmentation overlays and downstream diameter/center tracking, not IoU alone.
 4. Compare against the currently packaged model on the same cases.
 
-When a model is accepted, copy its `.pth` file and matching `.txt` log into `pupil_tracking/checkpoints/` as an intentional package change. The default inference code selects the packaged checkpoint with the highest IoU encoded in its filename, so preserve the `_iou=<value>` naming contract and remove or archive superseded packaged candidates deliberately.
+When a model is accepted, copy its `.pth` file and matching `.txt` log into `mouse_pupil_analysis/checkpoints/` as an intentional package change. The default inference code selects the packaged checkpoint with the highest IoU encoded in its filename, so preserve the `_iou=<value>` naming contract and remove or archive superseded packaged candidates deliberately.
 
 After promotion, run the repository checks and package build documented in `AGENTS.md`, then verify that the selected checkpoint and log appear in both the wheel and source distribution.
