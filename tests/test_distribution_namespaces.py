@@ -1,6 +1,14 @@
 """Regression tests for wheel and source-distribution namespace checks."""
 
-from scripts.verify_distribution_namespaces import forbidden_namespace_members
+import importlib.util
+from pathlib import Path
+
+VERIFIER = Path(__file__).resolve().parents[1] / "scripts" / "verify_distribution_namespaces.py"
+SPEC = importlib.util.spec_from_file_location("verify_distribution_namespaces", VERIFIER)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+forbidden_namespace_members = MODULE.forbidden_namespace_members
 
 
 def test_forbidden_namespace_is_detected_in_wheel_layout():
