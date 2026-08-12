@@ -18,10 +18,16 @@ keywords:
   - UNet
   - neuroscience
 abstract: "A Python package and command-line pipeline for mouse pupil segmentation, pupil-diameter estimation, and optional pupil-center velocity analysis from video or extracted frame images."
-# After the first Zenodo-archived release, uncomment and fill in the version DOI.
-# Zenodo mints both a concept DOI (all versions) and a per-version DOI; use the
-# per-version DOI here and cite the concept DOI in README.md. See RELEASING.md.
-# identifiers:
-#   - type: doi
-#     value: "10.5281/zenodo.XXXXXXX"
-#     description: "DOI for this specific version"
+# Zenodo mints a per-version DOI and a concept DOI. Update both `doi` and the
+# per-version entry below on every release; the concept DOI never changes and is
+# what README.md badges. Order matters: citation generators take the first
+# doi-type identifier, so the per-version DOI must stay first or exported BibTeX
+# will point at the moving concept DOI instead of the archived code. See RELEASING.md.
+doi: "10.5281/zenodo.21897796"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21897796"
+    description: "DOI for version 0.2.0"
+  - type: doi
+    value: "10.5281/zenodo.21897795"
+    description: "Concept DOI resolving to the latest version"

@@ -4,6 +4,20 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-12
 
+### Record the Zenodo DOIs and restructure the README (Claude Code, Opus 5)
+
+- Retrieved the minted identifiers from the public Zenodo API rather than waiting on the web UI: concept DOI `10.5281/zenodo.21897795` and v0.2.0 version DOI `10.5281/zenodo.21897796`. `RELEASING.md` step 8 now carries that one-line query so the next release does not have to rediscover it.
+- **Citation generators ignore the top-level `doi` when `identifiers` is present.** Verified with `cffconvert` across three CFF variants: the first doi-type entry under `identifiers` always wins, and the top-level `doi` is used only when the list is absent. The first arrangement tried listed the concept DOI first, and exported BibTeX cited the moving concept DOI instead of the archived code. The per-version entry is now first, both `doi` and that entry hold the version DOI, and the ordering requirement is recorded in `CITATION.cff` and `RELEASING.md` so a future release cannot silently reintroduce it. Exported BibTeX and APA now both carry `10.5281/zenodo.21897796`.
+- Restructured `README.md` around the maintainer's stated priority: a reader should reach installation and a first successful run without studying anything. Install is now four lines, usage is two commands plus the output tree, and the environment recommendation, PyTorch CPU/GPU builds, packaging-name background, and development install moved into a later `Installation notes` section. A linked contents table sits above `Install`. No technical claim was dropped: the units contract, quality-control semantics, and full argument descriptions were relocated intact, and `--batch_size` and `--mask_transparency` are documented for the first time.
+- Switched README links to reference-style absolute URLs. The README is the PyPI long description, and PyPI does not rewrite relative paths, so the demo GIF and every repository-file link were broken there. Reference definitions keep the prose readable while the emitted HTML is absolute.
+- **`twine check` passed without rendering the Markdown.** The environment had `readme_renderer` without its `md` extra, so `render()` returned `None` and the check reported PASSED on an unrendered file. Re-ran the render in a separate virtual environment with `readme_renderer[md]`: 30,198 characters, the GIF and all four badges present, all five tables intact, no unresolved reference links, and 19 of 19 in-document anchors resolving after the renderer's `user-content-` rewrite. Treat a bare `twine check` as insufficient evidence that a README renders.
+- Base branch correction: this work started from `refactor`, which predates the `pupil_tracking` to `mouse_pupil_analysis` rename and the repository rename. Rebased onto `dev`, so the README documents the published import name rather than the retired one.
+- Verification:
+  - `ruff check .`, `black --check .` (34 files unchanged), `pytest` (`65 passed`), and `git diff --check` passed.
+  - `python -m build` produced both distributions; `cffconvert --validate` reports valid against schema 1.2.0.
+  - Every absolute URL in the README resolves (the `doi.org` and Zenodo badge URLs answer 403 to a scripted user agent and 200 to `curl`).
+  - The local environment held a stale `pupil-tracking` console script that made `tests/test_cli_help.py` fail before any edit; reinstalled per `AGENTS.md` before trusting the suite.
+
 ### Finalize the package namespace and release gate (Codex, GPT-5)
 
 - The user confirmed that the pending PyPI publisher is registered with the renamed repository and that Zenodo remains enabled after the GitHub rename. Those account actions no longer block the release.

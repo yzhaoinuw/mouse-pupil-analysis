@@ -101,10 +101,22 @@ Zenodo mints two kinds of DOI:
 7. Create the GitHub Release for that tag. This is what triggers Zenodo; pushing the
    tag alone does not.
 
-8. Copy the newly minted version DOI into `CITATION.cff` under `identifiers`
-   (the block is present but commented out until the first DOI exists), and confirm
-   the concept-DOI badge in `README.md`. Commit this as a follow-up; it necessarily
-   lands after the tag, because the DOI does not exist until the release does.
+8. Copy the newly minted version DOI into `CITATION.cff`, replacing the previous
+   release's value in both the top-level `doi` and the first `identifiers` entry.
+   That entry must stay first: citation generators emit the first doi-type
+   identifier, so reordering it makes exported BibTeX cite the moving concept DOI
+   instead of the archived code. The concept DOI never changes, so the
+   `identifiers` entry describing it, the `README.md` badge, and the `DOI` entry in
+   `[project.urls]` need no edit. Commit this as a follow-up; it necessarily lands
+   after the tag, because the DOI does not exist until the release does.
+
+   The concept and per-version DOIs for a release are both readable without an
+   account:
+
+   ```bash
+   curl -s 'https://zenodo.org/api/records?q=%22mouse-pupil-analysis%22' \
+     | python -c 'import json,sys; h=json.load(sys.stdin)["hits"]["hits"][0]; print(h["doi"], h["conceptdoi"])'
+   ```
 
 ## Verifying A Published Release
 

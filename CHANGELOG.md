@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Zenodo DOI metadata. `CITATION.cff` records the v0.2.0 version DOI
+  (`10.5281/zenodo.21897796`) and the concept DOI (`10.5281/zenodo.21897795`), so
+  GitHub's "Cite this repository" button now exports a DOI. `README.md` badges the
+  concept DOI and `[project.urls]` links it.
+
+### Changed
+
+- Reorganized `README.md` so installation and a first run come before optional
+  features, added a linked contents table, and moved environment setup, PyTorch
+  CPU/GPU builds, and packaging-name background into a later section. No
+  documented behavior changed. `--batch_size` and `--mask_transparency`, which the
+  CLI has always accepted, are now documented.
+
 ## [0.2.0] - 2026-08-12
 
 Everything between the `v0.1.4` tag (2026-06-12) and this release, including the

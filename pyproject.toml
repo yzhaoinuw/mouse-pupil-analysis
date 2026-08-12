@@ -43,6 +43,8 @@ Homepage = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
 Repository = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
 Issues = "https://github.com/yzhaoinuw/mouse-pupil-analysis/issues"
 Changelog = "https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/CHANGELOG.md"
+# Concept DOI: always resolves to the newest archived version.
+DOI = "https://doi.org/10.5281/zenodo.21897795"
 
 [project.scripts]
 extract-frames = "mouse_pupil_analysis.extract_frames:main"
