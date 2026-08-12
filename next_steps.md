@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Packaging and distribution](#packaging-and-distribution) - the permanent project/package rename and release automation are on `dev`; the pending PyPI publisher remains the release blocker, while Zenodo is enabled and must be rechecked after the repository rename.
+- [Packaging and distribution](#packaging-and-distribution) - the permanent rename, pending PyPI publisher, and post-rename Zenodo connection are complete; merge the final namespace guard, then finish the `dev` to `main` release flow.
 - [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
 - [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
@@ -15,16 +15,16 @@ When a new thread starts, add a short bullet here with a link to its section bel
 
 ## Packaging And Distribution
 
-Status: implemented on `dev`; the pending PyPI publisher is the only release blocker
+Status: account setup complete; final namespace-guard follow-up is in PR #3
 
 The distribution is renamed to `mouse-pupil-analysis` because `pupil-tracking` on PyPI belongs to an unrelated project. `.github/workflows/release.yml` builds on a `v*` tag, verifies that the tag, `CITATION.cff`, and the packaged checkpoint all agree with `pyproject.toml`, and publishes through Trusted Publishing.
 
+**Settled: this project ships no `pupil_tracking` module, and no compatibility shim.** The unrelated `pupil-tracking` distribution installs its own `pupil_tracking/__init__.py`, so claiming that path here would give two distributions one import namespace. That was measured, not assumed: installing both in either order silently overwrites one `__init__.py` with the other's, and uninstalling either deletes the shared file while `pip list` still reports the survivor as installed. `mouse-pupil-analysis` had not yet been published to PyPI and the previous public release documented the CLI rather than a Python API, so the one-package namespace was established before it could break a published contract. CI and the release workflow both fail if `pupil_tracking/` reappears in a built artifact.
+
 Remaining work:
 
-- After the GitHub repository rename, confirm Zenodo still shows
-  `yzhaoinuw/mouse-pupil-analysis` as enabled.
-- Register the pending PyPI publisher using repository `mouse-pupil-analysis`; exact
-  field values are in [`RELEASING.md`](RELEASING.md).
+- Merge PR #3 into `dev`, merge the release-ready `dev` branch into `main`, tag
+  `v0.2.0`, and publish the GitHub Release according to [`RELEASING.md`](RELEASING.md).
 - After the first archived release, fill in the commented `identifiers` block in `CITATION.cff` with the version DOI and add the concept-DOI badge to `README.md`.
 
 ## Runtime Modularization
@@ -277,9 +277,8 @@ The repo now has MIT license metadata and `CITATION.cff`, so GitHub can display 
 
 Remaining work:
 
-- After the repository rename, confirm Zenodo still has
-  `yzhaoinuw/mouse-pupil-analysis` enabled; after the citable version tag is pushed,
-  publish the GitHub Release to trigger archival.
+- After the citable version tag is pushed, publish the GitHub Release to trigger
+  the already-confirmed Zenodo integration.
 - Mint a DOI for the release and add it to `CITATION.cff` and `README.md`.
 
 ## Sample Data For Examples And Regression Tests

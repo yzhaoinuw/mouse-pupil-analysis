@@ -1,5 +1,6 @@
 include mouse_pupil_analysis/checkpoints/*.pth
 include mouse_pupil_analysis/checkpoints/*.txt
 recursive-include sample_data *.csv *.md *.png
+recursive-include scripts *.py
 recursive-include training *.md *.py
 prune mouse_pupil_analysis/checkpoints/archive

@@ -4,21 +4,25 @@ This document covers the PyPI and Zenodo mechanics specific to this project. The
 general commit/push/tag discipline lives in
 [Release Gate](treaty_conventions.md#release-gate).
 
-The repository and distribution are **`mouse-pupil-analysis`**. The primary import
-is `mouse_pupil_analysis`; the established console commands remain unchanged, and
-`pupil_tracking` is shipped only as a deprecated compatibility package.
+The repository and distribution are **`mouse-pupil-analysis`**. The only import is
+`mouse_pupil_analysis`, and the established console commands remain unchanged.
+Nothing here may ship a `pupil_tracking` module: the unrelated PyPI distribution
+`pupil-tracking` already owns that import path, and two distributions writing one
+file corrupt each other on install and uninstall. The release workflow enforces
+this against the built artifacts.
 
-## One-Time Setup
+## One-Time Setup (Completed 2026-08-12)
 
-Both steps are account actions that cannot be automated from this repository.
+Both account actions are complete for `yzhaoinuw/mouse-pupil-analysis`. The details
+below remain as the authoritative configuration record.
 
 ### 1. PyPI Trusted Publisher
 
 Trusted Publishing lets the release workflow exchange its GitHub OIDC identity for
 a short-lived PyPI token, so no API token is ever stored in repository secrets.
 
-Because `mouse-pupil-analysis` does not exist on PyPI yet, register a **pending**
-publisher at <https://pypi.org/manage/account/publishing/>:
+Because `mouse-pupil-analysis` does not exist on PyPI yet, its **pending** publisher
+was registered at <https://pypi.org/manage/account/publishing/> with these values:
 
 | Field | Value |
 |---|---|
@@ -39,10 +43,9 @@ input on the publish step.
 
 ### 2. Zenodo Archiving
 
-The GitHub integration was enabled for this repository on 2026-08-11. After the
-repository rename, confirm that `yzhaoinuw/mouse-pupil-analysis` remains enabled at
-<https://zenodo.org/account/settings/github/>. Zenodo archives every subsequent
-**GitHub Release** (not every tag).
+The GitHub integration was enabled on 2026-08-11 and reconfirmed after the repository
+rename on 2026-08-12. Zenodo archives every subsequent **GitHub Release** (not every
+tag).
 
 Zenodo mints two kinds of DOI:
 

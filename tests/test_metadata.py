@@ -49,6 +49,31 @@ def test_distribution_name_is_the_published_one():
     assert _project()["name"] == "mouse-pupil-analysis"
 
 
+def test_packaging_does_not_claim_the_unrelated_pupil_tracking_namespace():
+    # The unrelated PyPI distribution ``pupil-tracking`` installs its own
+    # ``pupil_tracking/__init__.py``. If this project also shipped that path, the
+    # two distributions would own one import namespace: installing either would
+    # overwrite the other's file, and uninstalling either would delete it while
+    # pip still reported the survivor as installed.
+    pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    include = pyproject["tool"]["setuptools"]["packages"]["find"]["include"]
+    legacy_package = PROJECT_ROOT / "pupil_tracking"
+
+    assert not any(pattern.startswith("pupil_tracking") for pattern in include)
+    assert not (legacy_package / "__init__.py").exists()
+    assert not list(legacy_package.glob("*.py"))
+
+
+def test_console_scripts_target_the_renamed_package():
+    # The commands themselves are part of the public interface and must not
+    # change, but they have to resolve inside the renamed package.
+    scripts = _project()["scripts"]
+
+    assert set(scripts) == {"extract-frames", "run-pupil-analysis"}
+    for command, target in scripts.items():
+        assert target.startswith("mouse_pupil_analysis."), command
+
+
 def test_public_api_matches_the_lazy_export_map():
     expected = set(mouse_pupil_analysis._EXPORTS) | {"__version__"}
 

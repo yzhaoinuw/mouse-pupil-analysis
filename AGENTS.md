@@ -136,7 +136,8 @@ C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pre_commit run --all
 - Keep changes scoped: package code, training scripts, local experiments, generated results, and build outputs share this repo.
 - Do not add generated artifacts unless explicitly requested. Check `project_overview.md` before editing unfamiliar or generated-looking paths.
 - Use package imports such as `mouse_pupil_analysis.preprocessing` and
-  `mouse_pupil_analysis.unet` in new code. `pupil_tracking` exists only for compatibility.
+  `mouse_pupil_analysis.unet`. Never add a `pupil_tracking` module to this repo; an
+  unrelated PyPI distribution owns that import path.
 - Preserve the 148 x 148 centered/padded image convention unless intentionally changing model assumptions.
 - Default inference selects the packaged checkpoint with the highest IoU encoded in its filename.
 - `mouse_pupil_analysis/checkpoints/` is installed package data;

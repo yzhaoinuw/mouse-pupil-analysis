@@ -50,7 +50,7 @@ run-pupil-analysis = "mouse_pupil_analysis.run_pupil_analysis:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mouse_pupil_analysis*", "pupil_tracking*"]
+include = ["mouse_pupil_analysis*"]
 
 [tool.setuptools.package-data]
 mouse_pupil_analysis = ["checkpoints/*.pth", "checkpoints/*.txt"]
