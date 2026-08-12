@@ -26,11 +26,9 @@ images_validation/
 masks_validation/
 ```
 
-Images and masks must be PNG files whose filenames correspond one-to-one by stem. Keep the validation set independent of the training set.
+Images and masks must be PNG files whose filenames correspond one-to-one by stem. Keep the validation set independent of the training set. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.  
 
-Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks. Do not crop, resize, or pad them yourself.
-
-When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
+When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
 The training loader may then apply small random transformations to the training pair as data augmentation. This is also automatic. Run `check_augmentation.py` only to review examples and confirm that the image and mask stay aligned; it is not a preprocessing step.
 
