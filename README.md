@@ -17,10 +17,7 @@ quality.
 
 - [Install](#install)
 - [Usage](#usage)
-- [Pupil center and velocity](#pupil-center-and-velocity)
 - [Output](#output)
-  - [Units](#units)
-  - [Quality control](#quality-control)
 - [CLI reference](#cli-reference)
 - [Python API](#python-api)
 - [Sample data](#sample-data)
@@ -55,16 +52,7 @@ Or a folder of PNG frames you already have:
 run-pupil-analysis --image_dir movie_frames/
 ```
 
-That is the whole thing. Frames are sampled from the video at 5 fps, up to 10,000 of them,
-and inference uses a GPU when one is available and falls back to CPU otherwise.
-
-> **Input requirement.** The eye should be roughly centered and fill most of the frame.
-> Every image is resized with its aspect ratio preserved and center-padded to the model's
-> 148 x 148 input, so a small eye inside a wide scene has to be cropped first.
-
-## Pupil center and velocity
-
-Add `--calculate_velocity` to also track where the pupil center is and how fast it moves:
+Add `--calculate_velocity` to track the pupil center and its speed alongside diameter:
 
 ```bash
 run-pupil-analysis \
@@ -73,18 +61,12 @@ run-pupil-analysis \
   --acquisition_fps 33.3333333333
 ```
 
-Two things change in this mode:
+That is the whole thing. Video frames are sampled at 5 fps by default, velocity mode
+analyzes every encoded frame instead, and inference uses a GPU when one is available.
 
-- **Every encoded frame is analyzed**, not a 5 fps sample, so the run takes longer.
-- **Timestamps come from the source-frame index and `--acquisition_fps`**, not from the
-  frame rate stored in the video container, which often is not experimental time. Pass the
-  rate your camera actually acquired at. With `--image_dir` the flag is required; with
-  `--video_path` it defaults to the container rate.
-
-The CSV gains `timestamp_seconds`, `center_x_pixels`, `center_y_pixels`,
-`speed_pixels_per_second`, `tracking_status`, and `quality_reason`, and the plot gains
-matching panels. [Segmentation-to-velocity method][method] documents the algorithm behind
-them.
+> **Input requirement.** The eye should be roughly centered and fill most of the frame.
+> Every image is resized with its aspect ratio preserved and center-padded to the model's
+> 148 x 148 input, so a small eye inside a wide scene has to be cropped first.
 
 ## Output
 
@@ -102,50 +84,28 @@ movie_result/
     movie_pupil_analysis.png
 ```
 
-| File | Description |
+| File | Contents |
 |------|--------------|
-| `*_pupil_analysis.csv` | Unified table containing `image_name` and pupil diameter in both model and input-image pixels. Velocity mode appends timestamp, accepted x/y center, speed, three-state tracking status, and a concise quality reason. Generated image names contain the one-based source-frame number. |
-| `*_pupil_analysis.png` | Unified frame-indexed plot. Velocity mode appends x/y center, speed, and valid/warning/invalid quality-control panels below pupil diameter. |
-| Mask images in `--output_mask_dir` | Optional. PNGs with a translucent yellow-orange-red confidence heatmap over threshold-passing pupil pixels. Velocity mode also marks the raw pupil center with a thin translucent cross: cyan for accepted candidates and yellow for rejected candidates. |
+| `*_pupil_analysis.csv` | The per-frame table, columns below. |
+| `*_pupil_analysis.png` | Frame-indexed plot of those columns. Velocity mode adds center, speed, and quality-control panels below diameter. |
+| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. Velocity mode also crosses the raw center, cyan when accepted and yellow when rejected. |
 
-### Units
+CSV columns, the last five written only in velocity mode:
 
-Pupil diameter is reported twice, in two different units:
+| Column | Meaning |
+|---|---|
+| `image_name` | Source image. The number in a generated name is the one-based source-frame index. |
+| `estimated_pupil_diameter` | Equivalent-circle diameter, `sqrt(4 / pi * area)`, in the 148 x 148 model image. |
+| `pupil_diameter_input_pixels` | The same diameter at the scale of the image you supplied. |
+| `timestamp_seconds` | Derived from the source-frame index and `--acquisition_fps`. |
+| `center_x_pixels`, `center_y_pixels` | Pupil center in input-image pixels; x increases right, y increases down. |
+| `speed_pixels_per_second` | Center speed, in input-image pixels per second. |
+| `tracking_status` | `valid`, `warning`, or `invalid`. |
+| `quality_reason` | Which check flagged or rejected the frame. |
 
-- `estimated_pupil_diameter` is measured in the 148 x 148 model image. Because every
-  frame is rescaled to that size, this value is **not comparable between recordings**
-  with different resolution or cropping. It is kept for continuity with earlier results.
-- `pupil_diameter_input_pixels` inverts the resize-and-pad geometry to express the same
-  measurement at the scale of **the image you supplied**. With `--video_path` that is the
-  source video frame. With `--image_dir` it is whatever you prepared: if your frames were
-  already cropped or resized to 148 x 148, this column equals `estimated_pupil_diameter`.
-
-Both are equivalent-circle diameters: the diameter of a circle whose area matches the
-segmented pupil mask, `sqrt(4 / pi * area)`.
-
-Neither column is calibrated. `pupil_diameter_input_pixels` removes the model's rescaling,
-but two recordings still only compare directly if their optics and working distance match.
-Otherwise apply your own per-recording scale factor.
-
-Pupil-center coordinates and speed use the same input-image pixel scale as
-`pupil_diameter_input_pixels`: the source video frame with `--video_path`, and
-whatever you supplied with `--image_dir`. The x coordinate increases to the right
-and the y coordinate increases downward, and speed is in input-image pixels per
-second. The same calibration caveat applies, so speeds are only directly
-comparable between recordings whose optics and working distance match.
-
-Neither unit is physical. Converting to millimeters requires a scale factor from your
-own optics, which this package does not attempt to infer.
-
-### Quality control
-
-In velocity mode the CSV reports `tracking_status` as `valid`, `warning`, or `invalid`, with
-`quality_reason` identifying suspicious or rejected frames.
-
-Published center and speed fields are left empty when segmentation is rejected. Speed is
-also left empty when either adjacent frame is invalid or when source frames are not
-consecutive; the pipeline does not interpolate across these gaps. A warning remains usable,
-such as extra foreground components when the selected pupil component is still acceptable.
+No column is calibrated; see the [FAQ](#faq) before comparing recordings.
+[Segmentation-to-velocity method][method] documents how the center and quality fields are
+derived.
 
 ## CLI reference
 
@@ -326,6 +286,34 @@ run-pupil-analysis --video_path movie.avi --output_mask_dir movie_overlays
 Each overlay shades the pupil pixels that passed the threshold, from yellow (just over the
 threshold) through orange to red (near-certain). If the mask spills past the pupil, raise
 `--pred_thresh`; if it catches only part of the pupil, lower it.
+
+**What should I pass for `--acquisition_fps`?**
+
+The rate your camera actually acquired at. Velocity mode derives timestamps from the
+source-frame index and this value, not from the frame rate stored in the video container,
+which often is not experimental time. With `--image_dir` there is no container to fall back
+on, so the flag is required; with `--video_path` it defaults to the container rate.
+
+**Can I compare diameters or speeds between recordings?**
+
+Only when the optics and working distance match, or after applying your own per-recording
+scale factor. Nothing reported here is calibrated, and converting to millimeters needs a
+scale factor this package cannot infer.
+
+Within the CSV, prefer `pupil_diameter_input_pixels`. It inverts the resize-and-pad geometry
+back to the scale of the image you supplied: the source video frame with `--video_path`, or
+whatever you prepared with `--image_dir`. `estimated_pupil_diameter` is measured in the
+148 x 148 model image, so it is not comparable across recordings that differ in resolution
+or cropping; it is kept for continuity with earlier results. If your frames were already
+148 x 148, the two columns are identical. Center and speed use the same input-image scale.
+
+**Why are `center_x_pixels` and `speed_pixels_per_second` empty for some frames?**
+
+Because the pipeline neither publishes nor interpolates values it cannot stand behind.
+Center and speed are empty when segmentation is rejected, and speed is additionally empty
+when either adjacent frame is invalid or when the two source frames are not consecutive. A
+`warning` frame remains usable, such as extra foreground components when the selected pupil
+component is still acceptable; `quality_reason` names the check that fired.
 
 **What is the relationship to `pupil-tracking` on PyPI?**
 

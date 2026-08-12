@@ -16,10 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Rewrote `README.md` around the order a user actually needs: install, run, velocity
-  mode, output, then the full CLI reference, with a plain linked contents list above
-  them. Environment setup, PyTorch CPU/GPU builds, and troubleshooting moved into
-  later sections and an FAQ. No documented behavior changed. `--batch_size` and
+- Rewrote `README.md` around the order a user actually needs: install, run, output,
+  then the full CLI reference, with a plain linked contents list above them. Unit
+  conventions, calibration caveats, quality-control semantics, environment setup, and
+  PyTorch CPU/GPU builds moved into later sections and an FAQ, leaving the CSV column
+  table as the inline reference. No documented behavior changed. `--batch_size` and
   `--mask_transparency`, which the CLI has always accepted, are now documented.
 
 ## [0.2.0] - 2026-08-12

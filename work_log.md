@@ -4,6 +4,19 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-12
 
+### Compress the README to the following path (Claude Code, Opus 5)
+
+- Second review pass, on the principle the maintainer stated: **a reader who has to look up something they skipped is better off than a reader who abandons the instructions because too much was in the way.** Prose that explains a command before the reader has run it is the thing to cut.
+- Merged "Pupil center and velocity" into `Usage` as a third command. It is a primary use rather than an advanced mode, so a sibling section to `Usage` overstated its distance from the basic call.
+- Deleted the two explanatory bullets that followed the velocity command after checking they were redundant: the CLI reference table's `--calculate_velocity` row already states that every encoded frame is analyzed, and its `--acquisition_fps` row already states the `--image_dir` requirement and the video-header default. Only the container-rate-is-not-experimental-time warning was unique, and it became an FAQ entry.
+- Replaced the `Units` and `Quality control` subsections, about 40 lines of prose between the output files and the CLI reference, with an eight-row CSV column table. The table carries what a reader needs while reading their own CSV: per-column meaning, the equivalent-circle formula, the coordinate convention, and which columns are velocity-only.
+- Moved the displaced material into the FAQ as two entries, on cross-recording comparison and on empty center/speed fields. Nothing was dropped: the calibration caveat, the model-pixel versus input-pixel distinction, the continuity rationale for `estimated_pupil_diameter`, the no-interpolation rule, and the usability of `warning` rows all survive, and `Output` keeps a one-line pointer to them.
+- Section line counts after the pass: Install 11, Usage 30, Output 39, CLI reference 37. The path from the top of the file to the full argument list is roughly halved.
+- Verification:
+  - `ruff check .`, `black --check .` (34 files unchanged), `pytest` (`65 passed`), and `git diff --check` passed.
+  - Rendered through `readme_renderer[md]` as PyPI does: 28,289 characters, GIF and both badges present, five tables intact, no unresolved reference links, 15 of 15 anchors resolving.
+  - Re-asserted that the contents list matches the `##` heading sequence exactly.
+
 ### Re-cut the README on maintainer review (Claude Code, Opus 5)
 
 - The first restructure was accepted only in part. Reworked it against the maintainer's specific objections rather than patching around them.
