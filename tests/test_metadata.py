@@ -57,9 +57,11 @@ def test_packaging_does_not_claim_the_unrelated_pupil_tracking_namespace():
     # pip still reported the survivor as installed.
     pyproject = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     include = pyproject["tool"]["setuptools"]["packages"]["find"]["include"]
+    legacy_package = PROJECT_ROOT / "pupil_tracking"
 
     assert not any(pattern.startswith("pupil_tracking") for pattern in include)
-    assert not (PROJECT_ROOT / "pupil_tracking").exists()
+    assert not (legacy_package / "__init__.py").exists()
+    assert not list(legacy_package.glob("*.py"))
 
 
 def test_console_scripts_target_the_renamed_package():

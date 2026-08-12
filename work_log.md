@@ -6,6 +6,7 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Drop the legacy namespace instead of hardening it (Claude Code, Opus 5)
 
+- The user confirmed on 2026-08-12 that the pending PyPI publisher is registered with the renamed repository and that Zenodo remains enabled after the GitHub rename. Those account actions no longer block the release.
 - Reviewed the rename commit and found that the compatibility wrappers re-exported with `import *`, which honors `__all__`. Because the rename added `__all__` to `mouse_pupil_analysis/run_pupil_analysis.py`, `from pupil_tracking.run_pupil_analysis import run_analysis` raised `ImportError` even though the commit's stated goal was preserving legacy imports. Opened #3 fixing that by forwarding through a module-level `__getattr__`.
 - **Superseded that fix in favor of removing the shim, per review.** The reviewer's objection was decisive and correct: the unrelated PyPI distribution `pupil-tracking==1.0.1` installs the exact path `pupil_tracking/__init__.py`, so shipping the shim would give two distributions ownership of one import namespace. Verified against the published wheel rather than assuming, and measured the consequence in clean virtual environments:
   - Installing `pupil-tracking` then `mouse-pupil-analysis` silently overwrote the unrelated project's `__init__.py` with our shim, leaving `pip list` reporting `pupil-tracking 1.0.1` as installed.
@@ -13,11 +14,12 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - The reverse order broke our own shim instead: `pupil_tracking.analyze_video` raised `AttributeError`. Both orders fail, and pip reports success throughout.
 - Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `AGENTS.md`, and `project_overview.md`.
 - Added regressions so the namespace cannot return: `tests/test_metadata.py` asserts the packaging config and working tree never reintroduce it and that both console scripts still target `mouse_pupil_analysis`, and CI plus the release workflow fail on any `pupil_tracking/` member in a built wheel or sdist. The release check runs before publication, since a PyPI version can never be reused.
+- A follow-up audit found that the first inline artifact check correctly rejected wheel paths but accidentally exempted an sdist path because the archive root itself contains `mouse_pupil_analysis`. Replaced both copies with `scripts/verify_distribution_namespaces.py`, which checks complete path components, added explicit wheel-layout, sdist-layout, and false-positive regression cases, and included the verifier in the sdist alongside the tests that import it.
 - Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
 - Left commit `23cab15`'s literal `\n` characters alone, per the maintainer's decision not to rewrite the already-pushed shared `dev` branch.
 - Verification:
-  - `ruff check .`, `black --check .`, and the full Pytest suite passed.
-  - A clean wheel and sdist build contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
+  - `ruff check .`, `black --check .`, and the full Pytest suite passed (`65 passed`).
+  - A clean wheel and sdist build passed the shared namespace verifier, contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
   - Installed the wheel into a clean environment alongside `pupil-tracking==1.0.1` in both orders and confirmed the two distributions no longer share any file.
 
 ### Adopt the permanent mouse-pupil-analysis identity (Codex, GPT-5)
