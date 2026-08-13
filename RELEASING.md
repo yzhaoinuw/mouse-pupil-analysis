@@ -2,7 +2,7 @@
 
 This document covers the PyPI and Zenodo mechanics specific to this project. The
 general commit/push/tag discipline lives in
-[Release Gate](treaty_conventions.md#release-gate).
+[Release Gate](treaty_docs/treaty_conventions.md#release-gate).
 
 The repository and distribution are **`mouse-pupil-analysis`**. The only import is
 `mouse_pupil_analysis`, and the established console commands remain unchanged.

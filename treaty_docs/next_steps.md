@@ -7,7 +7,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Packaging and distribution](#packaging-and-distribution) - complete; version 0.2.0 is published on PyPI and GitHub under the permanent project identity.
 - [Runtime modularization](#runtime-modularization) - complete; a public Python API and focused modules are in place on `dev`.
 - [Pupil-center velocity](#pupil-center-velocity) - temporal area outliers are now usable warnings and the refreshed main-cadence demo is ready for review; next validate the provisional thresholds on additional recordings.
-- [Treaty v0.6.0 upstream feedback](#treaty-v060-upstream-feedback) - publication with `dev` and `main` is authorized in this delivery; monitor upstream issue #18 afterward.
+- [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
 - [DOI archival](#doi-archival) - complete; Zenodo minted the 0.2.0 DOIs and the citation metadata records them.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
 
@@ -208,10 +208,10 @@ When `--output_mask_dir` is supplied, render threshold-passing pixels as a trans
   - Focused frame-selection and metadata tests.
 - `tests/test_outputs.py`
   - One-based naming, compact diameter/velocity schemas, three-state status, and unified plot tests.
-- `project_overview.md`
+- `../project_overview.md`
   - Detailed segmentation-to-velocity methodology and quality-control semantics.
 - `README.md`
-  - User-facing arguments, sample command, output summary, and a link to the detailed methodology in `project_overview.md`.
+  - User-facing arguments, sample command, output summary, and a link to the detailed methodology in `../project_overview.md`.
 
 ### Acceptance And Verification
 
@@ -261,13 +261,13 @@ C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdis
 
 Verify that the packaged checkpoint and training log remain present in both wheel and source distribution outputs.
 
-## Treaty v0.6.0 Upstream Feedback
+## Treaty v0.9.0 Docs Layout
 
-Status: the validated Copier-managed migration from `v0.3.2` to `v0.6.0` is included in the authorized `dev` and `main` publication
+Status: migrated and verified on `chore/treaty`
 
 Remaining work:
 
-- Track upstream dry-run preview feedback in https://github.com/yzhaoinuw/agent_collab_treaty/issues/18.
+- Review and integrate `chore/treaty` when the reorganized documentation layout is accepted.
 
 ## DOI Archival
 

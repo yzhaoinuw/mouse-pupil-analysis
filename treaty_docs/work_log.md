@@ -2,6 +2,22 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-13
+
+### Adopt the treaty v0.9 docs layout (Codex, GPT-5)
+
+- Created `chore/treaty` from the clean tracked state of `dev`, leaving the pre-existing untracked `videos/` and `.pytest_tmp_full_console_fix_20260812/` directories untouched.
+- Previewed and applied the Copier migration from treaty template `v0.6.0` to `v0.9.0`. The compatibility step recorded `docs_dir: .` before relocation and updated only `.copier-answers.yml` plus the upstream-owned conventions file.
+- Used `treaty relocate` to move `treaty_conventions.md`, `next_steps.md`, `work_log.md`, and `work_log_archive/` into `treaty_docs/`, preserving Git history and keeping `AGENTS.md` and `project_overview.md` at the root.
+- Repaired the project-owned references identified by the relocation preview in `RELEASING.md` and `tests/test_end_to_end.py`; aligned the root documentation map and active handoff queue with the new paths.
+- Published the Windows adopter report and remaining relocation UX suggestions as agent-collab-treaty issue #22, signed `Codex (GPT-5)`, after confirming issue #21 was the related verification request rather than an equivalent adopter report.
+- Put the Agent Collab Treaty adoption badge before the DOI badge in `README.md` so the collaboration contract is the first project badge shown.
+- Verification:
+  - `treaty validate .` passed against the relocated layout; `treaty diff` compared against template `v0.9.0` and reported the expected project-authored section drift with the upstream conventions untouched.
+  - `ruff check .` and `black --check .` passed; Black reported 34 files unchanged plus its known non-fatal cache permission warning.
+  - The first sandboxed Pytest attempt could not access its default Windows temp directory or launch the environment console script. The retry used the same project environment with an accessible dedicated `--basetemp` and passed all 65 tests; the only remaining messages were the established dataset deprecation warning and a non-fatal Pytest cache warning.
+  - Final conflict-marker, stale-root-reference, Git-status/index, and whitespace checks passed.
+
 ## 2026-08-12
 
 ### Compress the README to the following path (Claude Code, Opus 5)
@@ -43,7 +59,7 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - `ruff check .`, `black --check .` (34 files unchanged), `pytest` (`65 passed`), and `git diff --check` passed.
   - `python -m build` produced both distributions; `cffconvert --validate` reports valid against schema 1.2.0.
   - Every absolute URL in the README resolves (the `doi.org` and Zenodo badge URLs answer 403 to a scripted user agent and 200 to `curl`).
-  - The local environment held a stale `pupil-tracking` console script that made `tests/test_cli_help.py` fail before any edit; reinstalled per `AGENTS.md` before trusting the suite.
+  - The local environment held a stale `pupil-tracking` console script that made `tests/test_cli_help.py` fail before any edit; reinstalled per `../AGENTS.md` before trusting the suite.
 
 ### Finalize the package namespace and release gate (Codex, GPT-5)
 
@@ -70,9 +86,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - Installing `pupil-tracking` then `mouse-pupil-analysis` silently overwrote the unrelated project's `__init__.py` with our shim, leaving `pip list` reporting `pupil-tracking 1.0.1` as installed.
   - Uninstalling `mouse-pupil-analysis` then deleted the shared file, leaving `pupil-tracking 1.0.1` still listed while `import pupil_tracking` raised `ModuleNotFoundError`. An unrelated third-party package was destroyed by our uninstall.
   - The reverse order broke our own shim instead: `pupil_tracking.analyze_video` raised `AttributeError`. Both orders fail, and pip reports success throughout.
-- Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `AGENTS.md`, and `project_overview.md`.
+- Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `../AGENTS.md`, and `../project_overview.md`.
 - Added regressions so the namespace cannot return: `tests/test_metadata.py` asserts the packaging config and working tree never reintroduce it and that both console scripts still target `mouse_pupil_analysis`, and CI plus the release workflow fail on any `pupil_tracking/` member in a built wheel or sdist. The release check runs before publication, since a PyPI version can never be reused.
-- Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
+- Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `../AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
 - Left commit `23cab15`'s literal `\n` characters alone, per the maintainer's decision not to rewrite the already-pushed shared `dev` branch.
 - Verification:
   - `ruff check .`, `black --check .`, and the full Pytest suite passed (`62 passed`).
@@ -166,7 +182,7 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - Caught while adding that test: it used `tomllib`, which is Python 3.11+, while `requires-python` allows 3.10 and CI tests it. The import is now guarded and the module skips on 3.10. Verified by executing the module header with `tomllib` blocked.
 - Moved the `media/make_gif.py` load into a fixture so a missing script skips instead of breaking collection.
 - Deleted `requirements.txt`, which duplicated `[project].dependencies` with no declared ownership.
-- Documented the macOS environment paths in `AGENTS.md` alongside the existing Windows ones, and recorded the console-script removal hazard when uninstalling the superseded distribution.
+- Documented the macOS environment paths in `../AGENTS.md` alongside the existing Windows ones, and recorded the console-script removal hazard when uninstalling the superseded distribution.
 - Verification:
   - `ruff check .`, `black --check .` (28 files unchanged), `pytest` (`40 passed`).
   - `pre-commit run --all-files` with the synced pins (`black Passed`, `ruff Passed`).

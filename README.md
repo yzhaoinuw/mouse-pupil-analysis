@@ -1,7 +1,7 @@
 # mouse-pupil-analysis
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21897795-1682D4.svg)][doi-concept]
 [![Agent Collab Treaty adopted](https://raw.githubusercontent.com/yzhaoinuw/agent_collab_treaty/main/assets/treaty-adopted.svg)][treaty]
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21897795-1682D4.svg)][doi-concept]
 
 ![Pupil analysis pipeline demo][demo]
 

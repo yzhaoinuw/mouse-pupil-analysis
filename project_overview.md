@@ -159,9 +159,9 @@ mouse-pupil-analysis/
 |- README.md
 |- AGENTS.md
 |- project_overview.md
-|- next_steps.md
-|- work_log.md
-|- work_log_archive/
+|- treaty_docs/next_steps.md
+|- treaty_docs/work_log.md
+|- treaty_docs/work_log_archive/
 ```
 
 ## Maintained vs. Local/Generated
@@ -208,7 +208,7 @@ Local/generated surfaces to treat carefully:
 ### Authored - hand-edit these
 
 - Package Python modules, training/media utilities, sample fixtures, tests, `pyproject.toml`, `MANIFEST.in`, and CI configuration are maintained source.
-- `README.md`, `AGENTS.md`, `project_overview.md`, `next_steps.md`, and `work_log.md` are maintained documentation. `treaty_conventions.md` is the exception: it is upstream-managed through `treaty update`.
+- `README.md`, `AGENTS.md`, `project_overview.md`, `treaty_docs/next_steps.md`, and `treaty_docs/work_log.md` are maintained documentation. `treaty_docs/treaty_conventions.md` is the exception: it is upstream-managed through `treaty update`.
 - The selection and packaging policy under `mouse_pupil_analysis/checkpoints/` is curated deliberately even though model binaries originate from training.
 
 ### Derived - regenerate or intentionally promote

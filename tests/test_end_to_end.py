@@ -3,8 +3,8 @@
 These tests exercise the wiring that unit tests cannot: video decoding, frame
 extraction, the real UNet forward pass, and output assembly. They deliberately use
 a synthetic video, so they verify plumbing rather than segmentation accuracy. A
-real-image regression test is tracked in next_steps.md and needs sample data that
-is not yet redistributable.
+real-image regression test is tracked in treaty_docs/next_steps.md and needs
+sample data that is not yet redistributable.
 """
 
 from pathlib import Path

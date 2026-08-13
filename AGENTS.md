@@ -1,6 +1,6 @@
 # Guidelines and Tips for Agents
 
-Read this file first when joining this repository. It is the project-specific quick reference; generic treaty mechanics live in [`treaty_conventions.md`](treaty_conventions.md).
+Read this file first when joining this repository. It is the project-specific quick reference; generic treaty mechanics live in [`treaty_docs/treaty_conventions.md`](treaty_docs/treaty_conventions.md).
 
 Keep this file lean (aim for under 150 lines). Put detailed procedures in the document that owns them and link from here.
 
@@ -76,34 +76,34 @@ python -m build --wheel --sdist
 
 Note that reinstalling under the current distribution name after an environment previously held the old `pupil-tracking` distribution requires `pip uninstall pupil-tracking` first, then `pip install -e ".[dev]"`. Both distributions declare the same console-script names, so uninstalling either one removes `run-pupil-analysis` and `extract-frames` until the remaining one is reinstalled.
 
-Before committing, confirm Ruff, Black, and Pytest are clean; package builds still contain the tracked checkpoint and training log when relevant; and `work_log.md` records the verification actually run.
+Before committing, confirm Ruff, Black, and Pytest are clean; package builds still contain the tracked checkpoint and training log when relevant; and `treaty_docs/work_log.md` records the verification actually run.
 
 ## When To Update Treaty Docs
 
-At the end of a substantive session, update `work_log.md` and align `next_steps.md` unless the user asks not to document it or the exchange was clearly trivial. Record decisions and reusable evidence, not a prose copy of the diff. See [Work Log Discipline](treaty_conventions.md#work-log-discipline).
+At the end of a substantive session, update `treaty_docs/work_log.md` and align `treaty_docs/next_steps.md` unless the user asks not to document it or the exchange was clearly trivial. Record decisions and reusable evidence, not a prose copy of the diff. See [Work Log Discipline](treaty_docs/treaty_conventions.md#work-log-discipline).
 
 ## Branch Handoff Discipline
 
-Prefer `dev` for ordinary development unless the user requests another branch; `main` is the GitHub default and recorded treaty integration branch. Before switching away from experimental or feature work, confirm its intended changes are complete, committed or intentionally local, verified, and merged/pushed/parked as requested. See [Branch Handoff](treaty_conventions.md#branch-handoff).
+Prefer `dev` for ordinary development unless the user requests another branch; `main` is the GitHub default and recorded treaty integration branch. Before switching away from experimental or feature work, confirm its intended changes are complete, committed or intentionally local, verified, and merged/pushed/parked as requested. See [Branch Handoff](treaty_docs/treaty_conventions.md#branch-handoff).
 
 ## Release / Tag Checklist
 
-Treat commit + push + tag, "cut a release," or "publish version X" as a release. Clear the documentation/version/verification gate before tagging, then verify remote refs. See [Release Gate](treaty_conventions.md#release-gate).
+Treat commit + push + tag, "cut a release," or "publish version X" as a release. Clear the documentation/version/verification gate before tagging, then verify remote refs. See [Release Gate](treaty_docs/treaty_conventions.md#release-gate).
 
 For the PyPI and Zenodo mechanics specific to this project — version metadata locations, the tag/citation/checkpoint checks enforced by `.github/workflows/release.yml`, and the DOI follow-up commit — see [`RELEASING.md`](RELEASING.md).
 
 ## Updating The Treaty
 
-Only update the treaty when the user asks. Use the stable treaty CLI to run `treaty diff`, preview with `treaty update --dry-run`, apply with `treaty update`, resolve any conflicts, and validate. See [Updating The Treaty](treaty_conventions.md#updating-the-treaty).
+Only update the treaty when the user asks. Use the stable treaty CLI to run `treaty diff`, preview with `treaty update --dry-run`, apply with `treaty update`, resolve any conflicts, and validate. See [Updating The Treaty](treaty_docs/treaty_conventions.md#updating-the-treaty).
 
 ## Documentation
 
 Read only what the task needs:
 
-- `treaty_conventions.md`: upstream-maintained logging, branch, release, and update procedures; prefer not to edit it.
+- `treaty_docs/treaty_conventions.md`: upstream-maintained logging, branch, release, and update procedures; prefer not to edit it.
 - `project_overview.md`: active runtime, structure, tests, and authored-vs-derived boundaries for unfamiliar areas.
-- `next_steps.md`: unfinished work; "Currently Hot" identifies active threads.
-- `work_log.md` and `work_log_archive/`: recent decisions and verification evidence; read the two latest dates when history matters.
+- `treaty_docs/next_steps.md`: unfinished work; "Currently Hot" identifies active threads.
+- `treaty_docs/work_log.md` and `treaty_docs/work_log_archive/`: recent decisions and verification evidence; read the two latest dates when history matters.
 - `README.md`: user-facing installation, usage, packaging, and I/O expectations.
 - `RELEASING.md`: PyPI Trusted Publishing setup, Zenodo archiving, and the per-release sequence.
 - `CHANGELOG.md`: user-facing change history; update the `Unreleased` section as features land.
