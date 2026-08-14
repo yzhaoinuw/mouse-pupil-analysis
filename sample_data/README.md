@@ -46,7 +46,7 @@ run-pupil-analysis `
 
 The velocity fixture contains source frames `07212` through `07242`, inclusive. They are consecutive frames from the recording used for the README GIF window, not the every-third-frame display sampling used by the animation. Preserving every source suffix allows the tracking code to calculate all 30 frame-to-frame speeds without bridging gaps.
 
-The committed velocity images are grayscale 148 x 148 outputs from the package's aspect-preserving `resize_with_pad(...)` preprocessing. On the packaged checkpoint used when the fixture was selected, all 31 segmentations were usable, four frames carried an `abrupt_area_change` warning, and the diameter ranged from approximately 18.40 to 25.41 model pixels. (These frames are already 148 x 148, so their input-pixel diameters are identical. The range was 18.38 to 25.38 before the equivalent-circle constant was corrected from the rounded 1.27 to an exact 4 / pi.) These observations are debugging landmarks rather than a permanently frozen numerical-output contract.
+The committed velocity images are grayscale 148 x 148 outputs from the package's aspect-preserving `resize_with_pad(...)` preprocessing. On the current packaged checkpoint, all 31 segmentations are usable, three frames carry an `abrupt_area_change` warning, and the diameter ranges from approximately 19.54 to 26.34 model pixels. These frames are already 148 x 148, so their input-pixel diameters are identical. These observations are debugging landmarks rather than a permanently frozen numerical-output contract.
 
 ## Try training and augmentation
 
@@ -68,13 +68,14 @@ Then inspect paired augmentation:
 python training\check_augmentation.py
 ```
 
-Or run the training script:
+Or run the training script with terminal arguments:
 
 ```powershell
-python training\run_train.py
+python training\run_train.py --data-root sample_data --epochs 1
 ```
 
-For a quick plumbing check, pass `n_epochs=1` in the final `TrainingConfig(...)` block. The
+For an IDE plumbing check, set `DATA_ROOT = PROJECT_ROOT / "sample_data"` and `n_epochs=1` in
+the final `TrainingConfig(...)` block of `training/run_train.py`. The
 best checkpoint, JSON metadata, and log are written to one descriptive run folder under
 `checkpoints_exp/` regardless of score. A model trained on eight images is expected to
 overfit and must not be treated as a useful trained model.

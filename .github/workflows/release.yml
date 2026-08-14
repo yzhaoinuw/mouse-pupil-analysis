@@ -56,7 +56,7 @@ jobs:
           print(f"Citation metadata agrees: {project_version}")
           PY
 
-      - name: Verify the intended checkpoint and training log ship in both distributions
+      - name: Verify the intended checkpoint, metadata, and training log ship in both distributions
         run: |
           python - <<'PY'
           import pathlib, tarfile, zipfile
@@ -79,8 +79,13 @@ jobs:
               )
           expected_checkpoint = repo_checkpoints[0]
           expected_log = f"training_log_{pathlib.Path(expected_checkpoint).stem}.txt"
+          expected_metadata = pathlib.Path(expected_checkpoint).with_suffix(".json").name
           if not (checkpoint_dir / expected_log).is_file():
               raise SystemExit(f"Missing training log {expected_log} for {expected_checkpoint}.")
+          if not (checkpoint_dir / expected_metadata).is_file():
+              raise SystemExit(
+                  f"Missing calibrated-threshold metadata {expected_metadata} for {expected_checkpoint}."
+              )
 
           distributions = sorted(pathlib.Path("dist").iterdir())
           if not distributions:
@@ -92,6 +97,8 @@ jobs:
                   raise SystemExit(f"{distribution.name} is missing {expected_checkpoint}.")
               if not any(n.endswith(f"checkpoints/{expected_log}") for n in members):
                   raise SystemExit(f"{distribution.name} is missing {expected_log}.")
+              if not any(n.endswith(f"checkpoints/{expected_metadata}") for n in members):
+                  raise SystemExit(f"{distribution.name} is missing {expected_metadata}.")
               stray = [
                   n for n in members
                   if n.endswith(".pth") and not n.endswith(f"checkpoints/{expected_checkpoint}")
@@ -100,7 +107,9 @@ jobs:
                   raise SystemExit(f"{distribution.name} ships unexpected checkpoints: {stray}")
               if [n for n in members if "checkpoints/archive/" in n]:
                   raise SystemExit(f"{distribution.name} leaks archived checkpoints.")
-              print(f"{distribution.name}: {expected_checkpoint} and its training log present")
+              print(
+                  f"{distribution.name}: {expected_checkpoint}, training log, and metadata present"
+              )
           PY
 
       - name: Verify the distributions claim only the mouse_pupil_analysis namespace

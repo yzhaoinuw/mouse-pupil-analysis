@@ -43,12 +43,13 @@ Install for development:
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pip install -e .[dev]
 ```
 
-Run analysis or frame extraction:
+Run analysis, frame extraction, or model training:
 
 ```powershell
 run-pupil-analysis --video_path C:\path\to\movie.avi
 run-pupil-analysis --image_dir C:\path\to\frames
 extract-frames --video_path C:\path\to\movie.avi --out_dir C:\path\to\frames
+python training\run_train.py --help
 ```
 
 Run the CI-equivalent checks:

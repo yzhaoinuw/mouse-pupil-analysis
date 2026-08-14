@@ -10,7 +10,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
 - [DOI archival](#doi-archival) - complete; Zenodo minted the 0.2.0 DOIs and the citation metadata records them.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
-- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - implemented and locally benchmarked on `feature/finetune`; next compare the leading candidates on independently held-out tiny, large, and partially occluded pupils.
+- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the strongest overall candidate is now packaged on `feature/finetune`; next validate it on independently held-out tiny, large, and partially occluded pupils.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
@@ -265,7 +265,8 @@ C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q
 C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist
 ```
 
-Verify that the packaged checkpoint and training log remain present in both wheel and source distribution outputs.
+Verify that the packaged checkpoint, calibrated-threshold JSON, and training log remain
+present in both wheel and source distribution outputs.
 
 ## Treaty v0.9.0 Docs Layout
 
@@ -343,7 +344,7 @@ Remaining work:
 
 ### Segmentation Fine-Tuning And Visibility
 
-Status: implemented and benchmarked locally on `feature/finetune`; independent evaluation remains
+Status: strongest overall candidate promoted on `feature/finetune`; independent evaluation remains
 
 The maintained trainer now supports lower-rate weight fine-tuning, equal-mass sampling across
 tiny/medium/large mask bins, per-image macro validation, equal-weighted size-bin early
@@ -356,13 +357,15 @@ every checkpoint on the same 56-image validation set. The overall leader,
 to 0.8749. Size balancing produced smaller overall gains but the best tiny-pupil result
 (0.8051 versus 0.7773 for the calibrated shipped model). The current validation recordings
 overlap training recording groups and contain no masks below the configured low-circularity
-cutoff, so none of these candidates is ready for package promotion.
+cutoff. The maintainer subsequently authorized the overall leader as the packaged checkpoint;
+its filename and JSON preserve the validation limitation and relevant run statistics, but the
+local comparison is not yet evidence of independent generalization.
 
 Next action:
 
 - Obtain raw versions and masks for the troubleshooting frames, then compare the packaged
-  checkpoint, the overall leader, and the size-balanced candidate that improved every size
-  bin on an independent, recording-grouped test set.
+  checkpoint and the size-balanced candidate that improved every size bin on an independent,
+  recording-grouped test set.
 
 Parked:
 
@@ -375,16 +378,16 @@ Parked:
 
 ### Training Workflow Documentation
 
-Status: documented; fine-tuning and calibrated validation remain script-based
+Status: documented with terminal-argument and editable IDE paths
 
 `training/README.md` documents the local data layout, Labelme conversion, augmentation
 review, fresh training, weight-based fine-tuning, size balancing, threshold calibration, and
 checkpoint promotion. Fine-tuning restores model weights but intentionally starts new
 optimizer, scheduler, early-stopping, and logging state.
 
-Resume if the training path becomes user-facing or needs reproducible CI coverage.
+`training/run_train.py` parses terminal arguments when they are supplied and retains its
+editable direct-IDE configuration when run without arguments.
 
 Remaining work:
 
-- Decide whether the workflow under `training/` should remain script-based or move behind a package CLI.
 - Add structured optimizer/scheduler checkpointing only if exact interrupted-run resume becomes necessary.

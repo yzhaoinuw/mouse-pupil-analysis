@@ -1,15 +1,18 @@
 # Model Training and Fine-Tuning
 
-This folder contains the maintained local workflow for preparing masks, reviewing augmentation, training the UNet, and promoting a selected checkpoint. These are editable research scripts rather than installed command-line tools, so their configuration is intentionally kept near the top of each file for terminal or IDE runs.
+This folder contains the editable workflow for preparing masks, reviewing augmentation,
+training the UNet, and promoting a selected checkpoint. `run_train.py` accepts terminal
+arguments when they are supplied and otherwise uses its editable Spyder/IDE configuration.
 
-Run commands from the repository root. All paths in the scripts are anchored to that root.
+Run repository scripts from the repository root. The training script treats the current
+directory as its default data root unless `--data-root` is supplied.
 
 ## Environment
 
 Use the project's environment and editable installation:
 
 ```powershell
-conda activate mouse_pupil_analysis
+conda activate pupil_tracking
 python -m pip install -e .
 ```
 
@@ -67,7 +70,7 @@ The script draws repeated augmented versions of training samples with the mask o
 
 ## 3. Train a model from scratch
 
-Edit the hyperparameter block in `run_train.py`, especially:
+For an IDE run, edit the final `TrainingConfig(...)` block in `run_train.py`, especially:
 
 - `finetune_checkpoint`: leave as `None` for fresh training.
 - `early_stopping_patience` and `scheduler_patience`: how long to wait for a
@@ -79,11 +82,18 @@ Edit the hyperparameter block in `run_train.py`, especially:
   reporting and balanced sampling.
 - DataLoader batch size and fresh-training Adam learning rate, currently `8` and `1e-3`.
 
-Then run the file in your IDE or execute:
+Then run the file directly in your IDE. The editable block deliberately remains separate from
+terminal argument parsing.
+
+For a terminal run from a directory containing the four data folders, use:
 
 ```powershell
-python training\run_train.py
+python training\run_train.py --run-name scratch_bal_lr1e-3_s0
 ```
+
+Use `--data-root C:\path\to\training-data` when the folders are elsewhere. Run
+`python training\run_train.py --help` for the fine-tuning checkpoint, output directory,
+learning rate, epoch, batch-size, patience, seed, sampling, and attention options.
 
 The script automatically uses CUDA when available. It oversamples training masks so the
 represented tiny, medium, and large bins receive equal total sampling probability. Validation
@@ -109,15 +119,24 @@ are not installed package data.
 Set `finetune_checkpoint` in the final block of `run_train.py` to a compatible `.pth` file:
 
 ```python
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = UNet(use_attention=use_attention).to(device)
-
 finetune_checkpoint = (
     PROJECT_ROOT
     / "mouse_pupil_analysis"
     / "checkpoints"
-    / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
+    / "166pupils_thresh=0.4_iou=0.8749.pth"
 )
+```
+
+The equivalent terminal command is:
+
+```powershell
+python training\run_train.py `
+    --data-root . `
+    --finetune-checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
+    --run-name ft_natural_lr1e-4_s1 `
+    --learning-rate 1e-4 `
+    --natural-sampling `
+    --seed 1
 ```
 
 The checkpoint architecture is detected from its weights. Fine-tuning automatically uses
@@ -136,9 +155,12 @@ Do not automatically place experimental output in `mouse_pupil_analysis/checkpoi
 3. Inspect segmentation overlays and downstream diameter/center tracking, not IoU alone.
 4. Compare against the currently packaged model on the same cases.
 
-When a model is accepted, rename `best.pth` to preserve the packaged
-`_thresh=<value>_iou=<value>` naming contract, using the calibrated threshold and reviewed IoU
-from `best.json`. Copy the renamed weights, matching JSON metadata, and `train.log` into
+When a model is accepted, use the concise packaged naming pattern
+`<count>pupils_thresh=<value>_iou=<macro-value>`. The model is always a UNet, attention is
+detected from its weights, and the 148 x 148 resize-and-pad step is universal, so `unet`,
+`atn`, and `resize` are intentionally omitted. Seed, learning rate, sampling, best epoch,
+balanced IoU, and other details remain in the matching log and JSON metadata. Copy the
+renamed weights, metadata, and `train.log` into
 `mouse_pupil_analysis/checkpoints/` as an intentional package change. Default inference
 selects the packaged checkpoint with the highest IoU encoded in its filename, then reads its
 threshold from JSON metadata (or the filename for older checkpoints). Remove or archive

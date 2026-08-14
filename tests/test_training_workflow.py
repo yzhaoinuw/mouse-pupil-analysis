@@ -15,6 +15,7 @@ per_image_overlap_scores = TRAINING["per_image_overlap_scores"]
 size_balanced_sample_weights = TRAINING["size_balanced_sample_weights"]
 default_run_name = TRAINING["default_run_name"]
 TrainingConfig = TRAINING["TrainingConfig"]
+training_main = TRAINING["main"]
 
 
 def test_per_image_iou_does_not_let_a_large_mask_hide_a_missed_small_mask():
@@ -78,3 +79,42 @@ def test_default_run_name_is_concise_and_describes_the_main_choices(tmp_path):
 def test_run_name_cannot_escape_the_experiment_directory():
     with pytest.raises(ValueError, match="run_name"):
         TrainingConfig(run_name="../outside")
+
+
+def test_terminal_entry_point_maps_arguments_to_training_config(monkeypatch, tmp_path):
+    captured = []
+    source = tmp_path / "source.pth"
+    output = tmp_path / "runs"
+    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
+
+    exit_code = training_main(
+        [
+            "--data-root",
+            str(tmp_path),
+            "--checkpoint-dir",
+            str(output),
+            "--run-name",
+            "terminal-smoke",
+            "--finetune-checkpoint",
+            str(source),
+            "--learning-rate",
+            "5e-5",
+            "--epochs",
+            "3",
+            "--natural-sampling",
+            "--seed",
+            "7",
+        ]
+    )
+
+    assert exit_code == 0
+    assert len(captured) == 1
+    config = captured[0]
+    assert config.data_root == tmp_path.resolve()
+    assert config.checkpoint_dir == output.resolve()
+    assert config.run_name == "terminal-smoke"
+    assert config.finetune_checkpoint == source
+    assert config.finetune_learning_rate == pytest.approx(5e-5)
+    assert config.n_epochs == 3
+    assert not config.balance_training_sizes
+    assert config.seed == 7

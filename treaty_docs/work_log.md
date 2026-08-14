@@ -2,6 +2,43 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-14
+
+### Promote the fine-tuned model and add script arguments (Codex, GPT-5, high reasoning)
+
+- Replaced the packaged weights and log with the authorized overall leader from
+  `ft_natural_lr1e-4_s0`, and added matching calibrated-threshold JSON metadata. The promoted
+  checkpoint's SHA-256 exactly matches the locally evaluated candidate.
+- Chose the concise packaged stem `166pupils_thresh=0.4_iou=0.8749`. Dataset size,
+  calibrated threshold, and macro per-image IoU are immediately useful selection facts;
+  seed, learning rate, sampling, best epoch, balanced IoU, and other details remain in the
+  log and JSON. `unet` is invariant, attention is detected from the weights, and Git history
+  shows `resize` marked preprocessing/augmentation that is now universal to the 148 x 148
+  model contract, so those tags are also omitted.
+- Added terminal argument parsing directly to `training/run_train.py`. Supplying arguments
+  enables terminal use, while running with no arguments retains the editable Spyder/IDE
+  configuration. No new installed console command or wheel training module is added.
+- Extended release validation to require the checkpoint's matching JSON metadata.
+- Verification:
+  - Confirmed the promoted checkpoint SHA-256 is
+    `CA0EDA577F33FD458E302B3787E17CC6588D894E6F8048F1DDFBDC41B207D0C7`, exactly matching
+    the evaluated `ft_natural_lr1e-4_s0/best.pth`; inference detects attention and resolves
+    threshold 0.4 from the renamed package triplet.
+  - `python training/run_train.py --help` passed, and a one-epoch fine-tuning smoke through
+    that exact script invocation loaded the promoted checkpoint and wrote weights, JSON, and
+    a full log. Refreshing the editable install removed the briefly introduced console script;
+    only `run-pupil-analysis` and `extract-frames` remain installed.
+  - Focused checkpoint/training/script/metadata/real-image/end-to-end coverage passed all 31
+    tests. The full Conda-environment suite passed all 77 tests.
+  - `ruff check .`, `black --check .`, and `git diff --check` passed. Black emitted only its
+    known non-fatal user-cache permission warning.
+  - A clean wheel and source distribution contained exactly
+    `166pupils_thresh=0.4_iou=0.8749.{pth,json}` and its matching log, with no old or long-name
+    checkpoint. The wheel contains no training module or new console command; the source
+    distribution retains `training/run_train.py`. The namespace verifier passed both.
+  - Treaty 0.5.0 remains unable to validate the repository's newer relocated
+    `treaty_docs/` layout, as documented in the preceding session entry.
+
 ## 2026-08-13
 
 ### Benchmark fine-tuning candidates (Codex, GPT-5, high reasoning)

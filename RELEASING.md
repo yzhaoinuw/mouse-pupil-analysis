@@ -5,7 +5,7 @@ general commit/push/tag discipline lives in
 [Release Gate](treaty_docs/treaty_conventions.md#release-gate).
 
 The repository and distribution are **`mouse-pupil-analysis`**. The only import is
-`mouse_pupil_analysis`, and the established console commands remain unchanged.
+`mouse_pupil_analysis`; the console commands are `run-pupil-analysis` and `extract-frames`.
 Nothing here may ship a `pupil_tracking` module: the unrelated PyPI distribution
 `pupil-tracking` already owns that import path, and two distributions writing one
 file corrupt each other on install and uninstall. The release workflow enforces
@@ -89,7 +89,7 @@ Zenodo mints two kinds of DOI:
    - the tag matches `[project].version`;
    - `CITATION.cff` records the same version;
    - both artifacts contain the exact checkpoint that inference will select, plus its
-     matching training log, and no stray or archived checkpoints;
+     matching training log and calibrated-threshold JSON, and no stray or archived checkpoints;
    - the tagged commit is an ancestor of `origin/main`, so a published version always
      corresponds to code that reached the default branch;
    - the wheel installs and runs in a clean environment.

@@ -105,19 +105,19 @@ def test_velocity_fixture_reproduces_documented_landmarks(tmp_path):
 
     assert len(table) == VELOCITY_FRAMES
 
-    # Every frame is usable; four carry a temporal-area warning. Documented in
+    # Every frame is usable; three carry a temporal-area warning. Documented in
     # sample_data/README.md.
     counts = table["tracking_status"].value_counts().to_dict()
     assert counts.get("invalid", 0) == 0
-    assert counts.get("warning", 0) == 4
-    assert counts.get("valid", 0) == VELOCITY_FRAMES - 4
+    assert counts.get("warning", 0) == 3
+    assert counts.get("valid", 0) == VELOCITY_FRAMES - 3
     assert set(table.loc[table["quality_reason"].ne(""), "quality_reason"]) == {
         "abrupt_area_change"
     }
 
     diameters = table["estimated_pupil_diameter"].to_numpy(dtype=float)
-    assert diameters.min() == pytest.approx(18.40, abs=0.15)
-    assert diameters.max() == pytest.approx(25.41, abs=0.15)
+    assert diameters.min() == pytest.approx(19.54, abs=0.15)
+    assert diameters.max() == pytest.approx(26.34, abs=0.15)
 
     # Frames are consecutive, so every adjacent pair yields a speed and no gap is bridged.
     speeds = pd.to_numeric(table["speed_pixels_per_second"], errors="coerce")

@@ -368,6 +368,13 @@ black --check .
 pytest
 ```
 
+From a source checkout, model training and fine-tuning can also be run with terminal
+arguments:
+
+```bash
+python training/run_train.py --help
+```
+
 Deeper documentation lives in the file that owns it:
 
 | Topic | Document |

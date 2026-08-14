@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Terminal arguments for `training/run_train.py`, while running the script without arguments
+  retains its editable Spyder/IDE configuration.
 - Fine-tuning support in `training/run_train.py`, with a lower default fine-tuning learning
   rate, size-balanced sampling, per-image and size-stratified validation, calibrated
   prediction thresholds, and best-checkpoint/metadata/log retention even when early stopping
@@ -24,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   concept DOI and `[project.urls]` links it.
 
 ### Changed
+
+- Replaced the packaged checkpoint and training log with the strongest overall fine-tuned
+  candidate. Its calibrated threshold is 0.4, macro IoU is 0.8749, and balanced size-bin IoU
+  is 0.8690 on the maintained validation set. Its concise filename retains the training-set
+  size, calibrated threshold, and macro IoU; detailed hyperparameters and secondary metrics
+  remain in the matching log and JSON metadata.
 
 - Inference now uses calibrated JSON metadata beside a checkpoint, then a threshold encoded
   in its filename, before falling back to `0.7`. `--pred_thresh` remains an explicit override.

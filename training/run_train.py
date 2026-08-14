@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """Train or fine-tune the pupil-segmentation UNet.
 
-Edit the configuration block at the bottom and run this file directly from an
-IDE or from the repository root. Importing the module is side-effect free so its
-validation and sampling helpers can be tested independently.
+Run this script with terminal arguments for a command-line workflow, or run it
+without arguments from Spyder/an IDE to use the editable configuration block at
+the bottom. Importing the module is side-effect free.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import random
 import re
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -514,7 +516,89 @@ def run_training(config: TrainingConfig) -> Path:
     return checkpoint_path
 
 
-if __name__ == "__main__":
+def _build_cli_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Train a fresh pupil UNet or fine-tune a compatible checkpoint.",
+    )
+    parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory containing images_train, masks_train, images_validation, and masks_validation.",
+    )
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        help="Experiment output directory (default: <data-root>/checkpoints_exp).",
+    )
+    parser.add_argument("--run-name", help="Concise experiment folder name.")
+    parser.add_argument(
+        "--finetune-checkpoint",
+        type=Path,
+        help="Compatible .pth weights to fine-tune; omit for fresh training.",
+    )
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        help="Override the mode-specific default (1e-4 fine-tuning; 1e-3 fresh training).",
+    )
+    parser.add_argument("--epochs", type=int, default=200, help="Maximum training epochs.")
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--early-stopping-patience", type=int, default=40)
+    parser.add_argument("--scheduler-patience", type=int, default=8)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--natural-sampling",
+        action="store_true",
+        help="Use the natural training-set distribution instead of equal-mass size bins.",
+    )
+    parser.add_argument(
+        "--no-attention",
+        action="store_true",
+        help="Disable spatial attention for fresh training; fine-tuning detects the architecture.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Parse terminal arguments and run training."""
+    args = _build_cli_parser().parse_args(argv)
+    data_root = args.data_root.resolve()
+    checkpoint_dir = (
+        args.checkpoint_dir.resolve()
+        if args.checkpoint_dir is not None
+        else data_root / "checkpoints_exp"
+    )
+    learning_rate_override = {}
+    if args.learning_rate is not None:
+        key = (
+            "finetune_learning_rate"
+            if args.finetune_checkpoint is not None
+            else "scratch_learning_rate"
+        )
+        learning_rate_override[key] = args.learning_rate
+
+    run_training(
+        TrainingConfig(
+            data_root=data_root,
+            checkpoint_dir=checkpoint_dir,
+            run_name=args.run_name,
+            finetune_checkpoint=args.finetune_checkpoint,
+            use_attention=not args.no_attention,
+            batch_size=args.batch_size,
+            n_epochs=args.epochs,
+            early_stopping_patience=args.early_stopping_patience,
+            scheduler_patience=args.scheduler_patience,
+            balance_training_sizes=not args.natural_sampling,
+            seed=args.seed,
+            **learning_rate_override,
+        )
+    )
+    return 0
+
+
+def _run_ide_configuration() -> None:
+    """Run the editable no-argument configuration used by Spyder and IDEs."""
     # Set this to a compatible .pth file to fine-tune its weights. Leave it as None
     # for fresh training. Fine-tuning automatically uses the lower learning rate.
     finetune_checkpoint = None
@@ -523,7 +607,7 @@ if __name__ == "__main__":
     #     PROJECT_ROOT
     #     / "mouse_pupil_analysis"
     #     / "checkpoints"
-    #     / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
+    #     / "166pupils_thresh=0.4_iou=0.8749.pth"
     # )
 
     run_training(
@@ -532,3 +616,9 @@ if __name__ == "__main__":
             finetune_checkpoint=finetune_checkpoint,
         )
     )
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        raise SystemExit(main())
+    _run_ide_configuration()

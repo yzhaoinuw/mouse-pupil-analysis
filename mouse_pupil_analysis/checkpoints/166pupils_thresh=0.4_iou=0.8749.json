@@ -1,0 +1,29 @@
+{
+  "run_name": "ft_natural_lr1e-4_s0",
+  "prediction_threshold": 0.4,
+  "best_epoch": 25,
+  "balanced_iou": 0.8689939975738525,
+  "macro_iou": 0.8749180436134338,
+  "macro_dice": 0.9290293455123901,
+  "size_iou": {
+    "tiny": 0.7954446077346802,
+    "medium": 0.8586752414703369,
+    "large": 0.9528621435165405
+  },
+  "low_circularity_iou": null,
+  "training": {
+    "mode": "fine_tune",
+    "source_checkpoint": "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth",
+    "training_examples": 166,
+    "sampling": "natural",
+    "use_attention": true,
+    "batch_size": 8,
+    "learning_rate": 0.0001,
+    "seed": 0,
+    "best_epoch": 25,
+    "early_stopping_patience": 40,
+    "scheduler_patience": 8,
+    "tiny_max_diameter": 15.0,
+    "large_min_diameter": 80.0
+  }
+}

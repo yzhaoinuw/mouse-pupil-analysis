@@ -78,10 +78,11 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 11. `training/`
 
-- Contains the maintained local training workflow: model training, Labelme JSON conversion, and augmentation inspection.
+- Contains the Spyder-friendly training launcher, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional model promotion.
-- All scripts use package imports and resolve training data/output folders from the repository root, independent of the current working directory.
-- `training/run_train.py` supports fresh training or lower-rate weight fine-tuning, balances training across mask-size bins, calibrates the prediction threshold on per-image size-stratified validation metrics, and always retains the best checkpoint, JSON metadata, and complete log in a collision-safe, descriptive run folder under `checkpoints_exp/`.
+- `training/run_train.py` owns the training implementation. Arguments enable terminal use;
+  running it without arguments preserves the editable direct-IDE block.
+- The trainer supports fresh training or lower-rate weight fine-tuning, balances training across mask-size bins, calibrates the prediction threshold on per-image size-stratified validation metrics, and always retains the best checkpoint, JSON metadata, and complete log in a collision-safe, descriptive run folder under `checkpoints_exp/`.
 
 ### 12. `media/`
 

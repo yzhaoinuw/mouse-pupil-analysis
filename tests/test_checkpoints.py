@@ -14,10 +14,13 @@ DEVICE = torch.device("cpu")
 
 
 def test_packaged_checkpoint_loads_with_attention():
-    model = load_unet_checkpoint(find_default_checkpoint(), DEVICE)
+    checkpoint = find_default_checkpoint()
+    model = load_unet_checkpoint(checkpoint, DEVICE)
 
     assert model.use_attention
     assert not model.training
+    assert checkpoint.name == "166pupils_thresh=0.4_iou=0.8749.pth"
+    assert resolve_prediction_threshold(checkpoint) == 0.4
 
 
 def test_checkpoint_without_attention_loads(tmp_path):
