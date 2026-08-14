@@ -67,3 +67,7 @@ predictions_test/
 # sketches
 *sketch*.py
 sketch*.py
+
+# OS metadata
+.DS_Store
+Thumbs.db

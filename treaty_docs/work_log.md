@@ -4,6 +4,38 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-14
 
+### Prune next_steps.md back to unfinished work (Claude, Opus 5)
+
+- `next_steps.md` had grown to 474 lines and stopped matching its own governing rule in
+  `treaty_conventions.md` ("remove completed items, and keep Currently Hot accurate"). Cut to
+  219 lines with no real follow-up lost: 23 action bullets before, 21 after, and the only
+  genuine deletion was a stale "sync the README from GitHub first" instruction from a session
+  whose README has since been rewritten twice.
+- Deleted the 228-line Pupil-Center Velocity design specification, 48% of the file. It was
+  written in the future imperative ("Add `--calculate_velocity`", "Create a focused
+  `tracking.py`") for a feature shipped in 0.2.0, and `project_overview.md` already documents
+  the implemented method and its actual QC constants. That section is now a status line, a
+  pointer to `project_overview.md#segmentation-to-velocity-method`, and the two follow-ups
+  that are genuinely open.
+- Fixed a structural bug: three threads listed under "Currently Hot" were physically filed as
+  `###` children of "Background / Paused". The fine-tuning thread was already misfiled; the
+  2026-08-14 session added two more beside it without noticing. All three are now `##` siblings.
+- Compressed the six completed threads to a status line plus whatever genuinely remains, and
+  dropped them from "Currently Hot". Kept the settled decisions that stop future re-litigation:
+  the `pupil_tracking` namespace measurement, and the `CITATION.cff` identifier-ordering finding.
+- Merged the duplicate "Sample Data For Examples And Regression Tests" and "Portable End-To-End
+  Fixture" sections, which covered the same fixture.
+- Removed machine-specific residue: the `C:\Users\yzhao\Desktop\eye.avi` timebase contract and a
+  PowerShell verification block duplicating `AGENTS.md`. The timebase principle it encoded is
+  already in `project_overview.md`.
+- Added `.DS_Store` and `Thumbs.db` to `.gitignore` under a new OS-metadata section.
+- Verification:
+  - All 5 internal anchors in the rewritten file resolve to real headings; the one cross-file
+    anchor (`project_overview.md#segmentation-to-velocity-method`) exists at line 100 and is the
+    same anchor `README.md` links.
+  - Confirmed no other tracked file links into a removed `next_steps.md` anchor.
+  - Diffed action bullets mechanically between the old and new file to enumerate what was lost.
+
 ### Measure the seed noise floor and audit the promotion (Claude, Opus 5)
 
 - Ran ten training runs on the full 166/56 dataset, five per arm, identical except the seed.
