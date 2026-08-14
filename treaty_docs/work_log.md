@@ -4,6 +4,21 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-14
 
+### Integrate the fine-tuned model into dev and main (Codex, GPT-5)
+
+- Fast-forwarded the accepted `feature/finetune` work into `dev` and then `main`, preserving
+  the pre-existing untracked `videos/` and `.pytest_tmp_full_console_fix_20260812/` directories.
+- Explicitly parked the next version tag and GitHub/PyPI release in `next_steps.md`; this
+  integration creates no tag and starts no release workflow.
+- Verification:
+  - Refreshed the remote state and confirmed `dev` was an ancestor of `feature/finetune` and
+    `main` was an ancestor of `dev`, allowing fast-forward-only integration.
+  - Verified the final local, tracking, and remote `dev`/`main` refs resolve to the same
+    integration commit.
+  - The integrated implementation retains the previously recorded 77-test, lint, script-smoke,
+    checkpoint-hash, and package-content verification; the documentation-only handoff commit
+    passed the configured pre-commit hooks.
+
 ### Promote the fine-tuned model and add script arguments (Codex, GPT-5, high reasoning)
 
 - Replaced the packaged weights and log with the authorized overall leader from
