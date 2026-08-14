@@ -10,7 +10,9 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
 - [DOI archival](#doi-archival) - complete; Zenodo minted the 0.2.0 DOIs and the citation metadata records them.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
-- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the strongest overall candidate is now packaged on `feature/finetune`; next validate it on independently held-out tiny, large, and partially occluded pupils.
+- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - a seed study showed the promoted candidate's margin is inside seed noise; the packaged checkpoint is retained and the next action is a recording-grouped re-split.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - 54 of 56 validation images come from training recordings, so no current number measures generalization; re-split by recording before any further model comparison.
+- [Model-selection metric fragility](#model-selection-metric-fragility) - `balanced_iou` rests a third of its weight on two validation images and the calibrated threshold varies 0.30-0.65 across seeds; both need fixing before the next promotion.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
@@ -342,9 +344,63 @@ Remaining work:
 - Inspect tracked vs. ignored files before deleting anything.
 - Keep `mouse_pupil_analysis/checkpoints/` package data intact.
 
+### Recording-Grouped Data Splits
+
+Status: measured and documented; the re-split itself is not done
+
+`reports/scripts/dataset_census.py` shows the maintained split leaks almost completely:
+54 of 56 validation images come from a recording that also supplies training images, and
+there are **no validation-only animals** across 10 animals and 24 recordings. Every IoU this
+project has ever reported therefore measures held-out frames from seen recordings, not
+generalization to a new animal, rig, or condition.
+
+Next action:
+
+- Re-split the existing 222 images by recording rather than by frame. This costs no new
+  labels, keeps the training-set size, and is the single highest-value change available. Do
+  it before any further model comparison, because every comparison inherits this limitation.
+
+Then:
+
+- Report with leave-one-animal-out cross-validation rather than one fixed split. Ten animals
+  with a heavy skew (5003 has 46 images, HQL088 has 2) make a fixed holdout expensive;
+  cross-validation uses every image and yields a spread instead of a single number.
+- Hold one or two animals out permanently as a test set touched only at publication.
+- Group by recording rather than animal as the primary unit. Sessions span sleep, whisker,
+  awake, and different lighting; the domain shift that breaks models in practice is condition
+  and rig, not identity, and recording-level grouping captures both.
+
+### Model-Selection Metric Fragility
+
+Status: measured; no change made yet
+
+The 2026-08-14 seed study surfaced three problems with how checkpoints are chosen. See
+`reports/2026-08-14-checkpoint-noise-floor.md`.
+
+- **Two images decide a third of the metric.** `balanced_iou` is the mean of the tiny,
+  medium, and large bins, and the validation set contains exactly 2 tiny masks. Collecting
+  more small-pupil labels for *validation* would de-noise selection more than any training
+  change. The evidence does not support small pupils being a training-data bottleneck: in
+  absolute pixel terms the model is about twice as accurate on them as on medium pupils, and
+  the low tiny-bin IoU is a mechanical property of IoU on small objects.
+- **The calibrated threshold is not a model property.** Ten runs differing only by seed
+  selected thresholds spanning 0.30-0.65, a wider range than the 0.7 to 0.4 change that moved
+  every user's reported diameters by about 6%. Consider shipping a calibration procedure users
+  run on their own recordings instead of a constant baked into the filename.
+- **Report signed diameter bias next to IoU.** An IoU of 0.895 hid a systematic -4% diameter
+  offset in the 0.7-threshold era. `reports/scripts/validation_diagnostics.py` prints both;
+  folding the diameter column into the trainer's per-epoch log would make the next such
+  offset visible immediately.
+
+Parked:
+
+- Calibrating the threshold on diameter error instead of IoU was tested and does **not**
+  improve precision (bootstrap sd 0.085 vs 0.084) — the two criteria nearly coincide for
+  convex masks. Report diameter bias as a diagnostic; do not switch the selection criterion.
+
 ### Segmentation Fine-Tuning And Visibility
 
-Status: strongest overall candidate promoted on `feature/finetune`; independent evaluation remains
+Status: promoted candidate's margin shown to be inside seed noise; packaged checkpoint retained
 
 The maintained trainer now supports lower-rate weight fine-tuning, equal-mass sampling across
 tiny/medium/large mask bins, per-image macro validation, equal-weighted size-bin early
@@ -361,11 +417,34 @@ cutoff. The maintainer subsequently authorized the overall leader as the package
 its filename and JSON preserve the validation limitation and relevant run statistics, but the
 local comparison is not yet evidence of independent generalization.
 
+A ten-run seed study on 2026-08-14 (`reports/2026-08-14-checkpoint-noise-floor.md`) revised
+this assessment:
+
+- The +0.0112 balanced-IoU margin that justified promotion is **1.6 standard deviations of the
+  spread produced by changing the random seed alone**, and 28% of run pairs differ by at least
+  that much. Five from-scratch runs average macro IoU 0.8749, matching the packaged checkpoint
+  exactly; its balanced IoU sits at their 20th percentile. Fine-tune runs peaked at epochs
+  1-26, meaning the best checkpoint was essentially the starting weights.
+- Retraining from scratch is nevertheless **not** a safe substitute. Three of five from-scratch
+  runs lose a real small pupil in `sample_data/raw_frames/recording_250616` that every
+  fine-tuned run and the packaged checkpoint detect, and those three are the runs with the
+  *highest* validation IoU. A higher-scoring scratch candidate was promoted on this branch and
+  then reverted for exactly this reason.
+- Conclusion: the fine-tuned lineage preserves something validation cannot see. Keep the
+  packaged checkpoint, and treat `reports/scripts/hard_frame_check.py` as a promotion gate.
+
 Next action:
 
-- Obtain raw versions and masks for the troubleshooting frames, then compare the packaged
-  checkpoint and the size-balanced candidate that improved every size bin on an independent,
-  recording-grouped test set.
+- Re-split by recording ([Recording-grouped data splits](#recording-grouped-data-splits))
+  before comparing any further candidates. Until then no comparison can distinguish a better
+  model from a better fit to the shared recordings.
+
+Then:
+
+- Obtain raw versions and masks for the troubleshooting frames and compare the packaged
+  checkpoint against the size-balanced candidate on an independent, recording-grouped test set.
+- Require of any future promotion: a seed spread behind the claimed margin, a pass on the
+  hard-frame gate, and a measured diameter shift for the CHANGELOG.
 
 Parked:
 

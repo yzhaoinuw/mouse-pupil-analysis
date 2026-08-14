@@ -33,6 +33,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
 SIZE_BIN_NAMES = ("tiny", "medium", "large")
+DEVICE_CHOICES = ("auto", "cuda", "mps", "cpu")
+
+
+def resolve_device(preference: str = "auto") -> torch.device:
+    """Select the training device, preferring CUDA, then Apple MPS, then CPU.
+
+    Apple silicon runs this model several times faster on MPS than on CPU. Its
+    kernels are not bit-identical to the CPU ones, so a run reproduced on a
+    different device matches closely rather than exactly; pass an explicit
+    device when a run has to be repeated precisely.
+    """
+    if preference != "auto":
+        return torch.device(preference)
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
 
 
 @dataclass(frozen=True)
@@ -71,8 +90,11 @@ class TrainingConfig:
     balance_training_sizes: bool = True
     console_interval: int = 10
     seed: int = 0
+    device: str = "auto"
 
     def __post_init__(self) -> None:
+        if self.device not in DEVICE_CHOICES:
+            raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
         if self.batch_size <= 0 or self.n_epochs <= 0:
             raise ValueError("batch_size and n_epochs must be positive.")
         if self.scratch_learning_rate <= 0 or self.finetune_learning_rate <= 0:
@@ -273,15 +295,44 @@ def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
     return values
 
 
-def default_run_name(config: TrainingConfig) -> str:
-    """Return a concise folder name that captures the important run choices."""
-    run_kind = "ft" if config.finetune_checkpoint is not None else "scratch"
-    sampling = "bal" if config.balance_training_sizes else "natural"
-    learning_rate = (
+def training_mode(config: TrainingConfig) -> str:
+    """Return ``fine_tune`` or ``scratch`` for the configured run."""
+    return "fine_tune" if config.finetune_checkpoint is not None else "scratch"
+
+
+def initial_learning_rate(config: TrainingConfig) -> float:
+    """Return the learning rate the run starts from, selected by training mode."""
+    return (
         config.finetune_learning_rate
         if config.finetune_checkpoint is not None
         else config.scratch_learning_rate
     )
+
+
+def run_header(
+    config: TrainingConfig,
+    training_examples: int,
+    device: torch.device | None = None,
+) -> dict[str, object]:
+    """Return the config plus the run facts a promoted checkpoint needs.
+
+    ``training/promote_checkpoint.py`` reads these fields, so a packaged
+    checkpoint can be rebuilt from its run folder instead of hand-assembled.
+    The resolved device is recorded because MPS, CUDA, and CPU kernels do not
+    produce bit-identical results.
+    """
+    return _jsonable_config(config) | {
+        "training_examples": training_examples,
+        "training_mode": training_mode(config),
+        "device_used": None if device is None else device.type,
+    }
+
+
+def default_run_name(config: TrainingConfig) -> str:
+    """Return a concise folder name that captures the important run choices."""
+    run_kind = "ft" if config.finetune_checkpoint is not None else "scratch"
+    sampling = "bal" if config.balance_training_sizes else "natural"
+    learning_rate = initial_learning_rate(config)
     learning_rate_text = (
         f"{learning_rate:.0e}".replace("e-0", "e-").replace("e+0", "e").replace("e+", "e")
     )
@@ -294,9 +345,12 @@ def _write_metadata(
     report: ValidationReport,
     epoch: int,
     learning_rate: float,
+    training_examples: int,
 ) -> None:
     payload = {
         "run_name": path.parent.name,
+        "training_mode": training_mode(config),
+        "training_examples": training_examples,
         "prediction_threshold": report.threshold,
         "best_epoch": epoch,
         "balanced_iou": report.balanced_iou,
@@ -348,13 +402,13 @@ def evaluate_checkpoint(
         config.data_root / "masks_validation",
         augment=False,
     )
+    device = resolve_device(config.device)
     val_loader = DataLoader(
         val_dataset,
         batch_size=config.batch_size,
         shuffle=False,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=device.type == "cuda",
     )
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_unet_checkpoint(Path(checkpoint_path), device)
     val_loss, probabilities, targets = _collect_validation(
         model,
@@ -390,12 +444,15 @@ def run_training(config: TrainingConfig) -> Path:
         augment=False,
     )
 
+    training_examples = len(train_dataset)
+
     sampler = None
     if config.balance_training_sizes:
         sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
         print(f"Training target counts by size: {dict(size_counts)}")
 
-    pin_memory = torch.cuda.is_available()
+    device = resolve_device(config.device)
+    pin_memory = device.type == "cuda"
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
@@ -410,13 +467,11 @@ def run_training(config: TrainingConfig) -> Path:
         pin_memory=pin_memory,
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    learning_rate = initial_learning_rate(config)
     if config.finetune_checkpoint is None:
         model = UNet(use_attention=config.use_attention).to(device)
-        learning_rate = config.scratch_learning_rate
     else:
         model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
-        learning_rate = config.finetune_learning_rate
 
     config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     run_name = config.run_name or default_run_name(config)
@@ -431,6 +486,7 @@ def run_training(config: TrainingConfig) -> Path:
     metadata_path = run_dir / "best.json"
     log_path = run_dir / "train.log"
     print(f"Run directory: {run_dir}")
+    print(f"Device: {device.type}")
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -445,7 +501,9 @@ def run_training(config: TrainingConfig) -> Path:
     best_balanced_iou = -math.inf
     patience_counter = 0
     with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-        log_file.write(json.dumps(_jsonable_config(config), sort_keys=True) + "\n")
+        log_file.write(
+            json.dumps(run_header(config, training_examples, device), sort_keys=True) + "\n"
+        )
         for epoch in range(1, config.n_epochs + 1):
             model.train()
             total_train_loss = 0.0
@@ -497,7 +555,14 @@ def run_training(config: TrainingConfig) -> Path:
                 best_balanced_iou = report.balanced_iou
                 patience_counter = 0
                 torch.save(model.state_dict(), checkpoint_path)
-                _write_metadata(metadata_path, config, report, epoch, current_lr)
+                _write_metadata(
+                    metadata_path,
+                    config,
+                    report,
+                    epoch,
+                    current_lr,
+                    training_examples,
+                )
                 if show_epoch:
                     print("Best model updated.")
             else:
@@ -548,6 +613,12 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scheduler-patience", type=int, default=8)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
+        "--device",
+        choices=DEVICE_CHOICES,
+        default="auto",
+        help="Training device. 'auto' prefers CUDA, then Apple MPS, then CPU.",
+    )
+    parser.add_argument(
         "--natural-sampling",
         action="store_true",
         help="Use the natural training-set distribution instead of equal-mass size bins.",
@@ -591,6 +662,7 @@ def main(argv: list[str] | None = None) -> int:
             scheduler_patience=args.scheduler_patience,
             balance_training_sizes=not args.natural_sampling,
             seed=args.seed,
+            device=args.device,
             **learning_rate_override,
         )
     )

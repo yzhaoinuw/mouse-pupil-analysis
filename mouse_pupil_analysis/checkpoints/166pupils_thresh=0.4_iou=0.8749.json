@@ -11,6 +11,7 @@
     "large": 0.9528621435165405
   },
   "low_circularity_iou": null,
+  "validation_note": "Metrics are validation-selected on the maintained 56-image set, whose recordings supply 54 of those 56 images to training and which has no validation-only animals, so they measure held-out frames rather than generalisation. A seed study (reports/2026-08-14-checkpoint-noise-floor.md) puts the run-to-run spread at +/-0.009 balanced IoU, which exceeds this checkpoint's margin over its predecessor; treat the reported values as a noise-limited comparison. This checkpoint is retained rather than replaced because all five fine-tuned runs preserve a small-pupil detection on sample_data/raw_frames/recording_250616 that three of five higher-scoring from-scratch runs lose entirely.",
   "training": {
     "mode": "fine_tune",
     "source_checkpoint": "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth",
@@ -20,7 +21,6 @@
     "batch_size": 8,
     "learning_rate": 0.0001,
     "seed": 0,
-    "best_epoch": 25,
     "early_stopping_patience": 40,
     "scheduler_patience": 8,
     "tiny_max_diameter": 15.0,

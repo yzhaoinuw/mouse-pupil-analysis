@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `reports/`, holding dated analyses and the scripts that regenerate their numbers.
+  `reports/2026-08-14-checkpoint-noise-floor.md` measures the run-to-run spread of the
+  model-selection metric, and `reports/scripts/` provides the seed study, the run summariser,
+  a dataset/leakage census, IoU-plus-diameter-bias validation diagnostics, and a promotion
+  gate that runs candidates over real frames validation does not cover.
+- Apple MPS support in `training/run_train.py` via `--device {auto,cuda,mps,cpu}`. `auto`
+  prefers CUDA, then MPS, then CPU, which is roughly 4.6x faster than CPU on Apple silicon.
+  The resolved device is recorded in the training log, since MPS, CUDA, and CPU kernels are
+  not bit-identical.
+- `training/promote_checkpoint.py`, which turns one `checkpoints_exp/<run-name>/` folder into
+  the three packaged checkpoint files. It applies the concise naming pattern, strips local
+  absolute paths from the metadata and log header, and records run provenance and a
+  `validation_note` under a fixed schema, so a promotion is reproducible from its run folder
+  instead of assembled by hand. `run_train.py` now records `training_examples` and
+  `training_mode` in `best.json` and the log header to make that transform possible.
 - Terminal arguments for `training/run_train.py`, while running the script without arguments
   retains its editable Spyder/IDE configuration.
 - Fine-tuning support in `training/run_train.py`, with a lower default fine-tuning learning
@@ -27,11 +42,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Replaced the packaged checkpoint and training log with the strongest overall fine-tuned
-  candidate. Its calibrated threshold is 0.4, macro IoU is 0.8749, and balanced size-bin IoU
-  is 0.8690 on the maintained validation set. Its concise filename retains the training-set
-  size, calibrated threshold, and macro IoU; detailed hyperparameters and secondary metrics
-  remain in the matching log and JSON metadata.
+- **Reported diameters are about 6% larger than in v0.2.0.** The packaged checkpoint's
+  calibrated threshold is `0.4`; v0.2.0 used `0.7`. A lower threshold admits more boundary
+  pixels, so every `estimated_pupil_diameter` and `pupil_diameter_input_pixels` value is
+  systematically larger. On the `sample_data` velocity fixture the mean diameter rises 6.0%;
+  the new weights evaluated at the old `0.7` threshold differ from v0.2.0 by about 1%, so
+  nearly all of the shift is the threshold rather than the model. The shift is a correction,
+  not an error: measured against ground-truth masks, `0.7` under-estimated diameters by about
+  4%, while `0.40`-`0.45` is close to unbiased. Diameters remain uncalibrated and comparable
+  only within one analysis run.
+
+  **Do not pool or compare diameters measured before and after this release.** Re-run earlier
+  recordings with this version, or pass `--pred_thresh 0.7` to reproduce v0.2.0 numbers.
+
+- Replaced the packaged checkpoint and training log with a fine-tuned candidate. Its
+  calibrated threshold is 0.4, macro IoU is 0.8749, and balanced size-bin IoU is 0.8690 on the
+  maintained validation set. Its concise filename retains the training-set size, calibrated
+  threshold, and macro IoU; detailed hyperparameters and secondary metrics remain in the
+  matching log and JSON metadata.
+
+  A subsequent ten-run seed study (`reports/2026-08-14-checkpoint-noise-floor.md`) found this
+  candidate's margin over its predecessor is about 1.6 standard deviations of the spread
+  produced by changing the random seed alone, so it is **not** a demonstrated improvement in
+  the weights. It is kept rather than replaced because every fine-tuned run preserves a
+  small-pupil detection on real frames that three of five higher-scoring from-scratch runs
+  lose entirely. The threshold recalibration below is the part of this release with evidence
+  behind it.
+
+  The filename metric is **not** comparable with the superseded `iou=0.9158`, which was
+  measured with the batch-aggregated IoU used before this release. Re-scored with the same
+  per-image metric and calibrated on the same threshold grid, the superseded checkpoint
+  selects `0.45` and reaches 0.8618 macro and 0.8578 balanced IoU, so the fine-tuned model
+  gains roughly 0.013 macro and 0.011 balanced IoU. Both figures are validation-selected: the
+  weights, the epoch, and the threshold were all chosen on one 56-image validation set whose
+  recordings share recording groups with the training set. Treat them as a relative comparison
+  between candidates, not as an independent generalization estimate. `validation_note` in the
+  packaged JSON metadata records the same caveat.
 
 - Inference now uses calibrated JSON metadata beside a checkpoint, then a threshold encoded
   in its filename, before falling back to `0.7`. `--pred_thresh` remains an explicit override.

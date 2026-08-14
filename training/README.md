@@ -155,17 +155,33 @@ Do not automatically place experimental output in `mouse_pupil_analysis/checkpoi
 3. Inspect segmentation overlays and downstream diameter/center tracking, not IoU alone.
 4. Compare against the currently packaged model on the same cases.
 
-When a model is accepted, use the concise packaged naming pattern
-`<count>pupils_thresh=<value>_iou=<macro-value>`. The model is always a UNet, attention is
-detected from its weights, and the 148 x 148 resize-and-pad step is universal, so `unet`,
-`atn`, and `resize` are intentionally omitted. Seed, learning rate, sampling, best epoch,
-balanced IoU, and other details remain in the matching log and JSON metadata. Copy the
-renamed weights, metadata, and `train.log` into
-`mouse_pupil_analysis/checkpoints/` as an intentional package change. Default inference
-selects the packaged checkpoint with the highest IoU encoded in its filename, then reads its
-threshold from JSON metadata (or the filename for older checkpoints). Remove or archive
-superseded packaged candidates deliberately.
+When a model is accepted, promote its run folder with:
 
-After promotion, run the repository checks and package build documented in `AGENTS.md`, then
-verify that the selected checkpoint, metadata, and log appear in both the wheel and source
-distribution.
+```powershell
+python training\promote_checkpoint.py `
+    --run-dir checkpoints_exp\ft_natural_lr1e-4_s0 `
+    --validation-note "Validation shares recording groups with training."
+```
+
+Add `--dry-run` first to see the filenames it would write. The script applies the concise
+packaged naming pattern `<count>pupils_thresh=<value>_iou=<macro-value>`, strips local
+absolute paths from the metadata and log header, and writes the weights, JSON metadata, and
+log into `mouse_pupil_analysis/checkpoints/`. The model is always a UNet, attention is
+detected from its weights, and the 148 x 148 resize-and-pad step is universal, so `unet`,
+`atn`, and `resize` are intentionally omitted from the name. Seed, learning rate, sampling,
+best epoch, balanced IoU, and other details stay in the matching log and JSON metadata.
+
+Use `--validation-note` to state the honest scope of the reported numbers, especially when
+validation is not independent of training. It is stored in the packaged metadata so the
+caveat travels with the model rather than living only in a work log.
+
+Default inference selects the packaged checkpoint with the highest IoU encoded in its
+filename, then reads its threshold from JSON metadata (or the filename for older
+checkpoints). The script never deletes anything; it lists superseded packaged checkpoints so
+you can remove or archive them deliberately, which the release workflow requires.
+
+Promotion is a package change, so also update `CHANGELOG.md`. If the calibrated threshold
+differs from the superseded checkpoint's, reported diameters change for every user: measure
+the difference on `sample_data/velocity_frames` and record it as a migration note. Then run
+the repository checks and package build documented in `AGENTS.md` and verify that the
+selected checkpoint, metadata, and log appear in both the wheel and source distribution.

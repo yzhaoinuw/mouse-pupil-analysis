@@ -4,6 +4,45 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-14
 
+### Measure the seed noise floor and audit the promotion (Claude, Opus 5)
+
+- Ran ten training runs on the full 166/56 dataset, five per arm, identical except the seed.
+  Scratch averages 0.8745 +/- 0.0092 balanced and 0.8749 +/- 0.0079 macro IoU; fine-tuning
+  from the packaged weights averages 0.8694 +/- 0.0023 and 0.8724 +/- 0.0063. The packaged
+  checkpoint's macro IoU equals the five-run scratch mean to four decimals and its balanced
+  IoU sits at their 20th percentile, so the +0.0112 margin that justified its promotion is
+  1.6 sd of seed noise. Fine-tune runs peaked at epochs 1-26, confirming that fine-tuning on
+  the data the weights were already fitted to is close to a no-op.
+- Promoted the best scratch run (`full_scratch_s3`, balanced 0.8825) as authorized, then
+  **reverted** it: it loses the small pupil in `sample_data/raw_frames/recording_250616`
+  entirely, as do the two other highest-scoring scratch runs. All five fine-tuned runs and the
+  packaged checkpoint detect it at 11.3-12.0 model px. Validation IoU is anti-correlated with
+  this real-frame correctness, so the packaged checkpoint is retained and the branch ships no
+  weights change.
+- Measured the split: 54 of 56 validation images come from a recording that also supplies
+  training images and there are no validation-only animals, so no reported number measures
+  generalization. Recorded the re-split plan in `next_steps.md`.
+- Established that low tiny-bin IoU is a metric artefact, not a small-pupil weakness. Implied
+  boundary error is 2.4 px for tiny masks against 5.4 px for medium, so the model is roughly
+  twice as accurate on small pupils; IoU merely penalises them mechanically. The tiny bin also
+  holds only 2 validation masks while carrying a third of `balanced_iou`.
+- Added `reports/` with the write-up and five scripts that regenerate its numbers, added
+  `training/promote_checkpoint.py` so a promotion is reproducible from a run folder rather
+  than hand-assembled, and added Apple MPS support to the trainer (4.6x faster than CPU here).
+- Tested and rejected a proposal to calibrate the threshold on diameter error instead of IoU:
+  bootstrap sd of the located threshold is 0.085 either way, and the two criteria nearly
+  coincide for convex masks. Diameter bias is worth reporting as a diagnostic, not as the
+  selection criterion. Recorded as parked in `next_steps.md`.
+- Verification:
+  - `conda run -n pupil_tracking pytest` passed the full suite including 9 new promotion
+    tests; the direct-interpreter run failed only the known console-launcher PATH test.
+  - `ruff check .` and `black --check .` passed.
+  - A promotion test caught a real defect: `Path(...).name` does not split Windows paths on
+    POSIX, so promoting a Windows-trained run from macOS or CI would have leaked
+    `C:\Users\...` into published package data. Fixed with a separator-agnostic split.
+  - Round-tripped the trainer and promotion script end to end on the public fixture, producing
+    packaged artifacts whose schema matches the shipped metadata exactly.
+
 ### Integrate the fine-tuned model into dev and main (Codex, GPT-5)
 
 - Fast-forwarded the accepted `feature/finetune` work into `dev` and then `main`, preserving
