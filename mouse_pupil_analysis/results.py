@@ -11,6 +11,7 @@ import pandas as pd
 
 from mouse_pupil_analysis.extract_frames import ExtractedFrame
 from mouse_pupil_analysis.plotting import plot_analysis
+from mouse_pupil_analysis.tracking import pupil_visibility
 
 
 class DiameterRow(NamedTuple):
@@ -23,12 +24,20 @@ class DiameterRow(NamedTuple):
 
 logger = logging.getLogger(__name__)
 
-DIAMETER_COLUMNS = ["image_name", "estimated_pupil_diameter", "pupil_diameter_input_pixels"]
+DIAMETER_COLUMNS = [
+    "image_name",
+    "estimated_pupil_diameter",
+    "pupil_diameter_input_pixels",
+    "pupil_visibility",
+    "segmentation_status",
+    "quality_reason",
+]
 
 VELOCITY_COLUMNS = [
     "image_name",
     "estimated_pupil_diameter",
     "pupil_diameter_input_pixels",
+    "pupil_visibility",
     "timestamp_seconds",
     "center_x_pixels",
     "center_y_pixels",
@@ -57,6 +66,7 @@ def build_analysis_table(
     results,
     image_frames: list[ExtractedFrame],
     tracking_dataframe: pd.DataFrame | None = None,
+    segmentation_dataframe: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """Build the compact output table and its one-based frame numbers.
 
@@ -88,7 +98,22 @@ def build_analysis_table(
     )
 
     if tracking_dataframe is None:
-        output_dataframe = result_dataframe[DIAMETER_COLUMNS].reset_index(drop=True)
+        if segmentation_dataframe is None:
+            ordered_segmentation = result_dataframe.copy()
+            ordered_segmentation["pupil_visibility"] = "not_evaluated"
+            ordered_segmentation["segmentation_valid"] = True
+            ordered_segmentation["quality_reason"] = ""
+        else:
+            ordered_segmentation = (
+                segmentation_dataframe.set_index("image_name")
+                .loc[result_dataframe["image_name"]]
+                .reset_index()
+            )
+        ordered_segmentation["segmentation_status"] = tracking_status(ordered_segmentation)
+        ordered_segmentation["quality_reason"] = (
+            ordered_segmentation["quality_reason"].fillna("").astype(str)
+        )
+        output_dataframe = ordered_segmentation[DIAMETER_COLUMNS].reset_index(drop=True)
         frame_numbers = result_dataframe["source_frame_index"].to_numpy(dtype=int) + 1
         return output_dataframe, frame_numbers
 
@@ -97,6 +122,10 @@ def build_analysis_table(
     )
     ordered_tracking["tracking_status"] = tracking_status(ordered_tracking)
     ordered_tracking["quality_reason"] = ordered_tracking["quality_reason"].fillna("").astype(str)
+    if "pupil_visibility" not in ordered_tracking:
+        ordered_tracking["pupil_visibility"] = [
+            pupil_visibility(row) for row in ordered_tracking.to_dict(orient="records")
+        ]
     output_dataframe = ordered_tracking[VELOCITY_COLUMNS]
     frame_numbers = ordered_tracking["source_frame_index"].to_numpy(dtype=int) + 1
     return output_dataframe, frame_numbers
@@ -108,6 +137,7 @@ def write_analysis_outputs(
     result_dir: Path,
     exp_name: str,
     tracking_dataframe: pd.DataFrame | None = None,
+    segmentation_dataframe: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, Path, Path]:
     """Write one compact analysis table and one frame-indexed plot.
 
@@ -117,6 +147,7 @@ def write_analysis_outputs(
     analysis_table, frame_numbers = build_analysis_table(
         results,
         image_frames,
+        segmentation_dataframe=segmentation_dataframe,
         tracking_dataframe=tracking_dataframe,
     )
 

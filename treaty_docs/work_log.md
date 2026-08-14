@@ -4,6 +4,81 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-13
 
+### Benchmark fine-tuning candidates (Codex, GPT-5, high reasoning)
+
+- Removed all 21 obsolete loose checkpoint files from the ignored `checkpoints_exp/`
+  directory as authorized; they were untracked local artifacts and are not recoverable from
+  Git. Replaced the flat naming scheme with collision-safe
+  `checkpoints_exp/<run-name>/{best.pth,best.json,train.log}` folders and a local comparison
+  summary.
+- Benchmarked the shipped checkpoint on the maintained 56-image validation set. Its packaged
+  threshold of 0.7 scored 0.8288 balanced IoU; calibrating it fairly on the same threshold
+  grid selected 0.45 and raised balanced IoU to 0.8578, with 0.8618 macro, 0.7773 tiny,
+  0.8421 medium, and 0.9541 large IoU.
+- Ran three lower-rate fine-tunes from the shipped weights. Natural sampling at `1e-4`, seed
+  0 was the overall leader at epoch 25 and threshold 0.40: 0.8690 balanced IoU and 0.8749
+  macro IoU, gains of 0.0112 and 0.0131 over the calibrated shipped model. Its size-bin IoUs
+  were 0.7954 tiny, 0.8587 medium, and 0.9529 large.
+- The size-balanced `1e-4`, seed 0 run scored 0.8669 balanced and 0.7995 tiny IoU. The
+  size-balanced `5e-5`, seed 1 run scored 0.8660 balanced and the best tiny IoU, 0.8051.
+  This ablation supports keeping the sampler as an option for tiny-pupil emphasis rather than
+  enabling it unconditionally.
+- Re-loaded and re-evaluated all three saved `best.pth` files; their selected thresholds and
+  metrics exactly matched their JSON metadata. The candidates were not promoted because
+  training and validation share recording groups and the validation set has no masks below
+  the configured low-circularity cutoff; independent troubleshooting masks remain required.
+- Verification:
+  - Focused training-workflow tests passed all 5 tests; the full Conda-environment suite
+    passed all 75 tests.
+  - `ruff check .`, `black --check .`, and `git diff --check` passed. Black emitted only its
+    known non-fatal user-cache permission warning.
+  - Fresh wheel and source-distribution builds passed. Archive inspection confirmed both
+    keep the shipped checkpoint and training log, the source distribution contains the new
+    training workflow and tests, and the wheel excludes repository-only training files.
+  - Treaty 0.5.0 validation was attempted but cannot validate the repository's newer
+    relocated `treaty_docs/` layout: validating the root expects the documents at root, while
+    validating `treaty_docs/` expects `AGENTS.md` and `project_overview.md` inside it.
+
+### Balance fine-tuning and expose visibility QC (Codex, GPT-5, high reasoning)
+
+- Created `feature/finetune` from `dev` and kept the pre-existing untracked `videos/` and
+  `.pytest_tmp_full_console_fix_20260812/` directories untouched.
+- Measured the maintained masks after the actual 148 x 148 resize: only 12 of 166 training
+  masks and 2 of 56 validation masks have equivalent diameter at or below 15 model pixels,
+  versus 21 training and 7 validation masks at or above 90 pixels. This supports balancing
+  real tiny-pupil examples while treating the observed large-pupil failures as likely
+  appearance, glare, or occlusion domain shift rather than size scarcity alone.
+- Chose per-image macro overlap and an equal-weighted mean of represented tiny, medium, and
+  large validation bins as the training-control signal. This prevents a large mask from
+  hiding a missed tiny mask and gives rare size bins influence without changing the loss.
+- Fine-tuning restores weights and detects the checkpoint architecture, but deliberately
+  starts new optimizer, scheduler, early-stopping, and log state at a lower learning rate.
+  The best weights, full log, and calibrated-threshold metadata are retained regardless of
+  whether the run clears the separate promotion target.
+- Applied segmentation QC to every analysis rather than velocity mode only. Visibility labels
+  are conservative: empty masks are `not_detected`, while low-circularity or border-touching
+  shapes are `partially_visible_or_uncertain`; the pipeline does not claim to reconstruct a
+  pupil hidden behind an eyelid.
+- Parked a composite Dice/focal/Tversky loss because the maintainer's prior attempt showed no
+  clear gain; also parked higher-resolution or two-stage inference because it changes the
+  148 x 148 checkpoint contract. Both are recorded in `next_steps.md` for controlled follow-up.
+- Verification:
+  - Fresh-training and packaged-checkpoint fine-tuning smoke runs completed on the public
+    fixture. Fine-tuning used `1e-4` and wrote stable `.pth`, `.json`, and `.txt` outputs; the
+    fixture remains a plumbing check rather than model-quality evidence.
+  - A real-image three-frame run used the packaged filename calibration (`0.7`), wrote all six
+    diameter/visibility/QC columns, marked all three frames visible and valid, and produced
+    three overlays.
+  - `ruff check .` and `black --check .` passed; Black retained its known non-fatal user-cache
+    permission warning.
+  - Conda-environment Pytest passed all 73 tests. The direct-interpreter attempt passed 72 and
+    failed only because its subprocess could not resolve the console launcher from `PATH`;
+    `conda run -n pupil_tracking pytest` supplied the established launcher environment.
+  - Fresh wheel and source-distribution builds passed. Archive inspection confirmed both keep
+    the packaged checkpoint/log, the source distribution includes the new training workflow
+    test and script, and the wheel remains free of repository-only training/test files.
+  - `git diff --check` passed.
+
 ### Adopt the treaty v0.9 docs layout (Codex, GPT-5)
 
 - Created `chore/treaty` from the clean tracked state of `dev`, leaving the pre-existing untracked `videos/` and `.pytest_tmp_full_console_fix_20260812/` directories untouched.

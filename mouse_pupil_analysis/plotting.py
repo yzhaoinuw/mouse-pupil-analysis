@@ -30,6 +30,18 @@ def plot_diameter(analysis_table: pd.DataFrame, frame_numbers: np.ndarray) -> Fi
     figure = Figure(figsize=(10, 6))
     axis = figure.subplots()
     axis.plot(frame_numbers, analysis_table["estimated_pupil_diameter"], linewidth=1)
+    if "segmentation_status" in analysis_table:
+        for status, _code, color, size in STATUS_STYLES:
+            selected = analysis_table["segmentation_status"].eq(status)
+            axis.scatter(
+                frame_numbers[selected],
+                analysis_table.loc[selected, "estimated_pupil_diameter"],
+                color=color,
+                s=size,
+                label=status,
+                zorder=3,
+            )
+        axis.legend(loc="best", ncol=3)
     axis.set_ylabel("Estimated pupil diameter\n(model pixels)")
     axis.set_title("Pupil Analysis")
     axis.set_xlabel("Frame (1-based)")

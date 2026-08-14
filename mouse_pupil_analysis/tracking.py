@@ -185,16 +185,46 @@ def measure_probability_map(
     return measurement, binary_mask, selected_mask
 
 
-class TrackingAccumulator:
-    """Consume transient predictions and finalize temporal tracking results."""
+def pupil_visibility(measurement: Mapping[str, object]) -> str:
+    """Describe visibility conservatively from segmentation-quality evidence.
 
-    def __init__(self, pred_thresh: float, acquisition_fps: float) -> None:
+    Shape and border evidence can identify a partially visible or otherwise
+    uncertain component, but cannot prove that an unseen pupil is present behind
+    an eyelid. The label therefore avoids claiming to reconstruct hidden anatomy.
+    """
+    reasons = set(str(measurement.get("quality_reason", "")).split(";"))
+    if "empty_mask" in reasons:
+        return "not_detected"
+    if reasons.intersection({"low_component_circularity", "component_touches_border"}):
+        return "partially_visible_or_uncertain"
+    if not bool(measurement.get("segmentation_valid", False)):
+        return "uncertain"
+    return "visible"
+
+
+def build_segmentation_dataframe(
+    measurements: Iterable[Mapping[str, object]],
+) -> pd.DataFrame:
+    """Build per-frame segmentation measurements without temporal processing."""
+    dataframe = pd.DataFrame(measurements).copy()
+    if dataframe.empty:
+        return dataframe
+    if "source_frame_index" not in dataframe:
+        raise ValueError("Segmentation measurements are missing source_frame_index.")
+    if "pupil_visibility" not in dataframe:
+        dataframe["pupil_visibility"] = [
+            pupil_visibility(measurement) for measurement in dataframe.to_dict(orient="records")
+        ]
+    return dataframe.sort_values("source_frame_index", kind="stable").reset_index(drop=True)
+
+
+class SegmentationAccumulator:
+    """Consume predictions and retain compact per-frame segmentation QC."""
+
+    def __init__(self, pred_thresh: float) -> None:
         if not 0 < pred_thresh < 1:
             raise ValueError("Prediction threshold must be between 0 and 1.")
-        if acquisition_fps <= 0:
-            raise ValueError("Acquisition FPS must be positive.")
         self.pred_thresh = pred_thresh
-        self.acquisition_fps = acquisition_fps
         self.measurements: list[dict[str, object]] = []
 
     def add(self, prediction: PupilPredictionLike) -> None:
@@ -213,7 +243,22 @@ class TrackingAccumulator:
                 "pupil_diameter_input_pixels": prediction.pupil_diameter_input_pixels,
             }
         )
+        measurement["pupil_visibility"] = pupil_visibility(measurement)
         self.measurements.append(measurement)
+
+    def build_dataframe(self) -> pd.DataFrame:
+        """Return per-frame segmentation quality evidence in source order."""
+        return build_segmentation_dataframe(self.measurements)
+
+
+class TrackingAccumulator(SegmentationAccumulator):
+    """Consume transient predictions and finalize temporal tracking results."""
+
+    def __init__(self, pred_thresh: float, acquisition_fps: float) -> None:
+        super().__init__(pred_thresh)
+        if acquisition_fps <= 0:
+            raise ValueError("Acquisition FPS must be positive.")
+        self.acquisition_fps = acquisition_fps
 
     def build_dataframe(self) -> pd.DataFrame:
         """Apply temporal quality checks and calculate kinematics."""

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fine-tuning support in `training/run_train.py`, with a lower default fine-tuning learning
+  rate, size-balanced sampling, per-image and size-stratified validation, calibrated
+  prediction thresholds, and best-checkpoint/metadata/log retention even when early stopping
+  occurs below the promotion target. Experimental artifacts are grouped in descriptive,
+  collision-safe run folders.
+- Segmentation visibility and quality-control fields for ordinary diameter-only runs. Empty,
+  low-confidence, low-circularity, and border-touching segmentations are now explicit without
+  requiring velocity analysis; potentially partial shapes are labeled conservatively rather
+  than treated as reconstructed hidden pupils.
 - Zenodo DOI metadata. `CITATION.cff` records the v0.2.0 version DOI
   (`10.5281/zenodo.21897796`) and the concept DOI (`10.5281/zenodo.21897795`), so
   GitHub's "Cite this repository" button now exports a DOI. `README.md` badges the
@@ -16,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Inference now uses calibrated JSON metadata beside a checkpoint, then a threshold encoded
+  in its filename, before falling back to `0.7`. `--pred_thresh` remains an explicit override.
 - Rewrote `README.md` around the order a user actually needs: install, run, output,
   then the full CLI reference, with a plain linked contents list above them. Unit
   conventions, calibration caveats, quality-control semantics, environment setup, and

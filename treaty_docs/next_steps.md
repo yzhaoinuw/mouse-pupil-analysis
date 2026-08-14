@@ -10,6 +10,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
 - [DOI archival](#doi-archival) - complete; Zenodo minted the 0.2.0 DOIs and the citation metadata records them.
 - [Sample data for examples and regression tests](#sample-data-for-examples-and-regression-tests) - complete; permission cleared, the fixture landed on `dev`, and the real-image regression test is in place.
+- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - implemented and locally benchmarked on `feature/finetune`; next compare the leading candidates on independently held-out tiny, large, and partially occluded pupils.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action.
 
@@ -55,7 +56,12 @@ For every acquired frame, report:
 - Scalar pupil-center speed in pixels per second.
 - Existing pupil-size measurement plus segmentation quality evidence.
 
-The first version does not include an interactive interface, phasic/tonic REM classification, model retraining, or temporal averaging of probability maps. The UNet architecture, packaged checkpoint, training workflow, and existing 0.7 threshold remain unchanged.
+The original velocity increment did not include an interactive interface, phasic/tonic REM
+classification, model retraining, or temporal averaging of probability maps. Fine-tuning and
+checkpoint-calibrated thresholds are now tracked separately under
+[Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility); the
+packaged UNet architecture and weights remain unchanged until a candidate is deliberately
+promoted.
 
 ### Confirmed Sample-Video Contract
 
@@ -335,11 +341,46 @@ Remaining work:
 - Inspect tracked vs. ignored files before deleting anything.
 - Keep `mouse_pupil_analysis/checkpoints/` package data intact.
 
+### Segmentation Fine-Tuning And Visibility
+
+Status: implemented and benchmarked locally on `feature/finetune`; independent evaluation remains
+
+The maintained trainer now supports lower-rate weight fine-tuning, equal-mass sampling across
+tiny/medium/large mask bins, per-image macro validation, equal-weighted size-bin early
+stopping, threshold calibration, and unconditional best-checkpoint/log retention. Normal
+diameter-only inference now exports conservative visibility and segmentation-QC fields.
+
+Three packaged-checkpoint fine-tunes were compared with the shipped model after calibrating
+every checkpoint on the same 56-image validation set. The overall leader,
+`ft_natural_lr1e-4_s0`, raised balanced IoU from 0.8578 to 0.8690 and macro IoU from 0.8618
+to 0.8749. Size balancing produced smaller overall gains but the best tiny-pupil result
+(0.8051 versus 0.7773 for the calibrated shipped model). The current validation recordings
+overlap training recording groups and contain no masks below the configured low-circularity
+cutoff, so none of these candidates is ready for package promotion.
+
+Next action:
+
+- Obtain raw versions and masks for the troubleshooting frames, then compare the packaged
+  checkpoint, the overall leader, and the size-balanced candidate that improved every size
+  bin on an independent, recording-grouped test set.
+
+Parked:
+
+- Revisit BCE plus Dice, focal, or Tversky loss only after the sampling, metric, calibration,
+  and QC changes have been evaluated. A previous attempt did not show a clear improvement,
+  but a controlled ablation may still be worthwhile.
+- Consider a higher-resolution input or two-stage eye-ROI model only if clearly visible tiny
+  pupils remain unresolved. This changes the model contract and requires full retraining, so
+  keep it out of the current checkpoint-compatible work.
+
 ### Training Workflow Documentation
 
-Status: documented; the workflow remains script-based
+Status: documented; fine-tuning and calibrated validation remain script-based
 
-`training/README.md` now documents the local data layout, Labelme conversion, augmentation review, fresh training, weight-based fine-tuning, and checkpoint promotion. The current fine-tuning path restores model weights but starts new optimizer and scheduler state.
+`training/README.md` documents the local data layout, Labelme conversion, augmentation
+review, fresh training, weight-based fine-tuning, size balancing, threshold calibration, and
+checkpoint promotion. Fine-tuning restores model weights but intentionally starts new
+optimizer, scheduler, early-stopping, and logging state.
 
 Resume if the training path becomes user-facing or needs reproducible CI coverage.
 

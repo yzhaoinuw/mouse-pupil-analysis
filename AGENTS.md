@@ -140,6 +140,6 @@ C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pre_commit run --all
   unrelated PyPI distribution owns that import path.
 - Preserve the 148 x 148 centered/padded image convention unless intentionally changing model assumptions.
 - Default inference selects the packaged checkpoint with the highest IoU encoded in its filename.
-- `mouse_pupil_analysis/checkpoints/` is installed package data;
+- `mouse_pupil_analysis/checkpoints/` weights, logs, and calibrated-threshold JSON are installed package data;
   `mouse_pupil_analysis/checkpoints/archive/` is excluded. Verify wheel and
   source-distribution contents after packaging changes.

@@ -74,7 +74,10 @@ Or run the training script:
 python training\run_train.py
 ```
 
-For a quick plumbing check, reduce `n_epochs` and `patience` and set `notable_iou` low enough to exercise checkpoint writing. A model trained on eight images is expected to overfit and must not be treated as a useful trained model.
+For a quick plumbing check, pass `n_epochs=1` in the final `TrainingConfig(...)` block. The
+best checkpoint, JSON metadata, and log are written to one descriptive run folder under
+`checkpoints_exp/` regardless of score. A model trained on eight images is expected to
+overfit and must not be treated as a useful trained model.
 
 ## Provenance and use
 

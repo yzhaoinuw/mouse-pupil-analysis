@@ -24,6 +24,9 @@ def _diameter_table() -> tuple[pd.DataFrame, np.ndarray]:
             "image_name": ["eye_00001.png", "eye_00002.png", "eye_00003.png"],
             "estimated_pupil_diameter": [10.0, 11.0, 12.0],
             "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
+            "pupil_visibility": ["visible", "visible", "not_detected"],
+            "segmentation_status": ["valid", "warning", "invalid"],
+            "quality_reason": ["", "low_component_dominance", "empty_mask"],
         }
     )[DIAMETER_COLUMNS]
     return table, np.array([1, 2, 3])

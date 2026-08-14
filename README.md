@@ -87,21 +87,24 @@ movie_result/
 | File | Contents |
 |------|--------------|
 | `*_pupil_analysis.csv` | The per-frame table, columns below. |
-| `*_pupil_analysis.png` | Frame-indexed plot of those columns. Velocity mode adds center, speed, and quality-control panels below diameter. |
-| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. Velocity mode also crosses the raw center, cyan when accepted and yellow when rejected. |
+| `*_pupil_analysis.png` | Frame-indexed diameter plot with valid/warning/invalid points. Velocity mode adds center, speed, and a dedicated quality-control panel. |
+| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. |
 
-CSV columns, the last five written only in velocity mode:
+Segmentation visibility and quality are written for every run. Timestamp, center, speed,
+and `tracking_status` are added in velocity mode:
 
 | Column | Meaning |
 |---|---|
 | `image_name` | Source image. The number in a generated name is the one-based source-frame index. |
 | `estimated_pupil_diameter` | Equivalent-circle diameter, `sqrt(4 / pi * area)`, in the 148 x 148 model image. |
 | `pupil_diameter_input_pixels` | The same diameter at the scale of the image you supplied. |
+| `pupil_visibility` | `visible`, `not_detected`, `uncertain`, or `partially_visible_or_uncertain`. Shape-based uncertainty does not claim to reconstruct a pupil hidden by the eyelid. |
+| `segmentation_status` | Diameter-only status: `valid`, `warning`, or `invalid`. |
+| `quality_reason` | Which check flagged or rejected the segmentation. |
 | `timestamp_seconds` | Derived from the source-frame index and `--acquisition_fps`. |
 | `center_x_pixels`, `center_y_pixels` | Pupil center in input-image pixels; x increases right, y increases down. |
 | `speed_pixels_per_second` | Center speed, in input-image pixels per second. |
 | `tracking_status` | `valid`, `warning`, or `invalid`. |
-| `quality_reason` | Which check flagged or rejected the frame. |
 
 No column is calibrated; see the [FAQ](#faq) before comparing recordings.
 [Segmentation-to-velocity method][method] documents how the center and quality fields are
@@ -134,7 +137,7 @@ extract-frames --video_path data/mouse1.avi --out_dir data/frames_mouse1
 | `--out_dir` | Where to write extracted frames. Defaults to `<video_stem>_frames/` next to the video. |
 | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
 | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
-| `--pred_thresh` | Confidence threshold from 0 to 1 for classifying a pixel as pupil (default `0.7`). A value of 0.7 means a pixel counts as pupil only when model confidence exceeds 0.7. Increase it when the segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
+| `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
 | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.1`). Higher values are more saturated. |
 | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
 | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
@@ -190,6 +193,8 @@ result = analyze_frames(
 |---|---|
 | `analysis_table` | The same compact table written to CSV, as a DataFrame. |
 | `csv_path`, `plot_path` | Locations of the written outputs. |
+| `prediction_threshold` | The explicit or checkpoint-calibrated threshold actually used. |
+| `segmentation_dataframe` | Detailed per-frame component and visibility evidence for every run. |
 | `tracking_dataframe` | Detailed per-frame quality evidence in velocity mode, otherwise `None`. Retains raw centers, component areas, confidence, circularity, and temporal-area calculations that the compact table omits. |
 | `image_frames` | Frame metadata linking each image name to its source-frame index. |
 
@@ -284,8 +289,13 @@ run-pupil-analysis --video_path movie.avi --output_mask_dir movie_overlays
 ```
 
 Each overlay shades the pupil pixels that passed the threshold, from yellow (just over the
-threshold) through orange to red (near-certain). If the mask spills past the pupil, raise
-`--pred_thresh`; if it catches only part of the pupil, lower it.
+threshold) through orange to red (near-certain). Inference normally uses the calibration
+stored with the checkpoint. If the mask spills past the pupil, override it with a higher
+`--pred_thresh`; if it catches only part of the pupil, try a lower value.
+
+`pupil_visibility` and the status/reason columns distinguish a clean segmentation from an
+empty, low-confidence, border-touching, or low-circularity candidate. A narrow visible sliver
+may be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.
 
 **What should I pass for `--acquisition_fps`?**
 

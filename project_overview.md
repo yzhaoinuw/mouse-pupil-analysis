@@ -18,11 +18,11 @@ unrelated PyPI distribution and must not be claimed here.
 - The console scripts are:
   - `extract-frames = mouse_pupil_analysis.extract_frames:main`
   - `run-pupil-analysis = mouse_pupil_analysis.run_pupil_analysis:main`
-- Package data includes `mouse_pupil_analysis/checkpoints/*.pth` and `mouse_pupil_analysis/checkpoints/*.txt`; archive checkpoints are excluded.
+- Package data includes checkpoint weights (`*.pth`), training logs (`*.txt`), and calibrated-threshold metadata (`*.json`); archive checkpoints are excluded.
 
 ### 2. `mouse_pupil_analysis/pupil_predictions.py`
 
-- Owns packaged-checkpoint selection, PNG frame discovery, UNet inference, pupil-diameter calculation, and confidence-heatmap overlays; it has no tracking or acquisition-time dependency.
+- Owns packaged-checkpoint selection, calibrated-threshold resolution, PNG frame discovery, UNet inference, pupil-diameter calculation, and confidence-heatmap overlays; it has no acquisition-time dependency.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
 - Includes an editable `if __name__ == "__main__":` block for direct IDE runs with hardcoded local paths and inference settings.
@@ -30,10 +30,10 @@ unrelated PyPI distribution and must not be claimed here.
 ### 3. `mouse_pupil_analysis/api.py`
 
 - Owns pipeline orchestration, independent of any command line.
-- `AnalysisConfig` collects every input and validates combinations in one place; `run_analysis(config)` returns an `AnalysisResult` carrying the analysis table, both output paths, the frame metadata, and the internal tracking DataFrame.
+- `AnalysisConfig` collects every input and validates combinations in one place; `run_analysis(config)` returns an `AnalysisResult` carrying the analysis table, both output paths, the resolved prediction threshold, frame metadata, and internal segmentation/tracking DataFrames.
 - `analyze_video(...)` and `analyze_frames(...)` are keyword wrappers intended for notebook and script use.
 - If a video is provided, calls `extract_selected_frames(...)` before inference.
-- Composes the streaming inference iterator with optional tracking and overlay accumulators according to the configuration.
+- Composes the streaming inference iterator with always-on segmentation QC plus optional temporal tracking and overlays.
 - With `calculate_velocity`, analyzes consecutive source frames using an explicit acquisition timebase and appends accepted center, speed, and three-state quality fields/panels to the unified outputs.
 
 ### 4. `mouse_pupil_analysis/run_pupil_analysis.py`
@@ -44,7 +44,7 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 5. `mouse_pupil_analysis/results.py` and `mouse_pupil_analysis/plotting.py`
 
-- `results.py` builds the compact user-facing table, derives the three-state `tracking_status`, and writes the CSV and figure. `DIAMETER_COLUMNS` and `VELOCITY_COLUMNS` are the authoritative output schemas.
+- `results.py` builds the compact user-facing table, including visibility and three-state segmentation QC for every run, and writes the CSV and figure. `DIAMETER_COLUMNS` and `VELOCITY_COLUMNS` are the authoritative output schemas.
 - `plotting.py` returns Matplotlib figures rather than saving them, so the standard panels can be restyled or embedded elsewhere.
 
 ### 6. `mouse_pupil_analysis/extract_frames.py`
@@ -57,7 +57,7 @@ unrelated PyPI distribution and must not be claimed here.
 ### 7. `mouse_pupil_analysis/tracking.py`
 
 - Postprocesses UNet probability maps without changing the model or checkpoint.
-- `TrackingAccumulator` consumes transient predictions only when velocity mode is enabled, reuses their binary masks, and retains lightweight measurements for temporal processing.
+- `SegmentationAccumulator` consumes every transient prediction and exposes visibility/QC without requiring velocity mode. `TrackingAccumulator` extends it with temporal processing when velocity is enabled.
 - Selects and measures pupil components, maps centers back to original-image pixels, applies explainable quality flags, and calculates frame-to-frame displacement and velocity.
 - Leaves published centers and velocities missing across rejected or non-consecutive frames rather than interpolating.
 - Includes an editable `if __name__ == "__main__":` block for direct IDE inspection of the detailed tracking DataFrame.
@@ -81,7 +81,7 @@ unrelated PyPI distribution and must not be claimed here.
 - Contains the maintained local training workflow: model training, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional model promotion.
 - All scripts use package imports and resolve training data/output folders from the repository root, independent of the current working directory.
-- `training/run_train.py` writes experimental checkpoints to `checkpoints_exp/`.
+- `training/run_train.py` supports fresh training or lower-rate weight fine-tuning, balances training across mask-size bins, calibrates the prediction threshold on per-image size-stratified validation metrics, and always retains the best checkpoint, JSON metadata, and complete log in a collision-safe, descriptive run folder under `checkpoints_exp/`.
 
 ### 12. `media/`
 
@@ -102,12 +102,12 @@ Velocity mode is postprocessing around the existing pupil-segmentation model; it
 
 1. **Preserve the timebase.** The pipeline analyzes consecutive source frames and assigns each frame a timestamp from its source-frame index and the actual acquisition rate.
 2. **Prepare the model image.** Each grayscale frame is resized with its aspect ratio preserved, padded to the model's 148 x 148 input size, and passed through the attention UNet.
-3. **Create the existing pupil segmentation.** A sigmoid converts model output to per-pixel probabilities. The existing prediction threshold, `--pred_thresh` (default `0.7`), determines which pixels enter the binary pupil mask.
+3. **Create the pupil segmentation.** A sigmoid converts model output to per-pixel probabilities. Unless `--pred_thresh` overrides it, inference uses calibration metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint.
 4. **Select and center the pupil candidate.** The largest 8-connected foreground component is selected. Its center is the probability-weighted centroid of its pixels, so higher-confidence pixels contribute more strongly. The resize and padding are then inverted to report the center in original-frame pixels.
 5. **Apply per-frame quality control.** Empty masks are rejected. The selected component is rejected if its mean probability is below `0.90`, its circularity is below `0.45`, or it touches the model-image border. If it contains less than 80% of all foreground pixels, `low_component_dominance` is recorded as a warning but does not by itself reject the frame.
 6. **Apply temporal area control.** Initially valid components are compared with the median component area within approximately +/-0.5 seconds. With at least four valid neighbors, an area below `0.65` or above `2.0` times that median is recorded as an `abrupt_area_change` warning while the center remains usable.
 7. **Calculate motion without bridging gaps.** Published center coordinates are retained for usable `valid` and `warning` frames. For consecutive usable frame pairs, the pipeline calculates horizontal and vertical displacement, divides each by the actual elapsed time to obtain x/y velocity, and reports scalar speed as `sqrt(velocity_x^2 + velocity_y^2)`. It does not interpolate across rejected or missing frames.
-8. **Preserve diagnostic evidence.** The internal tracking table retains raw centers and detailed component measurements for quality decisions and tests. The compact analysis CSV exposes usable centers, speed, a valid/warning/invalid status, and a concise reason. The unified plot supports frame-indexed review. Optional overlays map threshold-passing pixel probabilities from yellow just above the prediction threshold, through orange, to red near probability 1.0; thin center markers locate accepted and rejected candidates.
+8. **Preserve diagnostic evidence.** Every run retains an internal segmentation table and exposes visibility, a valid/warning/invalid status, and a concise reason in the compact CSV. Velocity mode adds the internal temporal table plus usable centers and speed. The unified plot supports frame-indexed review. Optional overlays map threshold-passing pixel probabilities from yellow just above the prediction threshold, through orange, to red near probability 1.0; thin center markers locate accepted and rejected candidates.
 
 ## Repo Structure Map
 

@@ -7,10 +7,12 @@ from PIL import Image
 from mouse_pupil_analysis.extract_frames import ExtractedFrame
 from mouse_pupil_analysis.pupil_predictions import PupilPrediction
 from mouse_pupil_analysis.tracking import (
+    SegmentationAccumulator,
     TrackingAccumulator,
     build_tracking_dataframe,
     measure_probability_map,
     model_to_original_coordinates,
+    pupil_visibility,
 )
 
 
@@ -110,6 +112,41 @@ def test_tracking_accumulator_reuses_streamed_binary_mask(tmp_path: Path):
     assert dataframe.loc[0, "selected_component_area"] == 81
     assert dataframe.loc[0, "segmentation_valid"]
     assert dataframe.loc[0, "image_name"] == image_path.name
+
+
+def test_segmentation_accumulator_reports_not_detected_without_velocity(tmp_path: Path):
+    image_path = tmp_path / "eye_00001.png"
+    Image.fromarray(np.zeros((148, 148), dtype=np.uint8)).save(image_path)
+    prediction = PupilPrediction(
+        frame=ExtractedFrame(image_path, source_frame_index=0, extraction_index=0),
+        probability_map=np.zeros((148, 148), dtype=np.float32),
+        binary_mask=np.zeros((148, 148), dtype=bool),
+        estimated_pupil_diameter=0.0,
+        original_size=(148, 148),
+    )
+
+    accumulator = SegmentationAccumulator(pred_thresh=0.7)
+    accumulator.add(prediction)
+    dataframe = accumulator.build_dataframe()
+
+    assert dataframe.loc[0, "pupil_visibility"] == "not_detected"
+    assert not dataframe.loc[0, "segmentation_valid"]
+    assert dataframe.loc[0, "quality_reason"] == "empty_mask"
+
+
+def test_low_circularity_component_is_marked_partially_visible_or_uncertain():
+    probability_map = np.zeros((40, 40), dtype=np.float32)
+    probability_map[20:22, 8:32] = 0.99
+
+    measurement, _, _ = measure_probability_map(
+        probability_map,
+        pred_thresh=0.7,
+        original_size=(40, 40),
+    )
+
+    assert not measurement["segmentation_valid"]
+    assert "low_component_circularity" in measurement["quality_reason"]
+    assert pupil_visibility(measurement) == "partially_visible_or_uncertain"
 
 
 def test_build_tracking_dataframe_uses_actual_elapsed_time():

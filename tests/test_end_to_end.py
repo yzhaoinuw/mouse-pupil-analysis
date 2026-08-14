@@ -58,11 +58,14 @@ def test_video_analysis_writes_diameter_outputs(synthetic_video: Path, tmp_path:
 
     assert result.csv_path.is_file()
     assert result.plot_path.is_file()
+    assert result.segmentation_dataframe is not None
     assert result.tracking_dataframe is None
+    assert result.prediction_threshold == 0.7
     assert result.analysis_table.columns.tolist() == DIAMETER_COLUMNS
     assert len(result.analysis_table) == FRAME_COUNT
     assert result.analysis_table["estimated_pupil_diameter"].notna().all()
     assert (result.analysis_table["estimated_pupil_diameter"] >= 0).all()
+    assert set(result.analysis_table["segmentation_status"]) <= {"valid", "warning", "invalid"}
 
     extracted = sorted((tmp_path / "frames").glob("*.png"))
     assert [path.name for path in extracted] == [

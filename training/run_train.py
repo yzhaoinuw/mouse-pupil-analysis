@@ -1,175 +1,534 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Sep 28 23:09:41 2025
+"""Train or fine-tune the pupil-segmentation UNet.
 
-@author: yzhao
+Edit the configuration block at the bottom and run this file directly from an
+IDE or from the repository root. Importing the module is side-effect free so its
+validation and sampling helpers can be tested independently.
 """
 
+from __future__ import annotations
+
+import json
+import math
 import random
+import re
+from collections import Counter
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
+from mouse_pupil_analysis.pupil_predictions import load_unet_checkpoint
 from mouse_pupil_analysis.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
-
-# -------------------- Metrics -------------------- #
-def dice_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
-    pred = (pred > pred_thresh).float()
-    target = target.float()
-    intersection = (pred * target).sum()
-    return (2.0 * intersection) / (pred.sum() + target.sum() + epsilon)
+SIZE_BIN_NAMES = ("tiny", "medium", "large")
 
 
-def iou_score(pred, target, pred_thresh=0.6, epsilon=1e-6):
-    pred = (pred > pred_thresh).float()
-    target = target.float()
-    intersection = (pred * target).sum()
-    union = pred.sum() + target.sum() - intersection
-    return intersection / (union + epsilon)
+@dataclass(frozen=True)
+class TrainingConfig:
+    """Editable settings for one fresh-training or fine-tuning run."""
+
+    data_root: Path = DATA_ROOT
+    checkpoint_dir: Path = PROJECT_ROOT / "checkpoints_exp"
+    run_name: str | None = None
+    finetune_checkpoint: Path | None = None
+    use_attention: bool = True
+    batch_size: int = 8
+    scratch_learning_rate: float = 1e-3
+    finetune_learning_rate: float = 1e-4
+    n_epochs: int = 200
+    early_stopping_patience: int = 40
+    scheduler_patience: int = 8
+    promotion_target_iou: float = 0.85
+    min_improvement: float = 1e-4
+    threshold_candidates: tuple[float, ...] = (
+        0.30,
+        0.35,
+        0.40,
+        0.45,
+        0.50,
+        0.55,
+        0.60,
+        0.65,
+        0.70,
+        0.75,
+        0.80,
+    )
+    tiny_max_diameter: float = 15.0
+    large_min_diameter: float = 80.0
+    low_circularity_cutoff: float = 0.45
+    balance_training_sizes: bool = True
+    console_interval: int = 10
+    seed: int = 0
+
+    def __post_init__(self) -> None:
+        if self.batch_size <= 0 or self.n_epochs <= 0:
+            raise ValueError("batch_size and n_epochs must be positive.")
+        if self.scratch_learning_rate <= 0 or self.finetune_learning_rate <= 0:
+            raise ValueError("Learning rates must be positive.")
+        if self.early_stopping_patience <= 0 or self.scheduler_patience < 0:
+            raise ValueError(
+                "Early-stopping patience must be positive and scheduler patience nonnegative."
+            )
+        if not self.threshold_candidates or any(
+            not 0 < threshold < 1 for threshold in self.threshold_candidates
+        ):
+            raise ValueError("threshold_candidates must contain probabilities between 0 and 1.")
+        if self.tiny_max_diameter >= self.large_min_diameter:
+            raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
+        if not 0 <= self.promotion_target_iou <= 1:
+            raise ValueError("promotion_target_iou must be between 0 and 1.")
+        if self.min_improvement < 0:
+            raise ValueError("min_improvement cannot be negative.")
+        if self.console_interval <= 0:
+            raise ValueError("console_interval must be positive.")
+        if self.run_name is not None and not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]*", self.run_name
+        ):
+            raise ValueError(
+                "run_name may contain only letters, numbers, dots, dashes, and underscores."
+            )
 
 
-# -------------------- Data Preparation -------------------- #
-def make_dataset(image_dir, mask_dir, augment=False):
+@dataclass(frozen=True)
+class ValidationReport:
+    """Macro validation results at one candidate prediction threshold."""
+
+    threshold: float
+    macro_iou: float
+    macro_dice: float
+    balanced_iou: float
+    size_iou: dict[str, float | None]
+    low_circularity_iou: float | None
+
+
+def make_dataset(image_dir: Path, mask_dir: Path, augment: bool = False) -> SegmentationDataset:
     """Build a dataset from a stem-paired image and mask directory."""
     image_paths, mask_paths = paired_image_mask_paths(image_dir, mask_dir)
     return SegmentationDataset(image_paths, mask_paths, augment=augment)
 
 
-# %% Hyperparameters setup
-pred_thresh = 0.7
-notable_iou = 0.85
-patience = 20
-n_epochs = 200
-use_attention = True
-seed = 0
-
-# Seed every source of randomness the training loop touches: augmentation uses the
-# `random` module, weight initialization and dropout use torch. Set this before the
-# datasets and model are constructed. Runs remain only approximately reproducible on
-# GPU unless deterministic kernels are also enabled.
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
-
-checkpoint_dir = PROJECT_ROOT / "checkpoints_exp"
-checkpoint_dir.mkdir(parents=True, exist_ok=True)
-
-train_dataset = make_dataset(
-    DATA_ROOT / "images_train",
-    DATA_ROOT / "masks_train",
-    augment=True,
-)
-val_dataset = make_dataset(
-    DATA_ROOT / "images_validation",
-    DATA_ROOT / "masks_validation",
-    augment=False,
-)
-
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, pin_memory=True)
-val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, pin_memory=True)
-use_atn = "atn_" * use_attention
-model_name = f"unet_{use_atn}resize_{len(train_dataset)}pupils_thresh={pred_thresh}"
-
-# %% -------------------- Model Setup -------------------- #
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = UNet(use_attention=use_attention).to(device)
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer,
-    mode="max",  # Because we are maximizing IoU
-    factor=0.5,  # Reduce LR by half
-    patience=10,  # Wait patience number of epochs with no improvement
-    min_lr=1e-3 * 0.5**5,  # Set a floor to avoid vanishing LR
-)
-
-# %% -------------------- Training Loop -------------------- #
-# best_val_loss = float("inf")
-best_val_iou = 0
-# prev_iou = 0
-patience_counter = 0
-log_lines = []  # ← log storage
-
-for epoch in range(n_epochs):
-    model.train()
-    train_loss = 0.0
-    for imgs, masks in train_loader:
-        imgs, masks = imgs.to(device), masks.to(device)
-        preds = model(imgs)
-        loss = criterion(preds, masks)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.item()
-
-    train_loss /= len(train_loader)
-
-    # -------------------- Validation -------------------- #
-    model.eval()
-    val_loss = 0.0
-    val_dice = 0.0
-    val_iou = 0.0
-    with torch.no_grad():
-        for imgs, masks in val_loader:
-            imgs, masks = imgs.to(device), masks.to(device)
-            preds = model(imgs)
-            loss = criterion(preds, masks)
-            val_loss += loss.item()
-
-            dice = dice_score(torch.sigmoid(preds), masks, pred_thresh=pred_thresh)
-            iou = iou_score(torch.sigmoid(preds), masks, pred_thresh=pred_thresh)
-            val_dice += dice
-            val_iou += iou
-
-    val_loss /= len(val_loader)
-    val_dice /= len(val_loader)
-    val_iou /= len(val_loader)
-    scheduler.step(val_iou)
-
-    # -------------------- Logging -------------------- #
-    log_line = (
-        f"Epoch {epoch+1:02d} | "
-        f"Train Loss: {train_loss:.4f} | "
-        f"Val Loss: {val_loss:.4f} | "
-        f"Val Dice: {val_dice:.4f} | "
-        f"Val IoU: {val_iou:.4f} | "
-        f"Learning Rate: {scheduler.get_last_lr()[0]}"
+def size_bin_labels(
+    diameters: np.ndarray,
+    tiny_max_diameter: float,
+    large_min_diameter: float,
+) -> np.ndarray:
+    """Assign model-space target diameters to tiny, medium, or large bins."""
+    diameters = np.asarray(diameters, dtype=float)
+    if tiny_max_diameter >= large_min_diameter:
+        raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
+    return np.select(
+        [diameters <= tiny_max_diameter, diameters >= large_min_diameter],
+        ["tiny", "large"],
+        default="medium",
     )
-    print(log_line)
-    log_lines.append(log_line)
 
-    # -------------------- Early Stopping -------------------- #
-    if val_iou > best_val_iou:
-        best_val_iou = val_iou  # ← save for filename later
-        if best_val_iou > notable_iou:
-            torch.save(
-                model.state_dict(),
-                checkpoint_dir / f"{model_name}_iou={best_val_iou:.4f}.pth",
+
+def size_balanced_sample_weights(labels: np.ndarray) -> np.ndarray:
+    """Give each represented size bin equal total sampling probability."""
+    labels = np.asarray(labels, dtype=str)
+    if labels.size == 0:
+        raise ValueError("Cannot build sampling weights for an empty dataset.")
+    counts = Counter(labels.tolist())
+    weights = np.asarray([1.0 / counts[label] for label in labels], dtype=float)
+    return weights / weights.mean()
+
+
+def make_size_balanced_sampler(
+    dataset: SegmentationDataset,
+    config: TrainingConfig,
+) -> tuple[WeightedRandomSampler, Counter]:
+    """Create a reproducible sampler that balances mask-size bins."""
+    diameters = np.asarray(dataset.mask_equivalent_diameters(), dtype=float)
+    labels = size_bin_labels(
+        diameters,
+        config.tiny_max_diameter,
+        config.large_min_diameter,
+    )
+    weights = size_balanced_sample_weights(labels)
+    generator = torch.Generator().manual_seed(config.seed)
+    sampler = WeightedRandomSampler(
+        torch.as_tensor(weights, dtype=torch.double),
+        num_samples=len(weights),
+        replacement=True,
+        generator=generator,
+    )
+    return sampler, Counter(labels.tolist())
+
+
+def per_image_overlap_scores(
+    probabilities: torch.Tensor,
+    targets: torch.Tensor,
+    threshold: float,
+    epsilon: float = 1e-6,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return per-image IoU and Dice instead of a batch-area-weighted score."""
+    predictions = probabilities > threshold
+    targets = targets > 0.5
+    dimensions = tuple(range(1, predictions.ndim))
+    intersection = (predictions & targets).sum(dim=dimensions).float()
+    predicted_area = predictions.sum(dim=dimensions).float()
+    target_area = targets.sum(dim=dimensions).float()
+    union = predicted_area + target_area - intersection
+    iou = torch.where(union > 0, intersection / (union + epsilon), torch.ones_like(union))
+    denominator = predicted_area + target_area
+    dice = torch.where(
+        denominator > 0,
+        2.0 * intersection / (denominator + epsilon),
+        torch.ones_like(denominator),
+    )
+    return iou, dice
+
+
+def _target_diameters(targets: torch.Tensor) -> np.ndarray:
+    dimensions = tuple(range(1, targets.ndim))
+    areas = (targets > 0.5).sum(dim=dimensions).cpu().numpy().astype(float)
+    return np.sqrt(4.0 * areas / math.pi)
+
+
+def _low_circularity_targets(targets: torch.Tensor, cutoff: float) -> np.ndarray:
+    low_circularity = []
+    for target in (targets > 0.5).cpu().numpy():
+        mask = np.asarray(target).squeeze().astype(np.uint8)
+        area = int(mask.sum())
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        perimeter = sum(cv2.arcLength(contour, closed=True) for contour in contours)
+        circularity = 0.0 if area == 0 or perimeter <= 0 else 4.0 * math.pi * area / perimeter**2
+        low_circularity.append(circularity < cutoff)
+    return np.asarray(low_circularity, dtype=bool)
+
+
+def evaluate_thresholds(
+    probabilities: torch.Tensor,
+    targets: torch.Tensor,
+    thresholds: tuple[float, ...],
+    tiny_max_diameter: float,
+    large_min_diameter: float,
+    low_circularity_cutoff: float,
+) -> ValidationReport:
+    """Select a threshold by equal-weighted tiny/medium/large validation IoU."""
+    if not thresholds:
+        raise ValueError("At least one threshold candidate is required.")
+    diameters = _target_diameters(targets)
+    size_labels = size_bin_labels(diameters, tiny_max_diameter, large_min_diameter)
+    low_circularity = _low_circularity_targets(targets, low_circularity_cutoff)
+    reports = []
+
+    for threshold in thresholds:
+        iou, dice = per_image_overlap_scores(probabilities, targets, threshold)
+        iou_values = iou.cpu().numpy()
+        size_iou: dict[str, float | None] = {}
+        represented_bin_scores = []
+        for label in SIZE_BIN_NAMES:
+            selected = size_labels == label
+            score = float(iou_values[selected].mean()) if selected.any() else None
+            size_iou[label] = score
+            if score is not None:
+                represented_bin_scores.append(score)
+
+        low_circularity_iou = (
+            float(iou_values[low_circularity].mean()) if low_circularity.any() else None
+        )
+        reports.append(
+            ValidationReport(
+                threshold=float(threshold),
+                macro_iou=float(iou.mean()),
+                macro_dice=float(dice.mean()),
+                balanced_iou=float(np.mean(represented_bin_scores)),
+                size_iou=size_iou,
+                low_circularity_iou=low_circularity_iou,
             )
-            print("✅ New best model saved!")
+        )
 
-        patience_counter = 0
+    return max(
+        reports,
+        key=lambda report: (
+            report.balanced_iou,
+            report.macro_iou,
+            -abs(report.threshold - 0.7),
+        ),
+    )
+
+
+def _metric_text(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.4f}"
+
+
+def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
+    values = asdict(config)
+    for key in ("data_root", "checkpoint_dir", "finetune_checkpoint"):
+        value = values[key]
+        values[key] = None if value is None else str(value)
+    return values
+
+
+def default_run_name(config: TrainingConfig) -> str:
+    """Return a concise folder name that captures the important run choices."""
+    run_kind = "ft" if config.finetune_checkpoint is not None else "scratch"
+    sampling = "bal" if config.balance_training_sizes else "natural"
+    learning_rate = (
+        config.finetune_learning_rate
+        if config.finetune_checkpoint is not None
+        else config.scratch_learning_rate
+    )
+    learning_rate_text = (
+        f"{learning_rate:.0e}".replace("e-0", "e-").replace("e+0", "e").replace("e+", "e")
+    )
+    return f"{run_kind}_{sampling}_lr{learning_rate_text}_s{config.seed}"
+
+
+def _write_metadata(
+    path: Path,
+    config: TrainingConfig,
+    report: ValidationReport,
+    epoch: int,
+    learning_rate: float,
+) -> None:
+    payload = {
+        "run_name": path.parent.name,
+        "prediction_threshold": report.threshold,
+        "best_epoch": epoch,
+        "balanced_iou": report.balanced_iou,
+        "macro_iou": report.macro_iou,
+        "macro_dice": report.macro_dice,
+        "size_iou": report.size_iou,
+        "low_circularity_iou": report.low_circularity_iou,
+        "learning_rate": learning_rate,
+        "meets_promotion_target": report.balanced_iou >= config.promotion_target_iou,
+        "config": _jsonable_config(config),
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _collect_validation(
+    model: nn.Module,
+    val_loader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device,
+) -> tuple[float, torch.Tensor, torch.Tensor]:
+    model.eval()
+    total_loss = 0.0
+    total_images = 0
+    probability_batches = []
+    target_batches = []
+    with torch.no_grad():
+        for images, masks in val_loader:
+            images, masks = images.to(device), masks.to(device)
+            logits = model(images)
+            batch_size = len(images)
+            total_loss += criterion(logits, masks).item() * batch_size
+            total_images += batch_size
+            probability_batches.append(torch.sigmoid(logits).cpu())
+            target_batches.append(masks.cpu())
+    return (
+        total_loss / total_images,
+        torch.cat(probability_batches),
+        torch.cat(target_batches),
+    )
+
+
+def evaluate_checkpoint(
+    checkpoint_path: Path,
+    config: TrainingConfig,
+) -> tuple[float, ValidationReport]:
+    """Evaluate one checkpoint with the same calibrated validation used in training."""
+    val_dataset = make_dataset(
+        config.data_root / "images_validation",
+        config.data_root / "masks_validation",
+        augment=False,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config.batch_size,
+        shuffle=False,
+        pin_memory=torch.cuda.is_available(),
+    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = load_unet_checkpoint(Path(checkpoint_path), device)
+    val_loss, probabilities, targets = _collect_validation(
+        model,
+        val_loader,
+        nn.BCEWithLogitsLoss(),
+        device,
+    )
+    report = evaluate_thresholds(
+        probabilities,
+        targets,
+        config.threshold_candidates,
+        config.tiny_max_diameter,
+        config.large_min_diameter,
+        config.low_circularity_cutoff,
+    )
+    return val_loss, report
+
+
+def run_training(config: TrainingConfig) -> Path:
+    """Run training and return the stable path holding the best model weights."""
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
+
+    train_dataset = make_dataset(
+        config.data_root / "images_train",
+        config.data_root / "masks_train",
+        augment=True,
+    )
+    val_dataset = make_dataset(
+        config.data_root / "images_validation",
+        config.data_root / "masks_validation",
+        augment=False,
+    )
+
+    sampler = None
+    if config.balance_training_sizes:
+        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
+        print(f"Training target counts by size: {dict(size_counts)}")
+
+    pin_memory = torch.cuda.is_available()
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.batch_size,
+        shuffle=sampler is None,
+        sampler=sampler,
+        pin_memory=pin_memory,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config.batch_size,
+        shuffle=False,
+        pin_memory=pin_memory,
+    )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if config.finetune_checkpoint is None:
+        model = UNet(use_attention=config.use_attention).to(device)
+        learning_rate = config.scratch_learning_rate
     else:
-        patience_counter += 1
-        print(f"⏳ Patience: {patience_counter}/{patience}")
-        if patience_counter >= patience:
-            print("⛔ Early stopping triggered.")
-            break
+        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
+        learning_rate = config.finetune_learning_rate
 
-    prev_iou = val_iou
+    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    run_name = config.run_name or default_run_name(config)
+    run_dir = config.checkpoint_dir / run_name
+    if run_dir.exists() and any(run_dir.iterdir()):
+        raise FileExistsError(
+            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
+            "remove the old experimental run deliberately."
+        )
+    run_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = run_dir / "best.pth"
+    metadata_path = run_dir / "best.json"
+    log_path = run_dir / "train.log"
+    print(f"Run directory: {run_dir}")
 
-if best_val_iou > notable_iou:
-    # -------------------- Save Log File -------------------- #
-    log_filename = f"training_log_{model_name}_iou={best_val_iou:.4f}.txt"
-    with open(checkpoint_dir / log_filename, "w") as f:
-        f.write("\n".join(log_lines))
-    print(f"📝 Training log saved as: {log_filename}")
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="max",
+        factor=0.5,
+        patience=config.scheduler_patience,
+        min_lr=learning_rate * 0.5**5,
+    )
+
+    best_balanced_iou = -math.inf
+    patience_counter = 0
+    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
+        log_file.write(json.dumps(_jsonable_config(config), sort_keys=True) + "\n")
+        for epoch in range(1, config.n_epochs + 1):
+            model.train()
+            total_train_loss = 0.0
+            total_train_images = 0
+            for images, masks in train_loader:
+                images, masks = images.to(device), masks.to(device)
+                logits = model(images)
+                loss = criterion(logits, masks)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                total_train_loss += loss.item() * len(images)
+                total_train_images += len(images)
+
+            train_loss = total_train_loss / total_train_images
+            val_loss, probabilities, targets = _collect_validation(
+                model,
+                val_loader,
+                criterion,
+                device,
+            )
+            report = evaluate_thresholds(
+                probabilities,
+                targets,
+                config.threshold_candidates,
+                config.tiny_max_diameter,
+                config.large_min_diameter,
+                config.low_circularity_cutoff,
+            )
+            scheduler.step(report.balanced_iou)
+            current_lr = optimizer.param_groups[0]["lr"]
+
+            log_line = (
+                f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | "
+                f"Val Loss: {val_loss:.4f} | Macro Dice: {report.macro_dice:.4f} | "
+                f"Macro IoU: {report.macro_iou:.4f} | Balanced IoU: {report.balanced_iou:.4f} | "
+                f"Threshold: {report.threshold:.2f} | Tiny: {_metric_text(report.size_iou['tiny'])} | "
+                f"Medium: {_metric_text(report.size_iou['medium'])} | "
+                f"Large: {_metric_text(report.size_iou['large'])} | "
+                f"Low-circularity: {_metric_text(report.low_circularity_iou)} | LR: {current_lr:g}"
+            )
+            show_epoch = epoch == 1 or epoch % config.console_interval == 0
+            if show_epoch:
+                print(log_line)
+            log_file.write(log_line + "\n")
+
+            improved = report.balanced_iou > best_balanced_iou + config.min_improvement
+            if improved:
+                best_balanced_iou = report.balanced_iou
+                patience_counter = 0
+                torch.save(model.state_dict(), checkpoint_path)
+                _write_metadata(metadata_path, config, report, epoch, current_lr)
+                if show_epoch:
+                    print("Best model updated.")
+            else:
+                patience_counter += 1
+                if show_epoch:
+                    print(
+                        f"Patience: {patience_counter}/{config.early_stopping_patience} "
+                        f"(best balanced IoU {best_balanced_iou:.4f})"
+                    )
+                if patience_counter >= config.early_stopping_patience:
+                    print("Early stopping triggered; the best checkpoint remains saved.")
+                    break
+
+    print(f"Training log: {log_path}")
+    print(f"Threshold and validation metadata: {metadata_path}")
+    return checkpoint_path
+
+
+if __name__ == "__main__":
+    # Set this to a compatible .pth file to fine-tune its weights. Leave it as None
+    # for fresh training. Fine-tuning automatically uses the lower learning rate.
+    finetune_checkpoint = None
+    # Example:
+    # finetune_checkpoint = (
+    #     PROJECT_ROOT
+    #     / "mouse_pupil_analysis"
+    #     / "checkpoints"
+    #     / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
+    # )
+
+    run_training(
+        TrainingConfig(
+            data_root=DATA_ROOT,
+            finetune_checkpoint=finetune_checkpoint,
+        )
+    )

@@ -20,9 +20,10 @@ from mouse_pupil_analysis.pupil_predictions import (
     find_default_checkpoint,
     frames_from_image_directory,
     iter_pupil_predictions,
+    resolve_prediction_threshold,
 )
 from mouse_pupil_analysis.results import DiameterRow, write_analysis_outputs
-from mouse_pupil_analysis.tracking import TrackingAccumulator
+from mouse_pupil_analysis.tracking import SegmentationAccumulator, TrackingAccumulator
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class AnalysisConfig:
     checkpoint: Path | None = None
     output_mask_dir: Path | None = None
     batch_size: int = 32
-    pred_thresh: float = 0.7
+    pred_thresh: float | None = None
     mask_transparency: float = 0.1
     extraction_fps: float = 5.0
     max_frames: int = 10000
@@ -72,7 +73,7 @@ class AnalysisConfig:
             raise ValueError("You must specify either video_path or image_dir.")
         if self.video_path is not None and self.image_dir is not None:
             raise ValueError("Specify only one of video_path or image_dir, not both.")
-        if not 0 < self.pred_thresh < 1:
+        if self.pred_thresh is not None and not 0 < self.pred_thresh < 1:
             raise ValueError("pred_thresh must be between 0 and 1.")
         if self.acquisition_fps is not None and self.acquisition_fps <= 0:
             raise ValueError("acquisition_fps must be positive.")
@@ -90,6 +91,8 @@ class AnalysisResult:
     csv_path: Path
     plot_path: Path
     image_frames: list[ExtractedFrame] = field(repr=False)
+    prediction_threshold: float = 0.7
+    segmentation_dataframe: pd.DataFrame | None = field(default=None, repr=False)
     tracking_dataframe: pd.DataFrame | None = field(default=None, repr=False)
 
 
@@ -157,20 +160,23 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         logger.info("Using acquisition rate: %.10g samples/s", config.acquisition_fps)
 
     checkpoint = config.checkpoint if config.checkpoint is not None else find_default_checkpoint()
+    prediction_threshold = resolve_prediction_threshold(checkpoint, config.pred_thresh)
+    logger.info("Prediction threshold: %.3g", prediction_threshold)
 
-    tracking_accumulator = None
     if config.calculate_velocity:
-        tracking_accumulator = TrackingAccumulator(
-            pred_thresh=config.pred_thresh,
+        segmentation_accumulator = TrackingAccumulator(
+            pred_thresh=prediction_threshold,
             acquisition_fps=config.acquisition_fps,
         )
+    else:
+        segmentation_accumulator = SegmentationAccumulator(pred_thresh=prediction_threshold)
 
     overlay_accumulator = None
     if config.output_mask_dir is not None:
         config.output_mask_dir.mkdir(parents=True, exist_ok=True)
         overlay_accumulator = MaskOverlayAccumulator(
             config.output_mask_dir,
-            pred_thresh=config.pred_thresh,
+            pred_thresh=prediction_threshold,
             mask_transparency=config.mask_transparency,
         )
 
@@ -178,7 +184,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
     for prediction in iter_pupil_predictions(
         checkpoint,
         image_frames,
-        pred_thresh=config.pred_thresh,
+        pred_thresh=prediction_threshold,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         show_progress=config.show_progress,
@@ -190,16 +196,17 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
                 prediction.pupil_diameter_input_pixels,
             )
         )
-        if tracking_accumulator is not None:
-            tracking_accumulator.add(prediction)
+        segmentation_accumulator.add(prediction)
         if overlay_accumulator is not None:
             overlay_accumulator.add(prediction)
 
-    tracking_dataframe = None
-    if tracking_accumulator is not None:
-        tracking_dataframe = tracking_accumulator.build_dataframe()
+    segmentation_dataframe = segmentation_accumulator.build_dataframe()
+    tracking_dataframe = segmentation_dataframe if config.calculate_velocity else None
     if overlay_accumulator is not None:
-        overlay_accumulator.save(image_frames, tracking_dataframe=tracking_dataframe)
+        overlay_accumulator.save(
+            image_frames,
+            tracking_dataframe=segmentation_dataframe,
+        )
 
     result_dir = _resolve_result_dir(config)
     exp_name = (
@@ -210,6 +217,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         image_frames,
         result_dir,
         exp_name,
+        segmentation_dataframe=segmentation_dataframe,
         tracking_dataframe=tracking_dataframe,
     )
 
@@ -218,6 +226,8 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         csv_path=csv_path,
         plot_path=plot_path,
         image_frames=image_frames,
+        prediction_threshold=prediction_threshold,
+        segmentation_dataframe=segmentation_dataframe,
         tracking_dataframe=tracking_dataframe,
     )
 

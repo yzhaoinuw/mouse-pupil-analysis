@@ -4,6 +4,7 @@ Nothing in this module runs during inference. It is imported by the training
 workflow under ``training/`` only.
 """
 
+import math
 import random
 from pathlib import Path
 
@@ -16,6 +17,17 @@ from torchvision.transforms import (
 )  # note: NOT v2 InterpolationMode
 
 from mouse_pupil_analysis.preprocessing import MODEL_IMAGE_SIZE, resize_with_pad
+
+
+def mask_equivalent_diameter(
+    mask_path: Path,
+    target_size: int = MODEL_IMAGE_SIZE,
+) -> float:
+    """Return a mask's equivalent-circle diameter in model-image pixels."""
+    mask = Image.open(mask_path).convert("L")
+    mask = resize_with_pad(mask, target_size=target_size, resample=Image.NEAREST)
+    foreground_area = sum(pixel > 0 for pixel in mask.getdata())
+    return math.sqrt(4.0 * foreground_area / math.pi)
 
 
 def paired_image_mask_paths(
@@ -273,6 +285,12 @@ class SegmentationDataset(Dataset):
                 ),
             ]
         )
+
+    def mask_equivalent_diameters(self) -> list[float]:
+        """Return target-mask diameters used for balanced training diagnostics."""
+        return [
+            mask_equivalent_diameter(path, target_size=self.target_size) for path in self.mask_paths
+        ]
 
     def __len__(self):
         return len(self.image_paths)

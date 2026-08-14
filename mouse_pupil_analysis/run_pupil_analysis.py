@@ -62,7 +62,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Dataloader worker processes (default: up to 4, capped by CPU count). Use 0 to disable.",
     )
-    parser.add_argument("--pred_thresh", type=float, default=0.7)
+    parser.add_argument(
+        "--pred_thresh",
+        type=float,
+        default=None,
+        help=(
+            "Override the checkpoint's calibrated pixel-confidence threshold. "
+            "Defaults to checkpoint metadata or its filename, then 0.7."
+        ),
+    )
     parser.add_argument("--mask_transparency", type=float, default=0.1)
     parser.add_argument("--extraction_fps", type=float, default=5)
     parser.add_argument("--max_frames", type=int, default=10000)

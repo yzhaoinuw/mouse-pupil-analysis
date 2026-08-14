@@ -5,6 +5,7 @@ The public functions in this module can be imported by another workflow or run
 directly from an IDE using the editable configuration at the bottom of the file.
 """
 
+import json
 import logging
 import math
 import os
@@ -34,9 +35,11 @@ from mouse_pupil_analysis.unet import UNet
 logger = logging.getLogger(__name__)
 
 _IOU_RE = re.compile(r"iou=(0\.\d+)")
+_THRESHOLD_RE = re.compile(r"(?:pred_)?thresh(?:old)?=(0(?:\.\d+)?|1(?:\.0+)?)")
 _NUMERIC_SUFFIX_RE = re.compile(r"(\d+)$")
 _CENTER_MARKER_OPACITY = 0.35
 _CENTER_MARKER_RADIUS = 3
+DEFAULT_PREDICTION_THRESHOLD = 0.7
 
 # A binary mask gives pupil area; the reported diameter is that of the circle with
 # the same area, so diameter = sqrt(4 / pi * area).
@@ -114,6 +117,49 @@ def find_default_checkpoint() -> Path:
     return Path(checkpoint)
 
 
+def resolve_prediction_threshold(
+    checkpoint_path: Path,
+    requested_threshold: float | None = None,
+    fallback: float = DEFAULT_PREDICTION_THRESHOLD,
+) -> float:
+    """Resolve an explicit, calibrated-metadata, filename, or fallback threshold."""
+    checkpoint_path = Path(checkpoint_path)
+    if requested_threshold is not None:
+        threshold = float(requested_threshold)
+        if not 0 < threshold < 1:
+            raise ValueError("Prediction threshold must be between 0 and 1.")
+        return threshold
+
+    metadata_path = checkpoint_path.with_suffix(".json")
+    if metadata_path.is_file():
+        try:
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            threshold = float(metadata["prediction_threshold"])
+            if not 0 < threshold < 1:
+                raise ValueError("calibrated threshold is outside (0, 1)")
+            logger.info(
+                "Using calibrated prediction threshold %.3g from %s", threshold, metadata_path
+            )
+            return threshold
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            logger.warning("Ignoring invalid threshold metadata in %s: %s", metadata_path, error)
+
+    match = _THRESHOLD_RE.search(checkpoint_path.name)
+    if match:
+        threshold = float(match.group(1))
+        if 0 < threshold < 1:
+            logger.info("Using prediction threshold %.3g from the checkpoint filename", threshold)
+            return threshold
+
+    if not 0 < fallback < 1:
+        raise ValueError("Fallback prediction threshold must be between 0 and 1.")
+    logger.info(
+        "Checkpoint has no calibrated threshold metadata; using fallback %.3g",
+        fallback,
+    )
+    return float(fallback)
+
+
 def __getattr__(name: str):
     """Resolve ``DEFAULT_CHECKPOINT`` on first access rather than at import time."""
     if name == "DEFAULT_CHECKPOINT":
@@ -128,7 +174,7 @@ def load_unet_checkpoint(checkpoint_path: Path, device: torch.device) -> UNet:
     rather than assumed, so a custom ``--checkpoint`` trained without attention
     loads correctly instead of failing on a state-dict key mismatch.
     """
-    state_dict = torch.load(checkpoint_path, map_location=device)
+    state_dict = torch.load(checkpoint_path, map_location=device, weights_only=True)
     if not isinstance(state_dict, dict):
         raise ValueError(
             f"{checkpoint_path} does not contain a state dict. Export the model with "
@@ -325,7 +371,7 @@ class MaskOverlayAccumulator:
 def iter_pupil_predictions(
     checkpoint_path: Path,
     image_frames: list[ExtractedFrame],
-    pred_thresh: float = 0.7,
+    pred_thresh: float | None = None,
     batch_size: int = 32,
     num_workers: int | None = None,
     show_progress: bool = False,
@@ -335,6 +381,7 @@ def iter_pupil_predictions(
     ``show_progress`` is off by default so importing code stays quiet. The console
     scripts turn it on.
     """
+    pred_thresh = resolve_prediction_threshold(checkpoint_path, pred_thresh)
     if num_workers is None:
         num_workers = default_num_workers()
     if not image_frames:
@@ -396,12 +443,13 @@ def generate_pupil_predictions(
     checkpoint_path: Path,
     image_frames: list[ExtractedFrame],
     output_mask_dir: Path | None = None,
-    pred_thresh: float = 0.7,
+    pred_thresh: float | None = None,
     batch_size: int = 32,
     mask_transparency: float = 0.1,
     show_progress: bool = False,
 ) -> list[tuple[str, float]]:
     """Generate diameter results and optional overlays without tracking."""
+    pred_thresh = resolve_prediction_threshold(checkpoint_path, pred_thresh)
     overlay_accumulator = None
     if output_mask_dir is not None:
         overlay_accumulator = MaskOverlayAccumulator(
@@ -431,7 +479,7 @@ def generate_pupil_mask_prediction(
     checkpoint_path: Path,
     image_dir: Path,
     output_mask_dir: Path | None = None,
-    pred_thresh: float = 0.7,
+    pred_thresh: float | None = None,
     batch_size: int = 32,
     mask_transparency: float = 0.1,
 ) -> list[tuple[str, float]]:
@@ -465,7 +513,7 @@ if __name__ == "__main__":
     image_dir = project_root / "images_test_1"
     checkpoint_path = find_default_checkpoint()
     output_mask_dir = project_root / "predictions_test"
-    pred_thresh = 0.7
+    pred_thresh = None  # Use checkpoint calibration; set a float to override it.
     batch_size = 32
     mask_transparency = 0.1
 

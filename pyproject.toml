@@ -55,7 +55,7 @@ where = ["."]
 include = ["mouse_pupil_analysis*"]
 
 [tool.setuptools.package-data]
-mouse_pupil_analysis = ["checkpoints/*.pth", "checkpoints/*.txt"]
+mouse_pupil_analysis = ["checkpoints/*.pth", "checkpoints/*.txt", "checkpoints/*.json"]
 
 [tool.setuptools.exclude-package-data]
 mouse_pupil_analysis = ["checkpoints/archive/*"]

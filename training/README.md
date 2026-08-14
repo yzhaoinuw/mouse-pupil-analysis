@@ -69,12 +69,15 @@ The script draws repeated augmented versions of training samples with the mask o
 
 Edit the hyperparameter block in `run_train.py`, especially:
 
-- `pred_thresh`: threshold used for validation Dice/IoU and encoded in the checkpoint name.
-- `notable_iou`: minimum best validation IoU before a checkpoint is saved.
-- `patience`: early-stopping patience.
+- `finetune_checkpoint`: leave as `None` for fresh training.
+- `early_stopping_patience` and `scheduler_patience`: how long to wait for a
+  size-balanced validation improvement and when to lower the learning rate.
 - `n_epochs`: maximum training epochs.
 - `use_attention`: must match the desired UNet architecture.
-- DataLoader batch size and Adam learning rate, currently `8` and `1e-3`.
+- `threshold_candidates`: pixel-confidence thresholds evaluated on validation data.
+- `tiny_max_diameter` and `large_min_diameter`: model-pixel cutoffs for stratified
+  reporting and balanced sampling.
+- DataLoader batch size and fresh-training Adam learning rate, currently `8` and `1e-3`.
 
 Then run the file in your IDE or execute:
 
@@ -82,11 +85,28 @@ Then run the file in your IDE or execute:
 python training\run_train.py
 ```
 
-The script automatically uses CUDA when available. Experimental checkpoints and their training logs are written to the repository-root `checkpoints_exp/` folder. That folder is local output and is not package data.
+The script automatically uses CUDA when available. It oversamples training masks so the
+represented tiny, medium, and large bins receive equal total sampling probability. Validation
+IoU and Dice are calculated per image, and the early-stopping score gives each represented
+size bin equal weight. Low-circularity masks are reported separately as a practical proxy for
+partially occluded or irregular labels; that geometry alone does not prove occlusion.
+
+Every run writes these local outputs under `checkpoints_exp/<run-name>/`, even if it stops
+early or does not meet the promotion target. Set `run_name` explicitly for a planned
+experiment, or let the trainer derive a concise name from the training mode, sampling mode,
+learning rate, and seed. A nonempty run folder is never overwritten.
+
+- `best.pth`: the best model weights, replaced only by a meaningful improvement.
+- `best.json`: the selected prediction threshold, macro and size-stratified metrics, best epoch,
+  and the complete run configuration.
+- `train.log`: every completed epoch and its threshold/size metrics.
+
+The promotion target is metadata, not a save gate. These files are experimental output and
+are not installed package data.
 
 ## 4. Fine-tune an existing checkpoint
 
-`run_train.py` currently initializes a fresh model. For weight-based fine-tuning, keep `use_attention` compatible with the source checkpoint and add a checkpoint load immediately after model creation:
+Set `finetune_checkpoint` in the final block of `run_train.py` to a compatible `.pth` file:
 
 ```python
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,12 +118,12 @@ finetune_checkpoint = (
     / "checkpoints"
     / "unet_atn_resize_166pupils_thresh=0.7_iou=0.9158.pth"
 )
-model.load_state_dict(
-    torch.load(finetune_checkpoint, map_location=device, weights_only=True)
-)
 ```
 
-Also lower the Adam learning rate deliberately, for example from `1e-3` to `1e-4`, and choose `notable_iou` relative to the checkpoint's existing validation performance.
+The checkpoint architecture is detected from its weights. Fine-tuning automatically uses
+`finetune_learning_rate` (`1e-4` by default); fresh training uses
+`scratch_learning_rate` (`1e-3`). Keep the original training examples mixed with new hard
+cases so adapting to one recording does not erase established behavior.
 
 This loads model weights only. It starts a new optimizer, learning-rate scheduler, early-stopping counter, and log, so it is fine-tuning rather than an exact resume of an interrupted training run. Exact resume support would require saving and restoring those states in a structured training checkpoint.
 
@@ -116,6 +136,14 @@ Do not automatically place experimental output in `mouse_pupil_analysis/checkpoi
 3. Inspect segmentation overlays and downstream diameter/center tracking, not IoU alone.
 4. Compare against the currently packaged model on the same cases.
 
-When a model is accepted, copy its `.pth` file and matching `.txt` log into `mouse_pupil_analysis/checkpoints/` as an intentional package change. The default inference code selects the packaged checkpoint with the highest IoU encoded in its filename, so preserve the `_iou=<value>` naming contract and remove or archive superseded packaged candidates deliberately.
+When a model is accepted, rename `best.pth` to preserve the packaged
+`_thresh=<value>_iou=<value>` naming contract, using the calibrated threshold and reviewed IoU
+from `best.json`. Copy the renamed weights, matching JSON metadata, and `train.log` into
+`mouse_pupil_analysis/checkpoints/` as an intentional package change. Default inference
+selects the packaged checkpoint with the highest IoU encoded in its filename, then reads its
+threshold from JSON metadata (or the filename for older checkpoints). Remove or archive
+superseded packaged candidates deliberately.
 
-After promotion, run the repository checks and package build documented in `AGENTS.md`, then verify that the selected checkpoint and log appear in both the wheel and source distribution.
+After promotion, run the repository checks and package build documented in `AGENTS.md`, then
+verify that the selected checkpoint, metadata, and log appear in both the wheel and source
+distribution.

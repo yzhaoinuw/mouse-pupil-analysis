@@ -24,6 +24,24 @@ def _results() -> list[DiameterRow]:
     ]
 
 
+def _segmentation() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "image_name": ["eye_00001.png", "eye_00002.png", "eye_00003.png"],
+            "source_frame_index": [0, 1, 2],
+            "estimated_pupil_diameter": [10.0, 11.0, 12.0],
+            "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
+            "pupil_visibility": [
+                "visible",
+                "visible",
+                "partially_visible_or_uncertain",
+            ],
+            "segmentation_valid": [True, True, False],
+            "quality_reason": ["", "low_component_dominance", "low_component_circularity"],
+        }
+    )
+
+
 def test_image_directory_uses_one_based_filename_as_source_frame(tmp_path: Path):
     (tmp_path / "eye_00001.png").touch()
     (tmp_path / "eye_00020.png").touch()
@@ -39,6 +57,7 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
         _frames(tmp_path),
         tmp_path,
         "eye",
+        segmentation_dataframe=_segmentation(),
     )
 
     dataframe = pd.read_csv(csv_path)
@@ -46,6 +65,9 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
         "image_name",
         "estimated_pupil_diameter",
         "pupil_diameter_input_pixels",
+        "pupil_visibility",
+        "segmentation_status",
+        "quality_reason",
     ]
     assert dataframe["pupil_diameter_input_pixels"].tolist() == [20.0, 22.0, 24.0]
     assert dataframe["image_name"].tolist() == [
@@ -53,6 +75,8 @@ def test_diameter_only_writes_one_compact_analysis_output(tmp_path: Path):
         "eye_00002.png",
         "eye_00003.png",
     ]
+    assert dataframe["segmentation_status"].tolist() == ["valid", "warning", "invalid"]
+    assert dataframe["pupil_visibility"].tolist()[-1] == "partially_visible_or_uncertain"
     assert plot_path.name == "eye_pupil_analysis.png"
     assert plot_path.is_file()
 
@@ -68,6 +92,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
             "speed_pixels_per_second": [np.nan, 47.0, np.nan],
             "estimated_pupil_diameter": [10.0, 11.0, 12.0],
             "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
+            "pupil_visibility": ["visible", "visible", "uncertain"],
             "segmentation_valid": [True, True, False],
             "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
         }
@@ -85,6 +110,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
         "image_name",
         "estimated_pupil_diameter",
         "pupil_diameter_input_pixels",
+        "pupil_visibility",
         "timestamp_seconds",
         "center_x_pixels",
         "center_y_pixels",
