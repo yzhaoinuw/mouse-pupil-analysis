@@ -369,6 +369,8 @@ Next action:
 
 Parked:
 
+- Tag the next version and publish its GitHub/PyPI release only when the maintainer resumes
+  release work; do not tag or release as part of the current `dev`/`main` integration.
 - Revisit BCE plus Dice, focal, or Tversky loss only after the sampling, metric, calibration,
   and QC changes have been evaluated. A previous attempt did not show a clear improvement,
   but a controlled ablation may still be worthwhile.
