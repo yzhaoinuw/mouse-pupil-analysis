@@ -1,0 +1,1959 @@
+{
+  "schema": 1,
+  "generated": "2026-08-14",
+  "grouping": "session (one animal, one date, one condition)",
+  "n_folds": 5,
+  "n_images": 222,
+  "n_sessions": 16,
+  "pool": [
+    [
+      "images_train",
+      "masks_train"
+    ],
+    [
+      "images_validation",
+      "masks_validation"
+    ]
+  ],
+  "tiny_max_diameter": 15.0,
+  "sessions": [
+    {
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "cohort": "date_id",
+      "animal": "5003",
+      "n_recordings": 1,
+      "n_images": 62,
+      "n_tiny": 0,
+      "median_diameter": 53.05
+    },
+    {
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "cohort": "date_id",
+      "animal": "5120",
+      "n_recordings": 1,
+      "n_images": 32,
+      "n_tiny": 0,
+      "median_diameter": 65.94
+    },
+    {
+      "session": "HQL085_whiskerb250916",
+      "fold": 1,
+      "cohort": "HQL",
+      "animal": "HQL085",
+      "n_recordings": 1,
+      "n_images": 4,
+      "n_tiny": 0,
+      "median_diameter": 62.45
+    },
+    {
+      "session": "HQL086_sleep250912",
+      "fold": 1,
+      "cohort": "HQL",
+      "animal": "HQL086",
+      "n_recordings": 1,
+      "n_images": 3,
+      "n_tiny": 0,
+      "median_diameter": 77.74
+    },
+    {
+      "session": "HQL088_whiskerb251006",
+      "fold": 1,
+      "cohort": "HQL",
+      "animal": "HQL088",
+      "n_recordings": 1,
+      "n_images": 1,
+      "n_tiny": 0,
+      "median_diameter": 107.33
+    },
+    {
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "cohort": "date_id",
+      "animal": "5213",
+      "n_recordings": 3,
+      "n_images": 5,
+      "n_tiny": 0,
+      "median_diameter": 38.38
+    },
+    {
+      "session": "HQL073_250515",
+      "fold": 2,
+      "cohort": "HQL",
+      "animal": "HQL073",
+      "n_recordings": 2,
+      "n_images": 18,
+      "n_tiny": 0,
+      "median_diameter": 35.46
+    },
+    {
+      "session": "HQL073_whisker250623",
+      "fold": 2,
+      "cohort": "HQL",
+      "animal": "HQL073",
+      "n_recordings": 2,
+      "n_images": 2,
+      "n_tiny": 0,
+      "median_diameter": 26.68
+    },
+    {
+      "session": "HQL088_sleep250929",
+      "fold": 2,
+      "cohort": "HQL",
+      "animal": "HQL088",
+      "n_recordings": 1,
+      "n_images": 1,
+      "n_tiny": 0,
+      "median_diameter": 70.57
+    },
+    {
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "cohort": "HQL",
+      "animal": "HQL090",
+      "n_recordings": 2,
+      "n_images": 13,
+      "n_tiny": 2,
+      "median_diameter": 17.95
+    },
+    {
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "cohort": "HQL",
+      "animal": "HQL080",
+      "n_recordings": 1,
+      "n_images": 17,
+      "n_tiny": 10,
+      "median_diameter": 12.72
+    },
+    {
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "cohort": "HQL",
+      "animal": "HQL080",
+      "n_recordings": 2,
+      "n_images": 13,
+      "n_tiny": 1,
+      "median_diameter": 30.63
+    },
+    {
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "cohort": "HQL",
+      "animal": "HQL086",
+      "n_recordings": 1,
+      "n_images": 11,
+      "n_tiny": 1,
+      "median_diameter": 17.66
+    },
+    {
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "cohort": "date_id",
+      "animal": "5212",
+      "n_recordings": 1,
+      "n_images": 13,
+      "n_tiny": 0,
+      "median_diameter": 35.84
+    },
+    {
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "cohort": "HQL",
+      "animal": "HQL086",
+      "n_recordings": 3,
+      "n_images": 12,
+      "n_tiny": 0,
+      "median_diameter": 94.91
+    },
+    {
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "cohort": "HQL",
+      "animal": "HQL090",
+      "n_recordings": 2,
+      "n_images": 15,
+      "n_tiny": 0,
+      "median_diameter": 79.56
+    }
+  ],
+  "images": [
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 107.91
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0776",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0776.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0776.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 97.27
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_10088",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_10088.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_10088.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 39.04
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1067",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1067.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1067.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 92.33
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13095",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13095.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13095.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 69.33
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13483",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13483.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_13483.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 75.34
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_14938",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_14938.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_14938.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 44.04
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16102",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16102.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16102.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 49.98
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1649",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1649.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_1649.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 92.01
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16490",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16490.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_16490.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 50.42
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19109",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19109.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19109.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 89.37
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19885",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19885.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_19885.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 99.94
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_20758",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_20758.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_20758.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 99.18
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2134",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2134.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2134.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 74.38
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_22019",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_22019.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_22019.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 101.31
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_24056",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_24056.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_24056.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 59.68
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2425",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2425.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_2425.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 64.36
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_25899",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_25899.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_25899.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 99.5
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28130",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28130.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28130.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 39.78
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28809",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28809.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_28809.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 35.54
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29294",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29294.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29294.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 35.86
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29488",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29488.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_29488.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 34.26
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3007",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3007.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3007.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 57.14
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3104",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3104.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3104.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 53.62
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32010",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32010.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32010.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 34.11
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32301",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32301.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_32301.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 51.19
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_33853",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_33853.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_33853.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 75.41
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_34338",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_34338.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_34338.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 78.74
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_35890",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_35890.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_35890.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 70.58
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_36763",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_36763.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_36763.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 93.03
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3686",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3686.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_3686.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 35.63
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37442",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37442.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37442.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 94.51
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37539",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37539.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_37539.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 75.74
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38218",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38218.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38218.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 61.01
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38412",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38412.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38412.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 55.65
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38994",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38994.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_38994.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 66.36
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_39382",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_39382.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_39382.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 42.74
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40061",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40061.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40061.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 37.08
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40643",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40643.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_40643.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 40.64
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 109.73
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_48597",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_48597.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_48597.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 103.6
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_4947",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_4947.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_4947.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 52.48
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_55193",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_55193.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_55193.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 33.51
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_57618",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_57618.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_57618.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 79.07
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_60431",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_60431.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_60431.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 52.39
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6402",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6402.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6402.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 46.89
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_67706",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_67706.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_67706.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 36.27
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6790",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6790.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_6790.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 70.19
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_77600",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_77600.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_77600.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 46.14
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_80413",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_80413.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_80413.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 24.38
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_81965",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_81965.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_81965.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 25.58
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 19.41
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_83226",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_83226.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_83226.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 23.72
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_84196",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_84196.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_84196.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 23.37
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 52.49
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_87106",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_87106.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_87106.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 68.31
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 55.81
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92441",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92441.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92441.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 34.3
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92538",
+      "image": "images_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92538.png",
+      "mask": "masks_validation/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_92538.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 30.45
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9312",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9312.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9312.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 52.32
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9603",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9603.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9603.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 38.96
+    },
+    {
+      "stem": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_96418",
+      "image": "images_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_96418.png",
+      "mask": "masks_train/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_96418.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 0,
+      "diameter": 35.23
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0000",
+      "image": "images_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0000.png",
+      "mask": "masks_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0000.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 21.62
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0150",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0150.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0150.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 20.37
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0360",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0360.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0360.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 19.15
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0390",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0390.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0390.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 21.32
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 16.81
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0510",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0510.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0510.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 31.96
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0960",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0960.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0960.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 66.05
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1050",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1050.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1050.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 70.23
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1290",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1290.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_1290.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 65.82
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15330",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15330.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15330.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 95.21
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15480",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15480.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15480.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 90.52
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15630",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15630.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15630.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 91.94
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15720",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15720.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_15720.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 89.93
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16350",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16350.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16350.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 95.57
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16680",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16680.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_16680.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 87.14
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17160",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17160.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17160.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 87.22
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 68.77
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18060",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18060.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18060.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 62.32
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18570",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18570.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_18570.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 53.19
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 30.36
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_20610",
+      "image": "images_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_20610.png",
+      "mask": "masks_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_20610.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 45.74
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_21750",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_21750.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_21750.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 71.54
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 101.37
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3330",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3330.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3330.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 66.44
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3570",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3570.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_3570.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 55.9
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4140",
+      "image": "images_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4140.png",
+      "mask": "masks_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4140.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 55.67
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4860",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4860.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_4860.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 43.95
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_5550",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_5550.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_5550.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 41.37
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_7230",
+      "image": "images_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_7230.png",
+      "mask": "masks_validation/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_7230.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 33.28
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9360",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9360.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9360.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 76.16
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9420",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9420.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9420.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 73.51
+    },
+    {
+      "stem": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9570",
+      "image": "images_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9570.png",
+      "mask": "masks_train/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_9570.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 1,
+      "diameter": 75.82
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00001",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00001.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00001.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 28.16
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00063",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00063.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00063.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 35.84
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 25.73
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00929",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00929.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00929.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 26.32
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_01313",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01313.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01313.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 42.02
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_01683",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01683.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01683.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 42.57
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_01715",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01715.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_01715.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 55.36
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00202",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00202.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00202.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 41.75
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00424",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00424.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00424.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 56.78
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00606",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00606.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_00606.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 60.65
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01601",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01601.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01601.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 27.03
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01625",
+      "image": "images_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01625.png",
+      "mask": "masks_validation/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01625.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 27.66
+    },
+    {
+      "stem": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01656",
+      "image": "images_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01656.png",
+      "mask": "masks_train/251016_5212_purple_Day10_2025-10-16T17-14-56.825_1_01656.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 4,
+      "diameter": 33.44
+    },
+    {
+      "stem": "251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00001",
+      "image": "images_validation/251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00001.png",
+      "mask": "masks_validation/251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00001.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "diameter": 38.38
+    },
+    {
+      "stem": "251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00018",
+      "image": "images_validation/251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00018.png",
+      "mask": "masks_validation/251018_5213_Purple_awake pupil recording_2025-10-18T13-25-26.27_00018.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "diameter": 46.76
+    },
+    {
+      "stem": "251018_5213_Purple_awake pupil recording_2025-10-18T13-42-29.035_00002",
+      "image": "images_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-42-29.035_00002.png",
+      "mask": "masks_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-42-29.035_00002.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "diameter": 28.97
+    },
+    {
+      "stem": "251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00006",
+      "image": "images_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00006.png",
+      "mask": "masks_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00006.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "diameter": 29.64
+    },
+    {
+      "stem": "251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127",
+      "image": "images_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "mask": "masks_train/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 2,
+      "diameter": 44.97
+    },
+    {
+      "stem": "HQL073_250515_002_eye_00452",
+      "image": "images_train/HQL073_250515_002_eye_00452.png",
+      "mask": "masks_train/HQL073_250515_002_eye_00452.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 34.65
+    },
+    {
+      "stem": "HQL073_250515_002_eye_07236",
+      "image": "images_validation/HQL073_250515_002_eye_07236.png",
+      "mask": "masks_validation/HQL073_250515_002_eye_07236.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 42.98
+    },
+    {
+      "stem": "HQL073_250515_002_eye_07404",
+      "image": "images_train/HQL073_250515_002_eye_07404.png",
+      "mask": "masks_train/HQL073_250515_002_eye_07404.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 48.16
+    },
+    {
+      "stem": "HQL073_250515_002_eye_13867",
+      "image": "images_train/HQL073_250515_002_eye_13867.png",
+      "mask": "masks_train/HQL073_250515_002_eye_13867.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 35.66
+    },
+    {
+      "stem": "HQL073_250515_002_eye_13873",
+      "image": "images_validation/HQL073_250515_002_eye_13873.png",
+      "mask": "masks_validation/HQL073_250515_002_eye_13873.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 35.25
+    },
+    {
+      "stem": "HQL073_250515_002_eye_13882",
+      "image": "images_train/HQL073_250515_002_eye_13882.png",
+      "mask": "masks_train/HQL073_250515_002_eye_13882.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 36.96
+    },
+    {
+      "stem": "HQL073_250515_002_eye_19699",
+      "image": "images_train/HQL073_250515_002_eye_19699.png",
+      "mask": "masks_train/HQL073_250515_002_eye_19699.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 52.85
+    },
+    {
+      "stem": "HQL073_250515_002_eye_19701",
+      "image": "images_train/HQL073_250515_002_eye_19701.png",
+      "mask": "masks_train/HQL073_250515_002_eye_19701.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 52.67
+    },
+    {
+      "stem": "HQL073_250515_002_eye_22134",
+      "image": "images_train/HQL073_250515_002_eye_22134.png",
+      "mask": "masks_train/HQL073_250515_002_eye_22134.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 33.78
+    },
+    {
+      "stem": "HQL073_250515_002_eye_22900",
+      "image": "images_train/HQL073_250515_002_eye_22900.png",
+      "mask": "masks_train/HQL073_250515_002_eye_22900.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 34.85
+    },
+    {
+      "stem": "HQL073_250515_002_eye_36845",
+      "image": "images_train/HQL073_250515_002_eye_36845.png",
+      "mask": "masks_train/HQL073_250515_002_eye_36845.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 37.61
+    },
+    {
+      "stem": "HQL073_250515_002_eye_43066",
+      "image": "images_validation/HQL073_250515_002_eye_43066.png",
+      "mask": "masks_validation/HQL073_250515_002_eye_43066.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 32.39
+    },
+    {
+      "stem": "HQL073_250515_002_eye_51689",
+      "image": "images_train/HQL073_250515_002_eye_51689.png",
+      "mask": "masks_train/HQL073_250515_002_eye_51689.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 27.75
+    },
+    {
+      "stem": "HQL073_250515_004_eye_00384",
+      "image": "images_train/HQL073_250515_004_eye_00384.png",
+      "mask": "masks_train/HQL073_250515_004_eye_00384.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 38.56
+    },
+    {
+      "stem": "HQL073_250515_004_eye_13842",
+      "image": "images_train/HQL073_250515_004_eye_13842.png",
+      "mask": "masks_train/HQL073_250515_004_eye_13842.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 46.39
+    },
+    {
+      "stem": "HQL073_250515_004_eye_41850",
+      "image": "images_train/HQL073_250515_004_eye_41850.png",
+      "mask": "masks_train/HQL073_250515_004_eye_41850.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 18.33
+    },
+    {
+      "stem": "HQL073_250515_004_eye_45361",
+      "image": "images_train/HQL073_250515_004_eye_45361.png",
+      "mask": "masks_train/HQL073_250515_004_eye_45361.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 17.41
+    },
+    {
+      "stem": "HQL073_250515_004_eye_45595",
+      "image": "images_train/HQL073_250515_004_eye_45595.png",
+      "mask": "masks_train/HQL073_250515_004_eye_45595.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "diameter": 16.7
+    },
+    {
+      "stem": "HQL073_whisker250623_004_eye_54571",
+      "image": "images_train/HQL073_whisker250623_004_eye_54571.png",
+      "mask": "masks_train/HQL073_whisker250623_004_eye_54571.png",
+      "session": "HQL073_whisker250623",
+      "fold": 2,
+      "diameter": 35.27
+    },
+    {
+      "stem": "HQL073_whisker250623_007_eye_60314",
+      "image": "images_train/HQL073_whisker250623_007_eye_60314.png",
+      "mask": "masks_train/HQL073_whisker250623_007_eye_60314.png",
+      "session": "HQL073_whisker250623",
+      "fold": 2,
+      "diameter": 18.09
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_07765",
+      "image": "images_train/HQL080_sleep250625_003_eye_07765.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_07765.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 63.97
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_10285",
+      "image": "images_train/HQL080_sleep250625_003_eye_10285.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_10285.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 14.84
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_11980",
+      "image": "images_validation/HQL080_sleep250625_003_eye_11980.png",
+      "mask": "masks_validation/HQL080_sleep250625_003_eye_11980.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 75.07
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_15066",
+      "image": "images_validation/HQL080_sleep250625_003_eye_15066.png",
+      "mask": "masks_validation/HQL080_sleep250625_003_eye_15066.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 11.89
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_15079",
+      "image": "images_train/HQL080_sleep250625_003_eye_15079.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_15079.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 12.72
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_21880",
+      "image": "images_train/HQL080_sleep250625_003_eye_21880.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_21880.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 58.48
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_24750",
+      "image": "images_train/HQL080_sleep250625_003_eye_24750.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_24750.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 11.0
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34112",
+      "image": "images_train/HQL080_sleep250625_003_eye_34112.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_34112.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 10.82
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34357",
+      "image": "images_validation/HQL080_sleep250625_003_eye_34357.png",
+      "mask": "masks_validation/HQL080_sleep250625_003_eye_34357.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 11.78
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34389",
+      "image": "images_train/HQL080_sleep250625_003_eye_34389.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_34389.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 10.7
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34448",
+      "image": "images_train/HQL080_sleep250625_003_eye_34448.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_34448.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 10.4
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34485",
+      "image": "images_train/HQL080_sleep250625_003_eye_34485.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_34485.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 10.59
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_34505",
+      "image": "images_train/HQL080_sleep250625_003_eye_34505.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_34505.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 8.81
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_39360",
+      "image": "images_train/HQL080_sleep250625_003_eye_39360.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_39360.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 67.35
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_48218",
+      "image": "images_train/HQL080_sleep250625_003_eye_48218.png",
+      "mask": "masks_train/HQL080_sleep250625_003_eye_48218.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 75.04
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_48292",
+      "image": "images_validation/HQL080_sleep250625_003_eye_48292.png",
+      "mask": "masks_validation/HQL080_sleep250625_003_eye_48292.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 71.46
+    },
+    {
+      "stem": "HQL080_sleep250625_003_eye_50165",
+      "image": "images_validation/HQL080_sleep250625_003_eye_50165.png",
+      "mask": "masks_validation/HQL080_sleep250625_003_eye_50165.png",
+      "session": "HQL080_sleep250625",
+      "fold": 3,
+      "diameter": 41.55
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_06622",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_06622.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_06622.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 49.98
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_09773",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_09773.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_09773.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 35.31
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_17969",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_17969.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_17969.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 22.28
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_20500",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_20500.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_20500.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 47.55
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_25934",
+      "image": "images_validation/HQL080_whiskerb_250722_007_eye_25934.png",
+      "mask": "masks_validation/HQL080_whiskerb_250722_007_eye_25934.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 37.68
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_32966",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_32966.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_32966.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 8.81
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_38166",
+      "image": "images_validation/HQL080_whiskerb_250722_007_eye_38166.png",
+      "mask": "masks_validation/HQL080_whiskerb_250722_007_eye_38166.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 17.44
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_40592",
+      "image": "images_validation/HQL080_whiskerb_250722_007_eye_40592.png",
+      "mask": "masks_validation/HQL080_whiskerb_250722_007_eye_40592.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 30.63
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_43662",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_43662.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_43662.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 22.99
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_007_eye_55059",
+      "image": "images_train/HQL080_whiskerb_250722_007_eye_55059.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_007_eye_55059.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 28.77
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_010_eye_09775",
+      "image": "images_train/HQL080_whiskerb_250722_010_eye_09775.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_010_eye_09775.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 31.11
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_010_eye_11160",
+      "image": "images_train/HQL080_whiskerb_250722_010_eye_11160.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_010_eye_11160.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 15.47
+    },
+    {
+      "stem": "HQL080_whiskerb_250722_010_eye_33899",
+      "image": "images_train/HQL080_whiskerb_250722_010_eye_33899.png",
+      "mask": "masks_train/HQL080_whiskerb_250722_010_eye_33899.png",
+      "session": "HQL080_whiskerb_250722",
+      "fold": 3,
+      "diameter": 32.99
+    },
+    {
+      "stem": "HQL085_whiskerb250916_007_eye_14523",
+      "image": "images_train/HQL085_whiskerb250916_007_eye_14523.png",
+      "mask": "masks_train/HQL085_whiskerb250916_007_eye_14523.png",
+      "session": "HQL085_whiskerb250916",
+      "fold": 1,
+      "diameter": 89.11
+    },
+    {
+      "stem": "HQL085_whiskerb250916_007_eye_45612",
+      "image": "images_train/HQL085_whiskerb250916_007_eye_45612.png",
+      "mask": "masks_train/HQL085_whiskerb250916_007_eye_45612.png",
+      "session": "HQL085_whiskerb250916",
+      "fold": 1,
+      "diameter": 62.06
+    },
+    {
+      "stem": "HQL085_whiskerb250916_007_eye_48125",
+      "image": "images_train/HQL085_whiskerb250916_007_eye_48125.png",
+      "mask": "masks_train/HQL085_whiskerb250916_007_eye_48125.png",
+      "session": "HQL085_whiskerb250916",
+      "fold": 1,
+      "diameter": 38.38
+    },
+    {
+      "stem": "HQL085_whiskerb250916_007_eye_58518",
+      "image": "images_train/HQL085_whiskerb250916_007_eye_58518.png",
+      "mask": "masks_train/HQL085_whiskerb250916_007_eye_58518.png",
+      "session": "HQL085_whiskerb250916",
+      "fold": 1,
+      "diameter": 62.85
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_03953",
+      "image": "images_validation/HQL086_sleep250909_011_eye_03953.png",
+      "mask": "masks_validation/HQL086_sleep250909_011_eye_03953.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 80.94
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_08235",
+      "image": "images_train/HQL086_sleep250909_011_eye_08235.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_08235.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 33.4
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_22730",
+      "image": "images_validation/HQL086_sleep250909_011_eye_22730.png",
+      "mask": "masks_validation/HQL086_sleep250909_011_eye_22730.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 16.31
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_25408",
+      "image": "images_train/HQL086_sleep250909_011_eye_25408.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_25408.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 17.66
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_29327",
+      "image": "images_validation/HQL086_sleep250909_011_eye_29327.png",
+      "mask": "masks_validation/HQL086_sleep250909_011_eye_29327.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 16.23
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_29786",
+      "image": "images_train/HQL086_sleep250909_011_eye_29786.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_29786.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 21.73
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_30750",
+      "image": "images_train/HQL086_sleep250909_011_eye_30750.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_30750.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 64.18
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_56784",
+      "image": "images_train/HQL086_sleep250909_011_eye_56784.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_56784.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 16.0
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_57058",
+      "image": "images_train/HQL086_sleep250909_011_eye_57058.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_57058.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 15.39
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_57658",
+      "image": "images_train/HQL086_sleep250909_011_eye_57658.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_57658.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 14.45
+    },
+    {
+      "stem": "HQL086_sleep250909_011_eye_60591",
+      "image": "images_train/HQL086_sleep250909_011_eye_60591.png",
+      "mask": "masks_train/HQL086_sleep250909_011_eye_60591.png",
+      "session": "HQL086_sleep250909",
+      "fold": 3,
+      "diameter": 82.75
+    },
+    {
+      "stem": "HQL086_sleep250912_006_eye_00326",
+      "image": "images_validation/HQL086_sleep250912_006_eye_00326.png",
+      "mask": "masks_validation/HQL086_sleep250912_006_eye_00326.png",
+      "session": "HQL086_sleep250912",
+      "fold": 1,
+      "diameter": 89.23
+    },
+    {
+      "stem": "HQL086_sleep250912_006_eye_01634",
+      "image": "images_train/HQL086_sleep250912_006_eye_01634.png",
+      "mask": "masks_train/HQL086_sleep250912_006_eye_01634.png",
+      "session": "HQL086_sleep250912",
+      "fold": 1,
+      "diameter": 77.74
+    },
+    {
+      "stem": "HQL086_sleep250912_006_eye_49207",
+      "image": "images_train/HQL086_sleep250912_006_eye_49207.png",
+      "mask": "masks_train/HQL086_sleep250912_006_eye_49207.png",
+      "session": "HQL086_sleep250912",
+      "fold": 1,
+      "diameter": 18.68
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_06913",
+      "image": "images_validation/HQL086_whiskerb250923_002_eye_06913.png",
+      "mask": "masks_validation/HQL086_whiskerb250923_002_eye_06913.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 94.76
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_23630",
+      "image": "images_train/HQL086_whiskerb250923_002_eye_23630.png",
+      "mask": "masks_train/HQL086_whiskerb250923_002_eye_23630.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 98.83
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_48481",
+      "image": "images_train/HQL086_whiskerb250923_002_eye_48481.png",
+      "mask": "masks_train/HQL086_whiskerb250923_002_eye_48481.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 88.04
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_49500",
+      "image": "images_train/HQL086_whiskerb250923_002_eye_49500.png",
+      "mask": "masks_train/HQL086_whiskerb250923_002_eye_49500.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 96.35
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_50229",
+      "image": "images_validation/HQL086_whiskerb250923_002_eye_50229.png",
+      "mask": "masks_validation/HQL086_whiskerb250923_002_eye_50229.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 91.49
+    },
+    {
+      "stem": "HQL086_whiskerb250923_002_eye_52440",
+      "image": "images_train/HQL086_whiskerb250923_002_eye_52440.png",
+      "mask": "masks_train/HQL086_whiskerb250923_002_eye_52440.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 80.69
+    },
+    {
+      "stem": "HQL086_whiskerb250923_005_eye_11197",
+      "image": "images_train/HQL086_whiskerb250923_005_eye_11197.png",
+      "mask": "masks_train/HQL086_whiskerb250923_005_eye_11197.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 96.47
+    },
+    {
+      "stem": "HQL086_whiskerb250923_005_eye_34830",
+      "image": "images_validation/HQL086_whiskerb250923_005_eye_34830.png",
+      "mask": "masks_validation/HQL086_whiskerb250923_005_eye_34830.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 99.03
+    },
+    {
+      "stem": "HQL086_whiskerb250923_005_eye_46658",
+      "image": "images_train/HQL086_whiskerb250923_005_eye_46658.png",
+      "mask": "masks_train/HQL086_whiskerb250923_005_eye_46658.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 102.03
+    },
+    {
+      "stem": "HQL086_whiskerb250923_008_eye_25046",
+      "image": "images_train/HQL086_whiskerb250923_008_eye_25046.png",
+      "mask": "masks_train/HQL086_whiskerb250923_008_eye_25046.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 62.97
+    },
+    {
+      "stem": "HQL086_whiskerb250923_008_eye_50170",
+      "image": "images_train/HQL086_whiskerb250923_008_eye_50170.png",
+      "mask": "masks_train/HQL086_whiskerb250923_008_eye_50170.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 60.11
+    },
+    {
+      "stem": "HQL086_whiskerb250923_008_eye_53378",
+      "image": "images_train/HQL086_whiskerb250923_008_eye_53378.png",
+      "mask": "masks_train/HQL086_whiskerb250923_008_eye_53378.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 4,
+      "diameter": 95.06
+    },
+    {
+      "stem": "HQL088_sleep250929_005_eye_04234",
+      "image": "images_train/HQL088_sleep250929_005_eye_04234.png",
+      "mask": "masks_train/HQL088_sleep250929_005_eye_04234.png",
+      "session": "HQL088_sleep250929",
+      "fold": 2,
+      "diameter": 70.57
+    },
+    {
+      "stem": "HQL088_whiskerb251006_008_eye_55068",
+      "image": "images_train/HQL088_whiskerb251006_008_eye_55068.png",
+      "mask": "masks_train/HQL088_whiskerb251006_008_eye_55068.png",
+      "session": "HQL088_whiskerb251006",
+      "fold": 1,
+      "diameter": 107.33
+    },
+    {
+      "stem": "HQL090_sleep251012_003_eye_44690",
+      "image": "images_train/HQL090_sleep251012_003_eye_44690.png",
+      "mask": "masks_train/HQL090_sleep251012_003_eye_44690.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 29.98
+    },
+    {
+      "stem": "HQL090_sleep251012_003_eye_57774",
+      "image": "images_validation/HQL090_sleep251012_003_eye_57774.png",
+      "mask": "masks_validation/HQL090_sleep251012_003_eye_57774.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 16.66
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_02063",
+      "image": "images_train/HQL090_sleep251012_010_eye_02063.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_02063.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 27.57
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_06107",
+      "image": "images_train/HQL090_sleep251012_010_eye_06107.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_06107.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 21.32
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_06588",
+      "image": "images_validation/HQL090_sleep251012_010_eye_06588.png",
+      "mask": "masks_validation/HQL090_sleep251012_010_eye_06588.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 24.12
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_06771",
+      "image": "images_validation/HQL090_sleep251012_010_eye_06771.png",
+      "mask": "masks_validation/HQL090_sleep251012_010_eye_06771.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 17.95
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_06814",
+      "image": "images_train/HQL090_sleep251012_010_eye_06814.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_06814.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 37.59
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_18921",
+      "image": "images_validation/HQL090_sleep251012_010_eye_18921.png",
+      "mask": "masks_validation/HQL090_sleep251012_010_eye_18921.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 16.39
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_40713",
+      "image": "images_train/HQL090_sleep251012_010_eye_40713.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_40713.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 15.96
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_43251",
+      "image": "images_train/HQL090_sleep251012_010_eye_43251.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_43251.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 17.66
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_44600",
+      "image": "images_validation/HQL090_sleep251012_010_eye_44600.png",
+      "mask": "masks_validation/HQL090_sleep251012_010_eye_44600.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 53.9
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_48537",
+      "image": "images_train/HQL090_sleep251012_010_eye_48537.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_48537.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 12.82
+    },
+    {
+      "stem": "HQL090_sleep251012_010_eye_49052",
+      "image": "images_train/HQL090_sleep251012_010_eye_49052.png",
+      "mask": "masks_train/HQL090_sleep251012_010_eye_49052.png",
+      "session": "HQL090_sleep251012",
+      "fold": 2,
+      "diameter": 11.28
+    },
+    {
+      "stem": "HQL090_whiskerb251020_006_eye_04826",
+      "image": "images_train/HQL090_whiskerb251020_006_eye_04826.png",
+      "mask": "masks_train/HQL090_whiskerb251020_006_eye_04826.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 75.69
+    },
+    {
+      "stem": "HQL090_whiskerb251020_006_eye_18617",
+      "image": "images_validation/HQL090_whiskerb251020_006_eye_18617.png",
+      "mask": "masks_validation/HQL090_whiskerb251020_006_eye_18617.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 96.34
+    },
+    {
+      "stem": "HQL090_whiskerb251020_006_eye_31417",
+      "image": "images_train/HQL090_whiskerb251020_006_eye_31417.png",
+      "mask": "masks_train/HQL090_whiskerb251020_006_eye_31417.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 100.44
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_06680",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_06680.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_06680.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 82.22
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_15701",
+      "image": "images_validation/HQL090_whiskerb251020_009_eye_15701.png",
+      "mask": "masks_validation/HQL090_whiskerb251020_009_eye_15701.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 79.56
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_23351",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_23351.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_23351.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 87.66
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_26054",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_26054.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_26054.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 68.99
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_32392",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_32392.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_32392.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 69.78
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_34487",
+      "image": "images_validation/HQL090_whiskerb251020_009_eye_34487.png",
+      "mask": "masks_validation/HQL090_whiskerb251020_009_eye_34487.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 85.24
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_36717",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_36717.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_36717.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 62.63
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_36785",
+      "image": "images_validation/HQL090_whiskerb251020_009_eye_36785.png",
+      "mask": "masks_validation/HQL090_whiskerb251020_009_eye_36785.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 55.59
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_43780",
+      "image": "images_validation/HQL090_whiskerb251020_009_eye_43780.png",
+      "mask": "masks_validation/HQL090_whiskerb251020_009_eye_43780.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 65.07
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_46355",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_46355.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_46355.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 87.61
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_52558",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_52558.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_52558.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 51.1
+    },
+    {
+      "stem": "HQL090_whiskerb251020_009_eye_57908",
+      "image": "images_train/HQL090_whiskerb251020_009_eye_57908.png",
+      "mask": "masks_train/HQL090_whiskerb251020_009_eye_57908.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 4,
+      "diameter": 88.68
+    }
+  ]
+}

@@ -29,7 +29,9 @@ images_validation/
 masks_validation/
 ```
 
-Images and masks must be PNG files whose filenames correspond one-to-one by stem. Keep the validation set independent of the training set. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.  
+Images and masks must be PNG files whose filenames correspond one-to-one by stem. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
+
+**Which of the two folders a file lands in no longer decides the split.** Both pairs are read as one flat pool, and `splits.json` decides what trains and what validates; see [Grouped splits](#grouped-splits) below. The folders are kept because existing local datasets use them. For choosing which frames are worth labelling and how to name them, see [`data_collection.md`](data_collection.md).
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
@@ -57,6 +59,30 @@ python training\labelme_json2png.py
 The script runs `labelme_export_json`, moves each generated `label.png` into the matching mask folder, and removes Labelme's temporary export directory. Existing masks with the same stem are skipped.
 
 Before training, compare the filenames and counts in each image/mask pair. A mask with the wrong image can train without an obvious file error while corrupting the model.
+
+## Grouped splits
+
+A *session* is one recording setting: one animal, one date, one condition. Sessions are
+the unit that must not span the train/validation boundary, because the domain shift that
+breaks this model is rig, camera angle, lighting, and animal state rather than animal
+identity. Recording *files* are too fine a unit — three files from one sitting are one
+setting — and animals are too coarse.
+
+Generate the manifest once, then refresh it whenever labelled data is added:
+
+```powershell
+python training\data_splits.py --data-root . --out splits.json
+python training\data_splits.py --data-root . --show   # census only, writes nothing
+```
+
+It prints a per-session table and a per-fold summary. Existing sessions keep their fold
+when the manifest is regenerated, so adding data does not invalidate earlier results.
+`--reassign` repacks everything and does invalidate them.
+
+Without `--split-manifest`, the trainer falls back to the fixed `images_train` /
+`images_validation` folders. That split shares recordings across the boundary, so its
+IoU measures held-out frames from seen recordings rather than generalisation. Prefer the
+manifest for anything you intend to compare.
 
 ## 2. Inspect augmentation
 
@@ -146,7 +172,37 @@ cases so adapting to one recording does not erase established behavior.
 
 This loads model weights only. It starts a new optimizer, learning-rate scheduler, early-stopping counter, and log, so it is fine-tuning rather than an exact resume of an interrupted training run. Exact resume support would require saving and restoring those states in a structured training checkpoint.
 
-## 5. Review and promote a checkpoint
+## 5. Cross-validate a configuration
+
+Use cross-validation to compare *configurations* — sampling, loss, augmentation,
+architecture. Each fold trains on every other fold and validates on its own held-out
+sessions, so every session is scored exactly once by a model that never saw that
+setting:
+
+```powershell
+python training\run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp\cv
+```
+
+Add `--folds 0 2` to run a subset, and `--seed` to repeat the whole sweep. The driver
+prints a per-fold table, a per-session IoU table, and three summary numbers:
+
+- **mean per-session IoU** — the headline. Averaging over sessions rather than images
+  keeps the largest session from dominating; one session is currently 28% of the pool.
+- **worst session** — usually more actionable than the mean, since it names the setting
+  to label or debug next.
+- **image-weighted IoU** — comparable to the macro IoU this project reported historically.
+
+Two caveats the output surfaces per fold. `balanced_iou` averages only the size bins a
+fold actually contains, so it means different things in different folds and is not
+comparable across them; the `bins scored` column shows which were present. And small
+pupils concentrate in very few sessions, so the fold holding them trains with almost no
+tiny masks — with size-balanced sampling on, that oversamples a handful of images
+heavily.
+
+This is not how the shipped checkpoint is built. Once a configuration wins, retrain it on
+the whole pool and promote that, then gate the result as below.
+
+## 6. Review and promote a checkpoint
 
 Do not automatically place experimental output in `mouse_pupil_analysis/checkpoints/`. First:
 

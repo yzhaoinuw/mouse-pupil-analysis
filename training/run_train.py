@@ -9,6 +9,7 @@ the bottom. Importing the module is side-effect free.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import math
 import random
@@ -34,6 +35,26 @@ DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fi
 
 SIZE_BIN_NAMES = ("tiny", "medium", "large")
 DEVICE_CHOICES = ("auto", "cuda", "mps", "cpu")
+
+
+def _load_data_splits():
+    """Load the sibling split module by path.
+
+    ``reports/scripts`` loads this trainer with ``runpy.run_path``, which does not put
+    ``training/`` on ``sys.path``, so a plain ``import data_splits`` would work as a
+    script and fail from those callers.
+    """
+    path = Path(__file__).resolve().parent / "data_splits.py"
+    spec = importlib.util.spec_from_file_location("training_data_splits", path)
+    module = importlib.util.module_from_spec(spec)
+    # dataclasses resolves string annotations through sys.modules, so the module has to
+    # be registered before it executes or every @dataclass in it raises.
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+data_splits = _load_data_splits()
 
 
 def resolve_device(preference: str = "auto") -> torch.device:
@@ -62,6 +83,8 @@ class TrainingConfig:
     checkpoint_dir: Path = PROJECT_ROOT / "checkpoints_exp"
     run_name: str | None = None
     finetune_checkpoint: Path | None = None
+    split_manifest: Path | None = None
+    fold: int | None = None
     use_attention: bool = True
     batch_size: int = 8
     scratch_learning_rate: float = 1e-3
@@ -95,6 +118,13 @@ class TrainingConfig:
     def __post_init__(self) -> None:
         if self.device not in DEVICE_CHOICES:
             raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
+        if (self.split_manifest is None) != (self.fold is None):
+            raise ValueError(
+                "split_manifest and fold must be given together: a manifest selects the "
+                "grouped split, and fold selects which group is held out."
+            )
+        if self.fold is not None and self.fold < 0:
+            raise ValueError("fold must be nonnegative.")
         if self.batch_size <= 0 or self.n_epochs <= 0:
             raise ValueError("batch_size and n_epochs must be positive.")
         if self.scratch_learning_rate <= 0 or self.finetune_learning_rate <= 0:
@@ -139,6 +169,50 @@ def make_dataset(image_dir: Path, mask_dir: Path, augment: bool = False) -> Segm
     """Build a dataset from a stem-paired image and mask directory."""
     image_paths, mask_paths = paired_image_mask_paths(image_dir, mask_dir)
     return SegmentationDataset(image_paths, mask_paths, augment=augment)
+
+
+def make_split_datasets(
+    config: TrainingConfig,
+) -> tuple[SegmentationDataset, SegmentationDataset]:
+    """Return the ``(train, validation)`` datasets this run's configuration selects.
+
+    With ``split_manifest`` set, both come from the grouped fold assignment in that
+    manifest and no whole session spans the boundary. Without it, the historical fixed
+    ``images_train`` / ``images_validation`` folders are used, which share recordings
+    across the split and therefore measure held-out frames rather than generalisation.
+    """
+    if config.split_manifest is None:
+        return (
+            make_dataset(
+                config.data_root / "images_train",
+                config.data_root / "masks_train",
+                augment=True,
+            ),
+            make_dataset(
+                config.data_root / "images_validation",
+                config.data_root / "masks_validation",
+                augment=False,
+            ),
+        )
+
+    manifest = data_splits.load_manifest(config.split_manifest)
+    train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
+    return (
+        SegmentationDataset(train[0], train[1], augment=True),
+        SegmentationDataset(validation[0], validation[1], augment=False),
+    )
+
+
+def split_description(config: TrainingConfig) -> str:
+    """Return a one-line description of which split a run used."""
+    if config.split_manifest is None:
+        return "fixed images_train/images_validation folders (recordings shared across split)"
+    manifest = data_splits.load_manifest(config.split_manifest)
+    held_out = data_splits.fold_sessions(manifest, config.fold)
+    return (
+        f"{Path(config.split_manifest).name} fold {config.fold}/{manifest['n_folds']}, "
+        f"holding out {len(held_out)} session(s): {', '.join(sorted(held_out))}"
+    )
 
 
 def size_bin_labels(
@@ -289,7 +363,7 @@ def _metric_text(value: float | None) -> str:
 
 def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
     values = asdict(config)
-    for key in ("data_root", "checkpoint_dir", "finetune_checkpoint"):
+    for key in ("data_root", "checkpoint_dir", "finetune_checkpoint", "split_manifest"):
         value = values[key]
         values[key] = None if value is None else str(value)
     return values
@@ -336,7 +410,9 @@ def default_run_name(config: TrainingConfig) -> str:
     learning_rate_text = (
         f"{learning_rate:.0e}".replace("e-0", "e-").replace("e+0", "e").replace("e+", "e")
     )
-    return f"{run_kind}_{sampling}_lr{learning_rate_text}_s{config.seed}"
+    name = f"{run_kind}_{sampling}_lr{learning_rate_text}_s{config.seed}"
+    # Cross-validation runs differ only by fold, so the fold has to reach the folder name.
+    return name if config.fold is None else f"{name}_f{config.fold}"
 
 
 def _write_metadata(
@@ -346,11 +422,13 @@ def _write_metadata(
     epoch: int,
     learning_rate: float,
     training_examples: int,
+    split: str | None = None,
 ) -> None:
     payload = {
         "run_name": path.parent.name,
         "training_mode": training_mode(config),
         "training_examples": training_examples,
+        "split": split,
         "prediction_threshold": report.threshold,
         "best_epoch": epoch,
         "balanced_iou": report.balanced_iou,
@@ -397,11 +475,7 @@ def evaluate_checkpoint(
     config: TrainingConfig,
 ) -> tuple[float, ValidationReport]:
     """Evaluate one checkpoint with the same calibrated validation used in training."""
-    val_dataset = make_dataset(
-        config.data_root / "images_validation",
-        config.data_root / "masks_validation",
-        augment=False,
-    )
+    _, val_dataset = make_split_datasets(config)
     device = resolve_device(config.device)
     val_loader = DataLoader(
         val_dataset,
@@ -433,16 +507,9 @@ def run_training(config: TrainingConfig) -> Path:
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
 
-    train_dataset = make_dataset(
-        config.data_root / "images_train",
-        config.data_root / "masks_train",
-        augment=True,
-    )
-    val_dataset = make_dataset(
-        config.data_root / "images_validation",
-        config.data_root / "masks_validation",
-        augment=False,
-    )
+    train_dataset, val_dataset = make_split_datasets(config)
+    split = split_description(config)
+    print(f"Split: {split}")
 
     training_examples = len(train_dataset)
 
@@ -562,6 +629,7 @@ def run_training(config: TrainingConfig) -> Path:
                     epoch,
                     current_lr,
                     training_examples,
+                    split,
                 )
                 if show_epoch:
                     print("Best model updated.")
@@ -589,7 +657,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         "--data-root",
         type=Path,
         default=Path.cwd(),
-        help="Directory containing images_train, masks_train, images_validation, and masks_validation.",
+        help="Directory holding the image and mask folders, and the root that split-manifest "
+        "paths are resolved against.",
     )
     parser.add_argument(
         "--checkpoint-dir",
@@ -601,6 +670,17 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         "--finetune-checkpoint",
         type=Path,
         help="Compatible .pth weights to fine-tune; omit for fresh training.",
+    )
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        help="Grouped split from training/data_splits.py. Requires --fold. Without it, the "
+        "fixed images_train/images_validation folders are used, which share recordings.",
+    )
+    parser.add_argument(
+        "--fold",
+        type=int,
+        help="Fold held out for validation; every other fold trains. Requires --split-manifest.",
     )
     parser.add_argument(
         "--learning-rate",
@@ -655,6 +735,10 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_dir=checkpoint_dir,
             run_name=args.run_name,
             finetune_checkpoint=args.finetune_checkpoint,
+            split_manifest=(
+                args.split_manifest.resolve() if args.split_manifest is not None else None
+            ),
+            fold=args.fold,
             use_attention=not args.no_attention,
             batch_size=args.batch_size,
             n_epochs=args.epochs,

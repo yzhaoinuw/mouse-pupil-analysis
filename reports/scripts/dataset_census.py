@@ -17,7 +17,7 @@ this splits on structural markers rather than tokenising:
 from __future__ import annotations
 
 import argparse
-import re
+import runpy
 from collections import Counter
 from pathlib import Path
 
@@ -25,17 +25,17 @@ import numpy as np
 
 from mouse_pupil_analysis.augmentation import mask_equivalent_diameter, paired_image_mask_paths
 
-TIMESTAMP = re.compile(r"^(.*?\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+)")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+# One parser, shared with the split generator, so a naming change cannot make the
+# census and the fold assignment disagree about which recording an image came from.
+_splits = runpy.run_path(str(PROJECT_ROOT / "training" / "data_splits.py"))
 
 
 def parse_identity(stem: str) -> tuple[str, str, str]:
     """Return ``(cohort, animal, recording)`` for one image stem."""
-    if stem.startswith("HQL"):
-        return ("HQL", stem.split("_")[0], stem.split("_eye_")[0])
-    match = TIMESTAMP.match(stem)
-    if match:
-        return ("date_id", stem.split("_")[1], match.group(1))
-    return ("unparsed", stem, stem)
+    identity = _splits["parse_identity"](stem)
+    return (identity.cohort, identity.animal, identity.recording)
 
 
 def main(argv: list[str] | None = None) -> int:

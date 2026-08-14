@@ -4,9 +4,9 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - 54 of 56 validation images come from training recordings, so no reported number measures generalization; re-split by recording before any further model comparison.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - built; run the first real cross-validation sweep to establish the generalization baseline.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - `balanced_iou` rests a third of its weight on two validation images and the calibrated threshold varies 0.30-0.65 across seeds; fix both before the next promotion.
-- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; blocked on the re-split above.
+- [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
 
@@ -14,40 +14,58 @@ When a new thread starts, add a short bullet here with a link to its section bel
 
 ## Recording-Grouped Data Splits
 
-Status: measured and documented; the re-split itself is not done
+Status: built; no cross-validation results measured yet
 
-`reports/scripts/dataset_census.py` shows the maintained split leaks almost completely: 54 of
-56 validation images come from a recording that also supplies training images, and there are
-**no validation-only animals** across 10 animals and 24 recordings. Every IoU this project has
-reported therefore measures held-out frames from seen recordings, not generalization to a new
-animal, rig, or condition.
+The old fixed split leaked almost completely: 54 of 56 validation images came from a recording
+that also supplied training images, with **no validation-only animals**. Every IoU this project
+reported before 2026-08-14 therefore measures held-out frames from seen recordings.
+
+`training/data_splits.py` now groups the pool into **sessions** (one animal, one date, one
+condition) and packs whole sessions into folds, recorded in `splits.json`. `training/run_cv.py`
+runs every fold. `training/data_collection.md` documents the labelling and naming policy.
+
+**Settled: the grouping unit is the session.** Not the recording file — same-day siblings like
+`HQL086_whiskerb250923_{002,005,008}` are one sitting with the camera untouched. Not the animal
+— every animal appears in one cohort and mostly one condition, so animal-grouping is nearly
+redundant with session-grouping and only costs training data. The 222 images are **16 sessions**,
+not 25 recordings and not 10 animals. Do not re-litigate; extend `parse_identity` instead if a
+new naming scheme arrives.
+
+Two structural facts that constrain every future comparison:
+
+- The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible. Fold 0 is
+  that session alone; the other four hold 39-41 images. A single fixed holdout is untenable.
+- `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Three of five
+  folds contain no tiny mask at all, so `balanced_iou` averages a different set of bins per fold
+  and cannot be compared across them. Report mean per-session IoU instead; `run_cv.py` prints
+  which bins each fold actually scored.
 
 Next action:
 
-- Re-split the existing 222 images by recording rather than by frame. This costs no new labels,
-  keeps the training-set size, and is the single highest-value change available. Do it before
-  any further model comparison, because every comparison inherits this limitation.
+- Run the first real sweep (`python training/run_cv.py --data-root . --split-manifest splits.json
+  --out checkpoints_exp/cv --epochs 400`) to establish the generalization baseline. Every number
+  this project has published is an interpolation number; this produces the first one that is not.
 
 Then:
 
-- Report with leave-one-animal-out cross-validation rather than one fixed split. Ten animals
-  with a heavy skew (5003 has 46 images, HQL088 has 2) make a fixed holdout expensive;
-  cross-validation uses every image and yields a spread instead of a single number.
-- Hold one or two animals out permanently as a test set touched only at publication.
-- Group by recording rather than animal as the primary unit. Sessions span sleep, whisker,
-  awake, and different lighting; the domain shift that breaks models in practice is condition
-  and rig, not identity, and recording-level grouping captures both.
+- Repeat the sweep at two or three seeds. Cross-validation narrows sampling noise, not seed
+  noise, and the measured seed floor is +/-0.0069.
+- Compare size-balanced against natural sampling on the grouped split. The fold holding
+  `HQL080_sleep250625` out trains on only 2 tiny masks, so balanced sampling oversamples two
+  images to a third of the training mass there - a hazard the old split hid.
 
 ## Model-Selection Metric Fragility
 
 Status: measured; no change made yet. See `reports/2026-08-14-checkpoint-noise-floor.md`.
 
-- **Two images decide a third of the metric.** `balanced_iou` is the mean of the tiny, medium,
-  and large bins, and validation holds exactly 2 tiny masks. More small-pupil labels *in
-  validation* would de-noise selection more than any training change. Small pupils are not a
-  training-data bottleneck: in absolute pixel terms the model is about twice as accurate on
-  them as on medium pupils, and low tiny-bin IoU is a mechanical property of IoU on small
-  objects.
+- **Two images decide a third of the metric, and the tiny bin is really one session.**
+  `balanced_iou` is the mean of the tiny, medium, and large bins; the old validation set held
+  exactly 2 tiny masks, and across the whole pool `HQL080_sleep250625` holds 10 of the 14. So
+  the tiny bin measures one recording setting, not a size regime, and under grouped folds it is
+  absent from three folds of five. Small pupils are not a training-data bottleneck: in absolute
+  pixel terms the model is about twice as accurate on them as on medium pupils, and low
+  tiny-bin IoU is a mechanical property of IoU on small objects. What would actually help is
+  small-pupil labels from a *different* session; more from the same one would not.
 - **The calibrated threshold is not a model property.** Ten runs differing only by seed selected
   thresholds spanning 0.30-0.65, wider than the 0.7 to 0.4 change that moved every user's
   reported diameters by about 6%. Consider shipping a calibration procedure users run on their
@@ -65,7 +83,8 @@ Parked:
 
 ## Segmentation Fine-Tuning And Visibility
 
-Status: promoted candidate's margin shown to be inside seed noise; packaged checkpoint retained
+Status: promoted candidate's margin shown to be inside seed noise; packaged checkpoint retained;
+unblocked now that the grouped split exists
 
 The maintained trainer supports lower-rate weight fine-tuning, equal-mass sampling across
 tiny/medium/large mask bins, per-image macro validation, equal-weighted size-bin early stopping,
@@ -88,9 +107,11 @@ A ten-run seed study on 2026-08-14 (`reports/2026-08-14-checkpoint-noise-floor.m
 
 Next action:
 
-- Re-split by recording ([Recording-grouped data splits](#recording-grouped-data-splits)) before
-  comparing further candidates. Until then no comparison can distinguish a better model from a
-  better fit to the shared recordings.
+- Re-run the fine-tune-versus-scratch comparison on the grouped split, which is now available
+  ([Recording-grouped data splits](#recording-grouped-data-splits)). Note that fine-tuning the
+  packaged weights inside cross-validation leaks: those weights saw all 222 images, so every
+  fold's validation data is already in them. Only a scratch arm is measurable this way; judging
+  the packaged lineage needs the hard-frame gate and genuinely new recordings.
 
 Then:
 

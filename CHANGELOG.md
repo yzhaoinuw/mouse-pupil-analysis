@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Recording-grouped data splits. `training/data_splits.py` groups the labelled pool into
+  *sessions* — one animal, one date, one condition — and packs whole sessions into
+  cross-validation folds, writing the assignment to a `splits.json` manifest.
+  `images_train/` and `images_validation/` are now read as one flat pool, so re-splitting
+  moves no labelled files. `run_train.py` gains `--split-manifest` and `--fold`; without
+  them it keeps the previous fixed-folder behaviour. Adding new data preserves existing
+  fold assignments, so results stay comparable as the dataset grows.
+- `training/run_cv.py`, which runs every fold and reports mean per-session IoU. Averaging
+  over sessions rather than images stops the largest session — currently 28% of the pool —
+  from dominating the headline number.
+- `training/data_collection.md`, documenting which incoming frames are worth labelling,
+  how filenames determine session grouping, and how a labelled batch joins the split.
 - `reports/`, holding dated analyses and the scripts that regenerate their numbers.
   `reports/2026-08-14-checkpoint-noise-floor.md` measures the run-to-run spread of the
   model-selection metric, and `reports/scripts/` provides the seed study, the run summariser,

@@ -4,6 +4,49 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-14
 
+### Build recording-grouped splits and cross-validation (Claude, Opus 5)
+
+- **Chose the session, not the recording file or the animal, as the grouping unit.** The
+  maintainer's argument that identity barely matters here is supported by the data: every
+  animal appears in exactly one cohort and mostly one condition, so animal-grouping is
+  largely redundant with session-grouping and only costs training data. Dropped the
+  "hold animals out permanently for publication" follow-up as not serving this project's goal.
+- **Recording files are too fine a unit, which the earlier plan had wrong.**
+  `HQL086_whiskerb250923_{002,005,008}` are three files from one sitting; splitting them
+  across the boundary leaks the same setting under another name. Six of 25 recording groups
+  are same-day siblings like this. Collapsing on animal+date+condition gives **16 sessions,
+  not 25** — the real count of independent settings behind 222 images.
+- **Two measurements that change how results must be read.** One session (`5003` dim-light,
+  62 images) is 28% of the pool and cannot be subdivided, so fold 0 is 62 images against
+  ~40 for the others and a single fixed holdout is untenable. And `HQL080_sleep250625` holds
+  10 of the 14 tiny masks in the entire dataset — "small-pupil performance" has always meant
+  "performance on that one session", a sharper statement of the `balanced_iou` fragility
+  already recorded. Three of five folds contain no tiny mask at all, so `balanced_iou`
+  averages a different set of bins per fold and is not comparable across them; `run_cv.py`
+  prints which bins each fold actually scored.
+- **Fold assignment is deterministic and stable under additions.** Largest-first bin packing,
+  no seed. Regenerating the manifest keeps existing sessions on their folds and packs only
+  new ones, so a cross-validation number stays comparable as data arrives; `--reassign`
+  repacks and is opt-in. This is the property that makes the manifest worth preserving —
+  it carries the history, and `splits.json` is committed for that reason.
+- Merged `images_train/` and `images_validation/` **logically, in the manifest**, rather than
+  physically. Both are gitignored and are the only copy of the labelled data, so moving files
+  to re-split was not worth the risk; the manifest stores data-root-relative paths instead.
+- Deduplicated `parse_identity`: `reports/scripts/dataset_census.py` now loads it from
+  `training/data_splits.py` so the census and the fold assignment cannot disagree. Confirmed
+  the census still reproduces the published report exactly (54/56, 96%, no validation-only animals).
+- Verification:
+  - `ruff check .`, `black --check .` clean; `pytest -q` 100 passed, including 14 new tests in
+    `tests/test_data_splits.py` covering the grouping rules, fold disjointness, determinism,
+    and the stability-under-addition guarantee.
+  - `python training/data_splits.py --data-root . --show` on the real 222-image pool: 16
+    sessions, folds of 62/40/39/41/40 images.
+  - End-to-end smoke: `run_train.py --split-manifest splits.json --fold 3 --epochs 2` trains
+    and writes metadata; `run_cv.py --folds 2 3 --epochs 1` produces the per-fold and
+    per-session tables and the summary JSON.
+  - No cross-validation results are recorded yet — the runs above were 1-2 epoch plumbing
+    checks, not measurements.
+
 ### Prune next_steps.md back to unfinished work (Claude, Opus 5)
 
 - `next_steps.md` had grown to 474 lines and stopped matching its own governing rule in
