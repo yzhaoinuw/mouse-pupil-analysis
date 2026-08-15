@@ -108,6 +108,23 @@ longer has; that path remains only for a checkout still laid out the old way, su
 `sample_data`, and it shares recordings across the boundary so its IoU measures held-out
 frames rather than generalisation.
 
+### Seeing the folds on disk
+
+The manifest is the record, but it is JSON. To look at the split as folders:
+
+```powershell
+python training\data_splits.py --data-root . --materialize
+```
+
+writes `folds/cv1/`, `folds/cv2/`, ... each with `images/` and `masks/`, plus `holdout/`
+if the manifest sets one. `cvN` holds fold `N-1`. Folds partition the pool, so the whole
+tree is one copy of the dataset; pass `--symlink` for none.
+
+This is **derived output, one way**. The folders are rebuilt from the manifest and never
+read back, so editing them changes nothing and the next `--materialize` overwrites them.
+The manifest stays the record because it is committed and the image folders are not — a
+fresh clone has `splits.json` and `provenance.csv` and no images at all.
+
 ### The holdout gate
 
 Every fold's number feeds configuration choice, so none of them is a clean estimate of

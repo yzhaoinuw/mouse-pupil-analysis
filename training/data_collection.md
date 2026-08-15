@@ -240,6 +240,17 @@ padded mean would encode the crop's aspect ratio as if it were lighting. Across 
 session means span 71 to 157 while the spread *within* a session is 1 to 11, which is
 what makes it usable as a lighting axis.
 
+## Seeing the folds on disk
+
+`python training/data_splits.py --data-root . --materialize` writes `folds/cv1/`,
+`folds/cv2/`, ... each holding `images/` and `masks/`, plus `holdout/` if one is set.
+`cvN` is fold `N-1`.
+
+Derived output, one way: rebuilt from the manifest, never read back, overwritten on the
+next run. Do not add labelled data there — it goes in `labeled_data/`, and the folders
+are regenerated. The manifest remains the record because it is committed while the image
+folders are not, so it is the only part of the split that survives a fresh clone.
+
 ## The holdout gate
 
 Cross-validation chooses configurations. Because every fold's number feeds that choice,

@@ -468,3 +468,48 @@ def test_census_flags_a_batch_fallback_group(tmp_path: Path):
     census = data_splits.format_census(manifest)
     assert "no recorded provenance" in census
     assert "june_dump" in census
+
+
+# --- materialized fold folders ----------------------------------------------------
+
+
+def test_materialize_writes_every_image_into_its_own_fold_folder(pool: Path, tmp_path: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+    out = tmp_path / "folds"
+
+    counts = data_splits.materialize(manifest, pool, out)
+
+    assert sorted(counts) == ["cv1", "cv2", "cv3"]
+    for entry in manifest["images"]:
+        assert (out / f"cv{entry['fold'] + 1}" / "images" / f"{entry['key']}.png").is_file()
+        assert (out / f"cv{entry['fold'] + 1}" / "masks" / f"{entry['key']}.png").is_file()
+
+    # Folds partition the pool: one copy of each image, none duplicated.
+    written = list(out.glob("cv*/images/**/*.png"))
+    assert len(written) == manifest["n_images"]
+
+
+def test_materialize_puts_holdout_in_its_own_folder(pool: Path, tmp_path: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
+    out = tmp_path / "folds"
+
+    counts = data_splits.materialize(manifest, pool, out)
+
+    assert "holdout" in counts
+    held = list((out / "holdout" / "images").rglob("*.png"))
+    assert held and all("rig0_day0" in str(p) for p in held)
+    # The gate must not also appear in a fold.
+    assert not any("rig0_day0" in str(p) for p in out.glob("cv*/images/**/*.png"))
+
+
+def test_materialize_is_regenerated_not_merged(pool: Path, tmp_path: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+    out = tmp_path / "folds"
+    data_splits.materialize(manifest, pool, out)
+
+    stale = out / "cv1" / "images" / "left_over_from_an_older_split.png"
+    stale.write_bytes(b"stale")
+    data_splits.materialize(manifest, pool, out)
+
+    # These folders are derived output, so a rebuild must not preserve anything.
+    assert not stale.exists()

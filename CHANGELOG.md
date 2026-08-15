@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
   identical band coverage.
+- `data_splits.py --materialize`, which writes the fold assignment to disk as
+  `folds/cv1/`, `folds/cv2/`, ... each with `images/` and `masks/` (and `holdout/` where
+  set), so the split can be inspected as folders rather than JSON. Derived output: rebuilt
+  from the manifest, never read back, overwritten on each run. The manifest stays the
+  record because it is committed and the image folders are not. `--symlink` avoids the
+  copy, though folds partition the pool so the tree is one copy of the dataset either way.
 - A holdout gate. `data_splits.py --holdout SESSION` sets sessions aside from every fold,
   and `run_train.py --final` trains on everything else and validates against them — the
   only number in the project measured on data the training procedure was never tuned on.

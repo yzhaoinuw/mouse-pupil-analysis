@@ -6,6 +6,13 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Built `--materialize`, which writes the folds to disk as `folds/cv1..cvN`.** The
+  maintainer asked for this in their first message; I argued against it (the folders are
+  gitignored, so folds-on-disk would not survive a fresh clone), offered `--materialize` as
+  the resolution in the same reply, and then never built it. Dropped twice over the session
+  along with the `labeled_data/` merge. The objection was never a reason not to build it --
+  it is a reason the *manifest* stays the record, which the one-way derivation preserves.
+  **Check dropped offers against the original ask before declaring a build finished.**
 - **Merged the four pool folders into one flat `labeled_data/` + `labeled_masks/`.** The
   maintainer proposed this at the start of the session; I agreed and then dropped it when
   summarising the design, and it went unbuilt for the whole build. Caught on review. The
