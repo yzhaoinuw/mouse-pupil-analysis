@@ -9,18 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Recording-grouped data splits. `training/data_splits.py` groups the labelled pool into
-  *sessions* — one animal, one date, one condition — and packs whole sessions into
-  cross-validation folds, writing the assignment to a `splits.json` manifest.
+- Recording-grouped, condition-stratified data splits. `training/data_splits.py` groups the
+  labelled pool into *sessions* — one animal, one date, one condition — and packs whole
+  sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.
   `images_train/` and `images_validation/` are now read as one flat pool, so re-splitting
   moves no labelled files. `run_train.py` gains `--split-manifest` and `--fold`; without
-  them it keeps the previous fixed-folder behaviour. Adding new data preserves existing
-  fold assignments, so results stay comparable as the dataset grows.
+  them it keeps the previous fixed-folder behaviour. Grouping is worth 0.25 IoU against a
+  0.02 seed noise floor: copying a nearest neighbour's mask scores 0.652 when the neighbour
+  shares a session and 0.399 when it does not.
+- Session identity is *recorded at intake, never inferred* (`training/provenance.py`). It
+  comes from an intake subfolder, a `session` flag in the labelme JSON, or a
+  `provenance.csv` sidecar, in that order of precedence; anything unresolved collapses into
+  a single over-merged group, which costs data efficiency but cannot leak. No filename is
+  parsed. Once an image is in the manifest its session and fold are frozen, and a
+  provenance source that later contradicts the record raises instead of silently repacking.
+  Recovering the grouping from the images was tested and does not work — crop geometry
+  splits 6 of 16 sessions, and agglomerative clustering on preprocessed frames tears 3 at
+  k=5 and 6 at k=10.
+- Fold stratification on pupil size and lighting. Sessions are banded by median mask
+  diameter and by median background brightness (new
+  `mouse_pupil_analysis.augmentation.image_background_brightness`), and a new session
+  prefers a fold holding no session of its diameter band, then the smallest fold.
+  Grouping alone had left a 3.03x spread in median diameter across folds with only 2 of 5
+  containing any small mask; it is now 1.78x and 4 of 5. Letting only the *absence* of a
+  band outrank fold size is what makes one rule work both when packing from scratch and
+  when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
+  sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
+  identical band coverage.
+- A holdout gate. `data_splits.py --holdout SESSION` sets sessions aside from every fold,
+  and `run_train.py --final` trains on everything else and validates against them — the
+  only number in the project measured on data the training procedure was never tuned on.
 - `training/run_cv.py`, which runs every fold and reports mean per-session IoU. Averaging
   over sessions rather than images stops the largest session — currently 28% of the pool —
   from dominating the headline number.
 - `training/data_collection.md`, documenting which incoming frames are worth labelling,
-  how filenames determine session grouping, and how a labelled batch joins the split.
+  how to record the session a batch came from, and how a labelled batch joins the split.
 - `reports/`, holding dated analyses and the scripts that regenerate their numbers.
   `reports/2026-08-14-checkpoint-noise-floor.md` measures the run-to-run spread of the
   model-selection metric, and `reports/scripts/` provides the seed study, the run summariser,

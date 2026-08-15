@@ -4,6 +4,79 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-14
 
+### Record provenance at intake and stratify the folds (Claude, Opus 5)
+
+- **The maintainer challenged filename-derived grouping: what happens when incoming images
+  follow a different convention, or none?** Fair, and the answer was not a better parser.
+  Tested whether session identity can be recovered from the data instead of a name, against
+  the 222 images whose sessions were already known. All three methods fail in the *dangerous*
+  direction — tearing one session across clusters, which is exactly the leak grouping exists
+  to prevent:
+
+  | method | result |
+  | --- | --- |
+  | crop geometry (exact) | 6 of 16 sessions span 2-3 crop boxes |
+  | masked-thumbnail correlation + connected components | no threshold gives usable groups; chains to 219/222 in one blob |
+  | agglomerative clustering (average/complete linkage) on preprocessed frames | 3 sessions torn at k=5, 6 at k=10 |
+  | file mtime | uniform, destroyed by copying |
+
+  Cause: the images are 150-283px crops around an eye, so the cage, headplate and rig framing
+  that would fingerprint a recording were cropped away before anything sees them.
+  **Do not retry this without new evidence.** Probes are in the session scratchpad; the
+  numbers are summarised in `training/data_collection.md`.
+- **Grouping is worth 0.25 IoU and stratifying does not substitute for it.** Nearest-neighbour
+  mask transfer: 0.652 IoU when the neighbour comes from the same session, 0.399 from a
+  different one, against a 0.02 seed noise floor. The control settles what drives it — matching
+  on closest *pupil diameter* from another session recovers only 0.434, so the advantage is the
+  setting, not the pupil. Also refuted the hypothesis that `resize_with_pad` normalises sessions
+  away: after the real preprocessing, within-session image correlation is 0.741 against 0.192
+  between, wider than on the raw crops.
+- **Session identity is now recorded, never derived** (`training/provenance.py`). Precedence:
+  frozen manifest > `provenance.csv` sidecar > labelme `flags.session` > intake subfolder >
+  single batch fallback. Over-merging costs data efficiency; tearing leaks — so the fallback
+  collapses everything unresolved into one group, and a pool with no provenance at all fails
+  loudly rather than splitting badly. Once an image is in the manifest its session and fold are
+  frozen; a source that later disagrees raises instead of silently repacking, which was a real
+  hole in the previous design (a `parse_identity` change would have shifted every session key
+  and repacked the whole pool while printing only "0 carried over").
+- **Stratified the folds on pupil size and lighting**, which the maintainer pushed for and the
+  data backed. The first grouped split left 3 of 5 folds with no small pupil and a 3.03x spread
+  in median diameter — so fold-to-fold variance was mostly a story about which size regime
+  landed where. Banding sessions by median diameter and median background brightness and packing
+  new sessions into the fold thinnest in their bands gives 1.78x and 4 of 5 folds with tiny
+  masks. Bands are kept *separate* rather than crossed: crossing them fragments the small-pupil
+  sessions into different combined strata, they stop repelling each other, and they pile back
+  into two folds.
+- **The maintainer's packing suggestion beat mine and is now the rule.** I proposed a size
+  "guard" (a tier penalising oversized folds); tested, it moved three images and cost a fold
+  its full band coverage — dead end. The maintainer's framing was simpler: send new data to
+  the emptiest fold. Tested three rules against both regimes, and the winner is *coverage-
+  first* — only the **absence** of a diameter band outranks fold size:
+
+  | rule | migration: med_d spread / tiny / all-3-bands | incremental (10 new): median / worst size spread |
+  | --- | --- | --- |
+  | band count throughout | 1.74x / 4-of-5 / 5-of-5 | 1.33x / 2.05x |
+  | size throughout | 4.51x / 2-of-5 / 2-of-5 | 1.15x / 1.25x |
+  | absence-of-band, then size | 1.74x / 4-of-5 / 5-of-5 | 1.15x / 1.25x |
+
+  Strictly dominant, no trade-off. Coverage fires only while folds are empty, which is
+  precisely when stratification is needed; once populated, size leads. Also worth recording:
+  **fold-size imbalance is self-correcting** — the current 1.91x falls to ~1.35x after five
+  new sessions under any rule. The residual is the indivisible 62-image session, which no
+  packing rule can touch. Regenerating produced a byte-identical assignment, so nothing moved.
+- **Brightness is measured outside the mask on the original image**, not the padded model input.
+  `resize_with_pad` fills with black, so a padded mean would encode the crop's aspect ratio as
+  if it were lighting. Session means span 71-157 with within-session spread of 1-11.
+- **Added a holdout gate** (`--holdout` / `run_train.py --final`): sessions in no fold, trained
+  on never. Corrected the maintainer's framing from holding out *mice* to holding out
+  *conditions* — animal identity is the axis this project already established does not matter.
+  None is set by default: two sessions is 15-27% of a 222-image pool, and that is the
+  maintainer's call to make.
+- `reports/scripts/dataset_census.py` now reads sessions from the manifest instead of importing
+  the deleted `parse_identity`. It reports at session level only; its animal and cohort
+  breakdowns were themselves filename-derived. It confirms the legacy fixed-folder split was
+  **100% leaked** — all 56 validation images share a session with training.
+
 ### Build recording-grouped splits and cross-validation (Claude, Opus 5)
 
 - **Chose the session, not the recording file or the animal, as the grouping unit.** The

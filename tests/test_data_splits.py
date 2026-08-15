@@ -1,9 +1,11 @@
-"""Coverage for recording-grouped splitting.
+"""Coverage for stratified, recording-grouped splitting.
 
-The failure this guards against is silent: a split that looks grouped but still puts
-two files from one sitting on opposite sides of the boundary reports a generalisation
-number that is really an interpolation number. Nothing raises when that happens, so
-the grouping rules and the stability guarantee are pinned explicitly here.
+Two failures are guarded here and both are silent. A split that looks grouped but
+still puts two frames from one sitting on opposite sides of the boundary reports an
+interpolation number as if it were a generalisation number -- worth 0.25 IoU on this
+pool against a 0.02 noise floor. And a manifest that quietly re-derives its own
+grouping can move an image between folds when a provenance source changes, which
+invalidates every previously recorded run without raising anything.
 """
 
 import importlib.util
@@ -18,101 +20,182 @@ from PIL import Image
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _load_data_splits():
-    path = PROJECT_ROOT / "training" / "data_splits.py"
-    spec = importlib.util.spec_from_file_location("training_data_splits_test", path)
+def _load(name: str):
+    path = PROJECT_ROOT / "training" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"training_{name}_test", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
 
-data_splits = _load_data_splits()
+data_splits = _load("data_splits")
+provenance = _load("provenance")
 
 
-# Real stems from the maintained dataset, one per naming scheme.
-HQL_STEM = "HQL080_whiskerb_250722_007_eye_06622"
-DATE_STEM = "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000"
+def _write_pair(
+    root: Path,
+    stem: str,
+    radius: int,
+    split: str = "train",
+    session: str | None = None,
+    grey: int = 100,
+    labelme_session: str | None = None,
+) -> Path:
+    """Write one image/mask pair, optionally inside an intake subfolder.
 
+    ``grey`` sets the background level the brightness feature reads, and ``radius``
+    sets the mask's equivalent diameter, so a test can place a pair in a chosen
+    stratum on purpose.
+    """
+    image_dir = root / f"images_{split}" / (session or "")
+    mask_dir = root / f"masks_{split}" / (session or "")
+    image_dir.mkdir(parents=True, exist_ok=True)
+    mask_dir.mkdir(parents=True, exist_ok=True)
 
-def _write_pair(root: Path, split: str, stem: str, radius: int) -> None:
-    """Write one image/mask pair with a mask of a known size."""
-    (root / f"images_{split}").mkdir(parents=True, exist_ok=True)
-    (root / f"masks_{split}").mkdir(parents=True, exist_ok=True)
-    Image.fromarray(np.zeros((60, 60), dtype=np.uint8)).save(root / f"images_{split}/{stem}.png")
+    Image.fromarray(np.full((60, 60), grey, dtype=np.uint8)).save(image_dir / f"{stem}.png")
 
     mask = np.zeros((60, 60), dtype=np.uint8)
     grid_y, grid_x = np.ogrid[:60, :60]
     mask[(grid_y - 30) ** 2 + (grid_x - 30) ** 2 <= radius**2] = 255
-    Image.fromarray(mask).save(root / f"masks_{split}/{stem}.png")
+    Image.fromarray(mask).save(mask_dir / f"{stem}.png")
+
+    if labelme_session is not None:
+        (image_dir / f"{stem}.json").write_text(
+            json.dumps({"flags": {"session": labelme_session}}), encoding="utf-8"
+        )
+    return image_dir / f"{stem}.png"
+
+
+def _sessions(root: Path, sidecar=None, batch_name="unknown_batch"):
+    """Group a pool without packing folds, so provenance can be tested on its own.
+
+    Fold packing needs at least as many sessions as folds, which gets in the way of
+    checking cases that deliberately collapse to a single group.
+    """
+    images, located = data_splits.discover_pool(root)
+    resolved = provenance.resolve(located, sidecar=sidecar, batch_name=batch_name)
+    return data_splits.group_sessions(images, resolved)
 
 
 @pytest.fixture
 def pool(tmp_path: Path) -> Path:
-    """Six sessions spread across both naming schemes and both pool folders."""
-    for index in range(4):
-        _write_pair(tmp_path, "train", f"HQL0{index}0_sleep2506{index}0_003_eye_0000{index}", 10)
-        _write_pair(tmp_path, "train", f"HQL0{index}0_sleep2506{index}0_007_eye_0000{index}", 10)
-    # Same session as the first pair above, but sitting in the validation folder.
-    _write_pair(tmp_path, "validation", "HQL000_sleep250600_009_eye_00009", 10)
-    _write_pair(tmp_path, "train", DATE_STEM, 20)
-    _write_pair(tmp_path, "validation", "250616_5120_P_sleep_2025-06-16T16-31-19.701_0000", 20)
+    """Six sessions recorded as intake folders, spanning both pool directories.
+
+    Radii and greys are chosen so the sessions land in different diameter and
+    brightness bands rather than all collapsing into one stratum.
+    """
+    for index in range(5):
+        session = f"rig{index}_day{index}"
+        for frame in range(3):
+            _write_pair(
+                tmp_path,
+                f"anything_at_all_{index}_{frame}",
+                radius=4 + 4 * index,
+                session=session,
+                grey=40 + 40 * index,
+            )
+    # A sixth session whose frames are split across both pool folders.
+    _write_pair(tmp_path, "split_a", radius=10, session="rig9_day9", grey=120)
+    _write_pair(tmp_path, "split_b", radius=10, split="validation", session="rig9_day9", grey=120)
     return tmp_path
 
 
-def test_hql_recording_files_from_one_sitting_share_a_session():
-    first = data_splits.parse_identity("HQL086_whiskerb250923_002_eye_01234")
-    second = data_splits.parse_identity("HQL086_whiskerb250923_008_eye_09999")
-
-    assert first.recording != second.recording
-    assert first.session == second.session == "HQL086_whiskerb250923"
-    assert first.animal == "HQL086"
+# --- provenance sources ----------------------------------------------------------
 
 
-def test_date_id_recordings_from_one_day_share_a_session():
-    first = data_splits.parse_identity(DATE_STEM)
-    second = data_splits.parse_identity(
-        "250530_5003_Green_Training_very_dm_light_2025-05-30T11-02-03.500_0042"
-    )
-
-    assert first.recording != second.recording
-    assert first.session == second.session == "250530_5003_Green_Training_very_dm_light"
-    assert first.animal == "5003"
-    assert first.cohort == "date_id"
-
-
-def test_different_dates_are_different_sessions():
-    september = data_splits.parse_identity("HQL086_sleep250909_011_eye_0001")
-    december = data_splits.parse_identity("HQL086_sleep250912_006_eye_0001")
-
-    assert september.session != december.session
-
-
-def test_unrecognised_names_become_their_own_session():
-    identity = data_splits.parse_identity("some_new_camera_export_frame7")
-
-    # Over-separating is safe; silently merging two settings is not.
-    assert identity.cohort == "unparsed"
-    assert identity.session == "some_new_camera_export_frame7"
-
-
-def test_pool_spans_both_folders_and_no_session_crosses_a_fold(pool: Path):
+def test_intake_folder_names_the_session_whatever_the_file_is_called(pool: Path):
     manifest = data_splits.build_manifest(pool, n_folds=3)
 
-    assert manifest["n_images"] == 11
+    sessions = {entry["session"] for entry in manifest["sessions"]}
+    assert "rig0_day0" in sessions
+    assert all(entry["source"] == "folder" for entry in manifest["sessions"])
+    # Nothing about the stems themselves carries the grouping.
     assert manifest["n_sessions"] == 6
+
+
+def test_sidecar_outranks_folder_and_labelme(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="folder_says", labelme_session="flag_says")
+
+    sessions = _sessions(tmp_path, sidecar={"folder_says/frame1": "sidecar_says"})
+    assert set(sessions) == {"sidecar_says"}
+    assert sessions["sidecar_says"].source == "sidecar"
+
+
+def test_labelme_flag_outranks_the_folder(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="folder_says", labelme_session="flag_says")
+
+    sessions = _sessions(tmp_path)
+    assert set(sessions) == {"flag_says"}
+    assert sessions["flag_says"].source == "labelme"
+
+
+def test_images_with_no_recorded_provenance_become_one_group(tmp_path: Path):
+    for index in range(6):
+        _write_pair(tmp_path, f"mystery_{index}", radius=6 + index)
+
+    # Over-merging is the safe failure: one group cannot straddle the boundary.
+    sessions = _sessions(tmp_path, batch_name="june_dump")
+    assert set(sessions) == {"june_dump"}
+    assert sessions["june_dump"].source == "batch"
+    assert sessions["june_dump"].n_images == 6
+
+
+def test_a_pool_with_no_provenance_at_all_cannot_be_folded(tmp_path: Path):
+    for index in range(6):
+        _write_pair(tmp_path, f"mystery_{index}", radius=6 + index)
+
+    # The cost of the safe fallback, made loud: one group is not five folds. This is
+    # the pressure to record the session at intake rather than a pipeline failure.
+    with pytest.raises(ValueError, match="from 1 non-holdout sessions"):
+        data_splits.build_manifest(tmp_path, n_folds=2, batch_name="june_dump")
+
+
+def test_two_unknown_batches_merge_when_given_the_same_name(tmp_path: Path):
+    _write_pair(tmp_path, "first", radius=8)
+    _write_pair(tmp_path, "second", radius=9)
+
+    sessions = _sessions(tmp_path, batch_name="same_rig")
+    assert set(sessions) == {"same_rig"}
+    assert sessions["same_rig"].n_images == 2
+
+
+def test_malformed_labelme_json_falls_through_rather_than_raising(tmp_path: Path):
+    image = _write_pair(tmp_path, "frame1", radius=8, session="folder_says")
+    image.with_suffix(".json").write_text("{not json at all", encoding="utf-8")
+
+    assert set(_sessions(tmp_path)) == {"folder_says"}
+
+
+def test_sidecar_round_trips_through_csv_and_json(tmp_path: Path):
+    mapping = {"a": "session_one", "b": "session_two"}
+    for name in ("provenance.csv", "provenance.json"):
+        path = tmp_path / name
+        provenance.write_sidecar(path, mapping)
+        assert provenance.load_sidecar(path) == mapping
+
+
+def test_sidecar_with_a_blank_session_is_rejected(tmp_path: Path):
+    path = tmp_path / "provenance.csv"
+    path.write_text("key,session\nframe1,\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="leaves the session blank"):
+        provenance.load_sidecar(path)
+
+
+# --- grouping and the freeze guarantee --------------------------------------------
+
+
+def test_no_session_is_split_across_folds(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
 
     fold_of_session = {entry["session"]: entry["fold"] for entry in manifest["sessions"]}
     for entry in manifest["images"]:
         assert entry["fold"] == fold_of_session[entry["session"]]
 
-    # The HQL000 session has images in both images_train and images_validation.
-    split_session = [e for e in manifest["images"] if e["session"] == "HQL000_sleep250600"]
-    assert {Path(e["image"]).parent.name for e in split_session} == {
-        "images_train",
-        "images_validation",
-    }
-    assert len({e["fold"] for e in split_session}) == 1
+    across = [e for e in manifest["images"] if e["session"] == "rig9_day9"]
+    assert {Path(e["image"]).parts[0] for e in across} == {"images_train", "images_validation"}
+    assert len({e["fold"] for e in across}) == 1
 
 
 def test_every_fold_is_used_and_folds_partition_the_pool(pool: Path):
@@ -138,28 +221,47 @@ def test_fold_assignment_is_deterministic(pool: Path):
 
 def test_adding_a_session_leaves_existing_assignments_untouched(pool: Path):
     before = data_splits.build_manifest(pool, n_folds=3)
-    existing = {entry["session"]: entry["fold"] for entry in before["sessions"]}
+    was = {entry["session"]: entry["fold"] for entry in before["sessions"]}
 
-    _write_pair(pool, "train", "HQL999_whiskerb260101_001_eye_00001", 12)
-    after = data_splits.build_manifest(pool, n_folds=3, existing=existing)
+    _write_pair(pool, "brand_new", radius=11, session="rig7_day7")
+    after = data_splits.build_manifest(pool, n_folds=3, previous=before)
 
-    unchanged = {
-        entry["session"]: entry["fold"]
-        for entry in after["sessions"]
-        if entry["session"] in existing
-    }
-    assert unchanged == existing
-    assert any(entry["session"] == "HQL999_whiskerb260101" for entry in after["sessions"])
+    unchanged = {e["session"]: e["fold"] for e in after["sessions"] if e["session"] in was}
+    assert unchanged == was
+    assert any(entry["session"] == "rig7_day7" for entry in after["sessions"])
 
 
-def test_reassigning_without_history_may_repack(pool: Path):
+def test_a_new_image_joins_the_fold_its_session_already_has(pool: Path):
     before = data_splits.build_manifest(pool, n_folds=3)
-    _write_pair(pool, "train", "HQL999_whiskerb260101_001_eye_00001", 12)
-    fresh = data_splits.build_manifest(pool, n_folds=3, existing=None)
+    existing_fold = next(e["fold"] for e in before["sessions"] if e["session"] == "rig0_day0")
 
-    # Not an assertion about *which* folds move -- only that a repack is unconstrained
-    # by history, which is why --reassign is opt-in.
-    assert fresh["n_sessions"] == before["n_sessions"] + 1
+    _write_pair(pool, "late_arrival", radius=4, session="rig0_day0", grey=40)
+    after = data_splits.build_manifest(pool, n_folds=3, previous=before)
+
+    added = next(e for e in after["images"] if e["key"].endswith("late_arrival"))
+    assert added["session"] == "rig0_day0"
+    assert added["fold"] == existing_fold
+
+
+def test_a_changed_provenance_source_raises_instead_of_repacking(pool: Path):
+    before = data_splits.build_manifest(pool, n_folds=3)
+
+    # Someone edits the sidecar and reassigns an image that is already recorded.
+    key = before["images"][0]["key"]
+    with pytest.raises(ValueError, match="already recorded under a different session"):
+        data_splits.build_manifest(
+            pool, n_folds=3, previous=before, sidecar={key: "somewhere_else"}
+        )
+
+
+def test_reassign_repacks_deliberately(pool: Path):
+    before = data_splits.build_manifest(pool, n_folds=3)
+    key = before["images"][0]["key"]
+
+    after = data_splits.build_manifest(
+        pool, n_folds=3, previous=before, sidecar={key: "somewhere_else"}, reassign=True
+    )
+    assert "somewhere_else" in {entry["session"] for entry in after["sessions"]}
 
 
 def test_more_folds_than_sessions_is_rejected(pool: Path):
@@ -168,21 +270,169 @@ def test_more_folds_than_sessions_is_rejected(pool: Path):
 
 
 def test_duplicate_stem_across_pool_folders_is_rejected(pool: Path):
-    _write_pair(pool, "validation", DATE_STEM, 20)
+    _write_pair(pool, "split_a", radius=10, split="validation", session="rig9_day9", grey=120)
 
     with pytest.raises(ValueError, match="appears in both"):
         data_splits.build_manifest(pool, n_folds=3)
 
 
+def test_two_intake_folders_may_reuse_the_same_filenames(tmp_path: Path):
+    # The whole point of intake folders is that filenames need not be unique, and
+    # per-recording exports routinely restart numbering at frame_0001.
+    for session in ("rig1_day1", "rig2_day2"):
+        for frame in range(3):
+            _write_pair(tmp_path, f"frame_{frame:04d}", radius=8, session=session)
+
+    manifest = data_splits.build_manifest(tmp_path, n_folds=2)
+
+    assert manifest["n_images"] == 6
+    assert {e["session"] for e in manifest["sessions"]} == {"rig1_day1", "rig2_day2"}
+    assert "rig1_day1/frame_0000" in {e["key"] for e in manifest["images"]}
+    # Same filename, two sessions, two distinct keys, and they may not share a fold.
+    same_name = [e for e in manifest["images"] if e["key"].endswith("frame_0000")]
+    assert len(same_name) == 2
+    assert len({e["session"] for e in same_name}) == 2
+
+
+def test_the_same_pair_in_both_pool_folders_is_still_rejected(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
+    _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
+    _write_pair(tmp_path, "frame1", radius=8, split="validation", session="rig1_day1")
+
+    with pytest.raises(ValueError, match="appears in both"):
+        data_splits.build_manifest(tmp_path, n_folds=2)
+
+
+def test_a_flat_mask_folder_still_pairs_with_nested_images(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
+    _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
+    # Move one mask out of its mirrored subfolder into the flat mask root.
+    nested = tmp_path / "masks_train" / "rig1_day1" / "frame1.png"
+    nested.rename(tmp_path / "masks_train" / "frame1.png")
+    nested.parent.rmdir()
+
+    manifest = data_splits.build_manifest(tmp_path, n_folds=2)
+    masks = {e["key"]: e["mask"] for e in manifest["images"]}
+    assert masks["rig1_day1/frame1"] == "masks_train/frame1.png"
+    assert masks["rig2_day2/frame2"] == "masks_train/rig2_day2/frame2.png"
+
+
+def test_an_image_with_no_mask_is_rejected(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
+    (tmp_path / "masks_train" / "rig1_day1" / "frame1.png").unlink()
+
+    with pytest.raises(FileNotFoundError, match="No mask for"):
+        data_splits.build_manifest(tmp_path, n_folds=2)
+
+
+# --- stratification ---------------------------------------------------------------
+
+
+def test_diameter_bands_are_spread_across_folds_rather_than_concentrated(tmp_path: Path):
+    # Nine sessions, three per diameter band. A grouped-but-unstratified packing can
+    # put every small session in one fold; this is what stops that.
+    for index in range(9):
+        radius = 4 + (index % 3) * 8
+        for frame in range(2):
+            _write_pair(
+                tmp_path,
+                f"s{index}_f{frame}",
+                radius=radius,
+                session=f"rig{index}",
+                grey=50 + (index % 3) * 50,
+            )
+
+    manifest = data_splits.build_manifest(tmp_path, n_folds=3)
+
+    per_fold = {}
+    for entry in manifest["sessions"]:
+        per_fold.setdefault(entry["fold"], []).append(entry["stratum"][:2])
+    for fold, bands in per_fold.items():
+        assert len(set(bands)) == 3, f"fold {fold} covers only {set(bands)}"
+
+
+def test_manifest_records_the_features_it_stratified_on(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+
+    assert manifest["stratified_by"] == ["median_diameter", "median_brightness"]
+    assert set(manifest["stratum_cutpoints"]) == {"diameter", "brightness"}
+    for entry in manifest["images"]:
+        assert entry["diameter"] > 0
+        assert 0 <= entry["brightness"] <= 255
+
+
+def test_brightness_tracks_the_background_not_the_pupil(tmp_path: Path):
+    from mouse_pupil_analysis.augmentation import image_background_brightness
+
+    _write_pair(tmp_path, "dim", radius=6, session="a", grey=40)
+    _write_pair(tmp_path, "bright", radius=20, session="b", grey=200)
+
+    dim = image_background_brightness(
+        tmp_path / "images_train/a/dim.png", tmp_path / "masks_train/a/dim.png"
+    )
+    bright = image_background_brightness(
+        tmp_path / "images_train/b/bright.png", tmp_path / "masks_train/b/bright.png"
+    )
+    # The bright image has the far larger pupil, so a whole-frame mean would narrow
+    # the gap; excluding the mask keeps this a measure of lighting.
+    assert dim == pytest.approx(40, abs=1)
+    assert bright == pytest.approx(200, abs=1)
+
+
+# --- the holdout gate -------------------------------------------------------------
+
+
+def test_holdout_sessions_appear_in_no_fold(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
+
+    gate = [e for e in manifest["sessions"] if e["session"] == "rig0_day0"][0]
+    assert gate["holdout"] is True
+    assert gate["fold"] == data_splits.HOLDOUT_FOLD
+
+    for fold in range(3):
+        (train_images, _), (val_images, _) = data_splits.fold_paths(manifest, fold, pool)
+        seen = {p.parent.name for p in train_images} | {p.parent.name for p in val_images}
+        assert "rig0_day0" not in seen
+
+
+def test_final_run_trains_on_everything_else_and_validates_on_the_gate(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
+    (train_images, _), (gate_images, _) = data_splits.final_paths(manifest, pool)
+
+    assert {p.parent.name for p in gate_images} == {"rig0_day0"}
+    assert "rig0_day0" not in {p.parent.name for p in train_images}
+    assert len(train_images) + len(gate_images) == manifest["n_images"]
+
+
+def test_holdout_survives_a_later_regeneration(pool: Path):
+    before = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
+    _write_pair(pool, "newcomer", radius=9, session="rig8_day8")
+    after = data_splits.build_manifest(pool, n_folds=3, previous=before)
+
+    assert data_splits.holdout_sessions(after) == ["rig0_day0"]
+
+
+def test_a_manifest_with_no_holdout_refuses_a_final_run(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+
+    with pytest.raises(ValueError, match="sets no holdout"):
+        data_splits.final_paths(manifest, pool)
+
+
+def test_holdout_naming_a_missing_session_is_rejected(pool: Path):
+    with pytest.raises(ValueError, match="no such session"):
+        data_splits.build_manifest(pool, n_folds=3, holdout={"never_existed"})
+
+
+# --- manifest I/O -----------------------------------------------------------------
+
+
 def test_manifest_round_trips_and_rejects_an_unknown_schema(pool: Path, tmp_path: Path):
     manifest = data_splits.build_manifest(pool, n_folds=3)
-    path = tmp_path / "splits.json"
+    path = tmp_path / "written.json"
     data_splits.write_manifest(path, manifest)
 
     assert data_splits.load_manifest(path) == manifest
-    assert data_splits.existing_assignment(path) == {
-        entry["session"]: entry["fold"] for entry in manifest["sessions"]
-    }
 
     manifest["schema"] = 99
     path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -190,13 +440,29 @@ def test_manifest_round_trips_and_rejects_an_unknown_schema(pool: Path, tmp_path
         data_splits.load_manifest(path)
 
 
-def test_existing_assignment_of_a_missing_file_is_empty(tmp_path: Path):
-    assert data_splits.existing_assignment(tmp_path / "absent.json") == {}
+def test_a_schema_one_manifest_points_at_the_migration(pool: Path, tmp_path: Path):
+    path = tmp_path / "old.json"
+    path.write_text(json.dumps({"schema": 1, "images": [], "sessions": []}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="--migrate-from"):
+        data_splits.load_manifest(path)
 
 
 def test_session_lookup_covers_every_image(pool: Path):
     manifest = data_splits.build_manifest(pool, n_folds=3)
-    lookup = data_splits.session_of_stem(manifest)
+    lookup = data_splits.session_of_key(manifest)
 
     assert len(lookup) == manifest["n_images"]
-    assert lookup[DATE_STEM] == "250530_5003_Green_Training_very_dm_light"
+    assert lookup["rig9_day9/split_a"] == "rig9_day9"
+
+
+def test_census_flags_a_batch_fallback_group(tmp_path: Path):
+    for index in range(4):
+        _write_pair(tmp_path, f"mystery_{index}", radius=6 + index)
+    _write_pair(tmp_path, "known_a", radius=9, session="rig1_day1")
+    _write_pair(tmp_path, "known_b", radius=14, session="rig2_day2")
+    manifest = data_splits.build_manifest(tmp_path, n_folds=2, batch_name="june_dump")
+
+    census = data_splits.format_census(manifest)
+    assert "no recorded provenance" in census
+    assert "june_dump" in census

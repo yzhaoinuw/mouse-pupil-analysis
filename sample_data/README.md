@@ -80,9 +80,22 @@ best checkpoint, JSON metadata, and log are written to one descriptive run folde
 `checkpoints_exp/` regardless of score. A model trained on eight images is expected to
 overfit and must not be treated as a useful trained model.
 
+To exercise the grouped, stratified split on the fixture, point both the data root and the
+manifest at it:
+
+```powershell
+python training\data_splits.py --data-root sample_data --folds 3 --show
+```
+
+`sample_data/provenance.csv` records which recording session each of the 12 images came from,
+which is what the split groups on — see [`../training/data_collection.md`](../training/data_collection.md).
+Twelve images across eight sessions is enough to check the split mechanics, not to train
+anything.
+
 ## Provenance and use
 
 - The cropped image/mask pairs were copied unchanged from the project's hand-curated local training and validation collections.
+- `provenance.csv` records the session each image belongs to, carried over from the main pool's sidecar.
 - The raw frames were copied unchanged from two original recording frame directories.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.

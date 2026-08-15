@@ -8,6 +8,7 @@ import math
 import random
 from pathlib import Path
 
+import numpy as np
 import torchvision.transforms.functional as TF
 import torchvision.transforms.v2 as transforms
 from PIL import Image
@@ -28,6 +29,33 @@ def mask_equivalent_diameter(
     mask = resize_with_pad(mask, target_size=target_size, resample=Image.NEAREST)
     foreground_area = sum(pixel > 0 for pixel in mask.getdata())
     return math.sqrt(4.0 * foreground_area / math.pi)
+
+
+def image_background_brightness(image_path: Path, mask_path: Path) -> float:
+    """Return the mean grey level of everything except the pupil, 0-255.
+
+    This is the lighting axis the split stratifies on. It separates recording settings
+    well -- across the maintained pool session means span 71 to 157 while the spread
+    *within* a session is 1 to 11 -- because illumination is a property of the rig and
+    the pupil, which is not, is excluded.
+
+    Deliberately measured on the original image rather than the padded model input:
+    ``resize_with_pad`` fills with black, so a padded mean would encode the crop's
+    aspect ratio as if it were lighting. Mean intensity is already scale-invariant, so
+    the resize buys nothing here.
+    """
+    image = Image.open(image_path).convert("L")
+    mask = Image.open(mask_path).convert("L")
+    if image.size != mask.size:
+        raise ValueError(
+            f"{Path(image_path).name} is {image.size} but its mask is {mask.size}; "
+            "brightness needs them aligned."
+        )
+
+    pixels = np.asarray(image, dtype=np.float64)
+    background = pixels[np.asarray(mask) == 0]
+    # A mask covering the whole frame leaves no background to measure.
+    return float(background.mean()) if background.size else float(pixels.mean())
 
 
 def paired_image_mask_paths(

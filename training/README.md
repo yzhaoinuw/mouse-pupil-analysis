@@ -31,7 +31,14 @@ masks_validation/
 
 Images and masks must be PNG files whose filenames correspond one-to-one by stem. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
 
-**Which of the two folders a file lands in no longer decides the split.** Both pairs are read as one flat pool, and `splits.json` decides what trains and what validates; see [Grouped splits](#grouped-splits) below. The folders are kept because existing local datasets use them. For choosing which frames are worth labelling and how to name them, see [`data_collection.md`](data_collection.md).
+**Which of the two folders a file lands in no longer decides the split.** Both pairs are read as one flat pool, and `splits.json` decides what trains and what validates; see [Grouped splits](#grouped-splits) below. The folders are kept because existing local datasets use them. For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
+
+Subdirectories inside the image folders are walked, and a per-recording subfolder is the easiest way to record which session a batch belongs to:
+
+```text
+images_train/HQL091_sleep260820/frame_0001.png    ->  session HQL091_sleep260820
+masks_train/HQL091_sleep260820/frame_0001.png     (or flat in masks_train/; both pair by filename)
+```
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
@@ -65,8 +72,20 @@ Before training, compare the filenames and counts in each image/mask pair. A mas
 A *session* is one recording setting: one animal, one date, one condition. Sessions are
 the unit that must not span the train/validation boundary, because the domain shift that
 breaks this model is rig, camera angle, lighting, and animal state rather than animal
-identity. Recording *files* are too fine a unit — three files from one sitting are one
-setting — and animals are too coarse.
+identity. Copying a neighbour's mask scores 0.652 IoU when the neighbour comes from the
+same session and 0.399 when it comes from a different one, against a 0.02 seed noise
+floor — that gap is what a non-grouped split hands the model for free.
+
+Which session an image belongs to is **recorded, never inferred**. It comes from an
+intake subfolder, a `session` flag in the labelme JSON, or a `provenance.csv` sidecar,
+and anything unresolved collapses into one safe over-merged group. Filenames are not
+parsed. [`data_collection.md`](data_collection.md) covers the sources and the
+measurements that ruled out recovering the grouping from the images themselves.
+
+Folds are also **stratified**: sessions are banded by median pupil diameter and median
+background brightness, and a new session prefers a fold holding no session of its
+diameter band, then the smallest fold. Grouping alone left three of five folds with no
+small pupil at all.
 
 Generate the manifest once, then refresh it whenever labelled data is added:
 
@@ -75,14 +94,31 @@ python training\data_splits.py --data-root . --out splits.json
 python training\data_splits.py --data-root . --show   # census only, writes nothing
 ```
 
-It prints a per-session table and a per-fold summary. Existing sessions keep their fold
-when the manifest is regenerated, so adding data does not invalidate earlier results.
-`--reassign` repacks everything and does invalidate them.
+It prints a per-session table and a per-fold summary. Every image already in the
+manifest keeps the session and fold it had, and a new image joins the fold its session
+already sits in, so adding data does not invalidate earlier results. A provenance source
+that contradicts the manifest is an error rather than a silent repack; `--reassign`
+repacks everything deliberately and does invalidate earlier numbers.
 
 Without `--split-manifest`, the trainer falls back to the fixed `images_train` /
 `images_validation` folders. That split shares recordings across the boundary, so its
 IoU measures held-out frames from seen recordings rather than generalisation. Prefer the
 manifest for anything you intend to compare.
+
+### The holdout gate
+
+Every fold's number feeds configuration choice, so none of them is a clean estimate of
+the final model. Set one or more sessions aside to get one:
+
+```powershell
+python training\data_splits.py --data-root . --holdout HQL090_sleep251012 --out splits.json
+python training\run_train.py --split-manifest splits.json --final
+```
+
+Holdout sessions appear in no fold — trained on never, validated on never — and
+`--final` trains on everything else and validates against them. Choose the holdout by
+condition rather than by animal, and note that at the current pool size two sessions is
+15–27% of the labelled data. None is set by default.
 
 ## 2. Inspect augmentation
 

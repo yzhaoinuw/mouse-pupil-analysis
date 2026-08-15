@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Group the labelled image pool into sessions and assign grouped cross-validation folds.
+"""Assign labelled images to stratified, recording-grouped cross-validation folds.
 
-A *session* is one recording setting: one animal, on one date, under one condition.
-It is the unit that must not span the train/validation boundary, because the domain
-shift that breaks this model in practice is rig, camera placement, lighting, and
-animal state -- not animal identity. Mice eyes are interchangeable; camera angles
-are not.
+Two independent things are going on here, and conflating them is the mistake this
+module exists to avoid:
 
-Recording *files* are too fine a unit. ``HQL086_whiskerb250923_002``, ``_005``, and
-``_008`` are three files from one sitting, minutes apart with the camera untouched;
-splitting them across train and validation leaks the same setting under a different
-name. Animals are too coarse: grouping by animal discards usable training data to
-protect against a shift the data does not show.
+**Grouping** keeps every image from one recording session on the same side of the
+train/validation boundary. Without it the reported IoU measures interpolation inside a
+setting the model has already seen. The size of that effect was measured on this pool:
+copying the mask of an image's nearest neighbour scores 0.652 IoU when the neighbour
+comes from the same session and 0.399 when it comes from a different one -- a 0.25 gap
+against a seed noise floor of 0.02.
+
+**Stratification** spreads pupil size and lighting evenly across the folds, so each
+fold's number measures the same thing. Grouping alone does not give you this: the
+first grouped split of this pool left three of five folds with no small pupil at all
+and a 3x spread in median diameter, which made fold-to-fold variance mostly a story
+about which size regime happened to land where.
+
+Session identity is *recorded*, never inferred -- see :mod:`training.provenance` for
+why and for the four sources it comes from. Nothing here parses a filename.
 
 Generate or refresh the manifest::
 
@@ -22,82 +29,46 @@ Then train one fold with::
 
     python training/run_train.py --split-manifest splits.json --fold 0
 
-Adding new images never reshuffles existing sessions. Sessions already present in the
-manifest keep their fold, and only genuinely new sessions are packed into whichever
-folds are currently smallest, so cross-validation numbers stay comparable as the
-dataset grows. Pass ``--reassign`` to deliberately repack everything from scratch,
-which invalidates comparison against previously recorded runs.
+Once an image is in the manifest, its session and fold are frozen there and adding
+more data cannot move it. If a provenance source later disagrees with what was
+recorded, that is an error rather than a silent repack, because a repack invalidates
+comparison against every previously recorded run. ``--reassign`` repacks deliberately.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import statistics
-from collections import Counter
-from dataclasses import dataclass, field
+import sys
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from mouse_pupil_analysis.augmentation import mask_equivalent_diameter, paired_image_mask_paths
+from mouse_pupil_analysis.augmentation import image_background_brightness, mask_equivalent_diameter
 
-SCHEMA_VERSION = 1
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import provenance as provenance_module  # noqa: E402
+
+SCHEMA_VERSION = 2
+HOLDOUT_FOLD = -1
 
 DEFAULT_POOL = (
     ("images_train", "masks_train"),
     ("images_validation", "masks_validation"),
 )
 
-# ``250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000``
-TIMESTAMP = re.compile(r"^(.*?)_(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+)")
-# ``HQL080_whiskerb_250722_007_eye_06622`` -> recording index ``_007``
-HQL_FILE_INDEX = re.compile(r"_(\d{2,4})$")
-
-
-@dataclass(frozen=True)
-class Identity:
-    """Where one labelled image came from."""
-
-    cohort: str
-    animal: str
-    recording: str
-    session: str
-
-
-def parse_identity(stem: str) -> Identity:
-    """Return the cohort, animal, recording, and session for one image stem.
-
-    Two naming schemes are in use and both have variable-length middle segments, so
-    this splits on structural markers rather than tokenising. An unrecognised stem
-    becomes its own single-image session under the ``unparsed`` cohort: that is the
-    conservative failure mode, because it can only over-separate, never leak.
-    """
-    if stem.startswith("HQL"):
-        animal = stem.split("_")[0]
-        recording = stem.split("_eye_")[0]
-        session = HQL_FILE_INDEX.sub("", recording)
-        return Identity("HQL", animal, recording, session)
-
-    match = TIMESTAMP.match(stem)
-    if match:
-        session, timestamp = match.group(1), match.group(2)
-        parts = session.split("_")
-        animal = parts[1] if len(parts) > 1 else session
-        return Identity("date_id", animal, f"{session}_{timestamp}", session)
-
-    return Identity("unparsed", stem, stem, stem)
-
 
 @dataclass
 class PoolImage:
     """One labelled image/mask pair, located relative to the data root."""
 
-    stem: str
+    key: str
     image: str
     mask: str
-    identity: Identity
     diameter: float
+    brightness: float
 
 
 @dataclass
@@ -105,9 +76,8 @@ class Session:
     """Every labelled image sharing one recording setting."""
 
     key: str
-    cohort: str
-    animal: str
-    images: list[PoolImage] = field(default_factory=list)
+    source: str
+    images: list[PoolImage]
 
     @property
     def n_images(self) -> int:
@@ -119,102 +89,247 @@ class Session:
     def median_diameter(self) -> float:
         return statistics.median(image.diameter for image in self.images)
 
-    def recordings(self) -> set[str]:
-        return {image.identity.recording for image in self.images}
+    def median_brightness(self) -> float:
+        return statistics.median(image.brightness for image in self.images)
+
+
+def _mask_for(image_path: Path, image_root: Path, mask_root: Path) -> Path:
+    """Find the mask for an image, mirroring intake subfolders then falling back flat.
+
+    ``labelme_json2png.py`` writes each mask as ``<image stem>.png``. When images are
+    dropped in per-recording subfolders the masks usually mirror that structure, but a
+    flat mask folder is still common, so both layouts are accepted.
+    """
+    relative = image_path.relative_to(image_root)
+    mirrored = mask_root / relative
+    if mirrored.is_file():
+        return mirrored
+    flat = mask_root / image_path.name
+    if flat.is_file():
+        return flat
+    raise FileNotFoundError(
+        f"No mask for {relative.as_posix()}: looked for {mirrored} and {flat}. "
+        "Every labelled image needs a mask sharing its stem."
+    )
 
 
 def discover_pool(
     data_root: Path,
     pool: tuple[tuple[str, str], ...] = DEFAULT_POOL,
-) -> list[PoolImage]:
+) -> tuple[list[PoolImage], dict[str, tuple[Path, Path]]]:
     """Read every image/mask pair in the pool directories as one flat collection.
 
-    The historical ``images_train`` / ``images_validation`` folders are treated as a
-    single pool. The split is decided by the manifest, not by which folder a file
-    happens to sit in, so no labelled data has to be moved to re-split it.
+    Subdirectories are walked, because an intake subfolder is one of the ways a session
+    gets recorded. Returns the pool alongside the ``key -> (image path, pool root)``
+    map that provenance resolution needs.
+
+    An image is identified by its path *within* its pool folder, without the extension:
+    ``frame_0001`` when it sits flat, ``HQL091_sleep260820/frame_0001`` when it sits in
+    an intake subfolder. The bare filename will not do -- per-recording exports routinely
+    restart their numbering, so two intake folders can each hold a ``frame_0001.png``,
+    and the whole point of the folders is that filenames need not be unique. Excluding
+    the pool folder from the key means moving a pair between ``images_train`` and
+    ``images_validation`` does not change its identity, which is what keeps the split
+    frozen when the historical folders are reshuffled.
     """
     data_root = Path(data_root)
     found: list[PoolImage] = []
+    located: dict[str, tuple[Path, Path]] = {}
     seen: dict[str, str] = {}
+
     for image_dir, mask_dir in pool:
-        absolute = data_root / image_dir
-        if not absolute.is_dir():
+        image_root = data_root / image_dir
+        mask_root = data_root / mask_dir
+        if not image_root.is_dir():
             continue
-        image_paths, mask_paths = paired_image_mask_paths(absolute, data_root / mask_dir)
-        for image_path, mask_path in zip(image_paths, mask_paths):
-            stem = image_path.stem
-            if stem in seen:
+        for image_path in sorted(image_root.rglob("*.png")):
+            key = image_path.relative_to(image_root).with_suffix("").as_posix()
+            if key in seen:
                 raise ValueError(
-                    f"Image stem {stem!r} appears in both {seen[stem]} and {image_dir}. "
-                    "One stem must map to exactly one labelled pair."
+                    f"Image {key!r} appears in both {seen[key]} and {image_dir}. "
+                    "One key must map to exactly one labelled pair."
                 )
-            seen[stem] = image_dir
+            seen[key] = image_dir
+            mask_path = _mask_for(image_path, image_root, mask_root)
             found.append(
                 PoolImage(
-                    stem=stem,
-                    image=f"{image_dir}/{image_path.name}",
-                    mask=f"{mask_dir}/{mask_path.name}",
-                    identity=parse_identity(stem),
+                    key=key,
+                    image=image_path.relative_to(data_root).as_posix(),
+                    mask=mask_path.relative_to(data_root).as_posix(),
                     diameter=mask_equivalent_diameter(mask_path),
+                    brightness=image_background_brightness(image_path, mask_path),
                 )
             )
+            located[key] = (image_path, image_root)
+
     if not found:
         raise FileNotFoundError(
             f"No labelled images found under {data_root} in {[d for d, _ in pool]}."
         )
-    return found
+    return found, located
 
 
-def group_sessions(images: list[PoolImage]) -> dict[str, Session]:
-    """Collapse the flat pool into sessions, keyed by recording setting."""
-    sessions: dict[str, Session] = {}
+def frozen_sessions(previous: dict | None) -> dict[str, str]:
+    """Return the ``key -> session`` already recorded in a manifest."""
+    if not previous:
+        return {}
+    return {entry["key"]: entry["session"] for entry in previous["images"]}
+
+
+def frozen_folds(previous: dict | None) -> dict[str, int]:
+    """Return the ``session -> fold`` already recorded in a manifest."""
+    if not previous:
+        return {}
+    return {entry["session"]: entry["fold"] for entry in previous["sessions"]}
+
+
+def group_sessions(
+    images: list[PoolImage],
+    assignment: dict[str, provenance_module.Provenance],
+) -> dict[str, Session]:
+    """Collapse the flat pool into sessions using the resolved provenance."""
+    # A session resolved from several sources reports the least explicit one, so the
+    # census never overstates how well its provenance is recorded. An unrecognised
+    # source sorts last for the same reason.
+    rank = {"frozen": 0, "sidecar": 1, "labelme": 2, "folder": 3, "batch": 4}
+
+    grouped: dict[str, list[PoolImage]] = defaultdict(list)
+    source: dict[str, str] = {}
     for image in images:
-        identity = image.identity
-        session = sessions.get(identity.session)
-        if session is None:
-            session = Session(identity.session, identity.cohort, identity.animal)
-            sessions[identity.session] = session
-        session.images.append(image)
-    return sessions
+        resolved = assignment[image.key]
+        grouped[resolved.session].append(image)
+        current = source.get(resolved.session)
+        if current is None or rank.get(resolved.source, len(rank)) > rank.get(current, len(rank)):
+            source[resolved.session] = resolved.source
+    return {key: Session(key, source[key], value) for key, value in grouped.items()}
+
+
+def _terciles(values: list[float]) -> tuple[float, float]:
+    """Return the two cutpoints splitting values into low/middle/high thirds."""
+    if len(values) < 3:
+        middle = statistics.median(values)
+        return middle, middle
+    ordered = sorted(values)
+    return (
+        ordered[len(ordered) // 3],
+        ordered[2 * len(ordered) // 3],
+    )
+
+
+def _band(value: float, cuts: tuple[float, float]) -> int:
+    return 0 if value < cuts[0] else (1 if value < cuts[1] else 2)
+
+
+def stratify(sessions: dict[str, Session]) -> tuple[dict[str, tuple[int, int]], dict]:
+    """Band each session by median diameter and median brightness, as terciles.
+
+    The two bands stay separate rather than being crossed into one label. Crossing
+    them fragments the axis that matters most: the small-pupil sessions split across
+    several combined strata, stop repelling each other, and pile back into the same
+    couple of folds. Kept separate, every ``d0`` session repels every other ``d0``
+    session whatever its lighting.
+
+    Cutpoints shift as the pool grows, which is harmless: they only steer where *new*
+    sessions land, and assignments already recorded are frozen regardless.
+    """
+    diameters = [session.median_diameter() for session in sessions.values()]
+    brightnesses = [session.median_brightness() for session in sessions.values()]
+    d_cuts = _terciles(diameters)
+    b_cuts = _terciles(brightnesses)
+
+    bands = {
+        key: (
+            _band(session.median_diameter(), d_cuts),
+            _band(session.median_brightness(), b_cuts),
+        )
+        for key, session in sessions.items()
+    }
+    cutpoints = {
+        "diameter": [round(d_cuts[0], 2), round(d_cuts[1], 2)],
+        "brightness": [round(b_cuts[0], 2), round(b_cuts[1], 2)],
+    }
+    return bands, cutpoints
+
+
+def stratum_label(bands: tuple[int, int]) -> str:
+    """Render a session's bands for the census table."""
+    return f"d{bands[0]}b{bands[1]}"
 
 
 def assign_folds(
     sessions: dict[str, Session],
+    bands: dict[str, tuple[int, int]],
     n_folds: int,
     existing: dict[str, int] | None = None,
+    holdout: set[str] | None = None,
 ) -> dict[str, int]:
-    """Pack whole sessions into folds, largest first, keeping folds evenly sized.
+    """Pack whole sessions into folds, balancing fold size and both condition bands.
 
-    This is deterministic and needs no seed. Sessions already carrying a valid fold in
-    ``existing`` keep it, so adding data never invalidates earlier cross-validation
-    results. Ties are broken toward the fold holding fewer sessions of the same cohort,
-    which keeps both acquisition cohorts represented in every fold.
+    Deterministic, no seed. Sessions carrying a valid fold in ``existing`` keep it, so
+    adding data never invalidates an earlier cross-validation result.
+
+    A new session prefers a fold that holds *no* session of its diameter band; failing
+    that, the smallest fold. Diameter leads because it is the axis the evaluation
+    reports size bins over, and the one an unstratified packing got worst -- three of
+    five folds had no small pupil at all. Sessions are placed largest first so the big
+    ones set the size balance before the small ones fill in around them.
+
+    Making only the *absence* of a band outrank size is what lets one rule serve two
+    regimes. Packing from scratch, folds start empty and coverage dominates, which is
+    when it is needed: ordering by size alone there gives a 4.51x spread in median
+    diameter and leaves 3 of 5 folds with no small pupil. Once folds each hold a few
+    sessions the bands are covered, coverage stops firing, and size leads -- which
+    keeps fold sizes even as sessions trickle in one at a time. Simulated over 200
+    arrival orders, that is a 1.15x size spread against 1.33x for ranking by band count
+    throughout, and a 1.25x worst case against 2.05x, with band coverage identical.
+
+    Sessions named in ``holdout`` are set aside entirely and take no fold.
     """
+    holdout = holdout or set()
+    unknown = holdout - set(sessions)
+    if unknown:
+        raise ValueError(f"Holdout names no such session: {sorted(unknown)}")
+
+    assignable = {key: session for key, session in sessions.items() if key not in holdout}
     if n_folds < 2:
         raise ValueError("n_folds must be at least 2.")
-    if n_folds > len(sessions):
+    if n_folds > len(assignable):
         raise ValueError(
-            f"Cannot build {n_folds} folds from {len(sessions)} sessions; "
+            f"Cannot build {n_folds} folds from {len(assignable)} non-holdout sessions; "
             "every fold needs at least one whole session."
         )
 
-    assignment: dict[str, int] = {}
+    assignment: dict[str, int] = {key: HOLDOUT_FOLD for key in holdout}
     sizes = Counter({fold: 0 for fold in range(n_folds)})
-    cohorts: dict[int, Counter] = {fold: Counter() for fold in range(n_folds)}
+    diameter_counts: dict[int, Counter] = {fold: Counter() for fold in range(n_folds)}
+    brightness_counts: dict[int, Counter] = {fold: Counter() for fold in range(n_folds)}
+
+    def record(key: str, fold: int) -> None:
+        assignment[key] = fold
+        sizes[fold] += assignable[key].n_images
+        diameter_counts[fold][bands[key][0]] += 1
+        brightness_counts[fold][bands[key][1]] += 1
 
     for key, fold in (existing or {}).items():
-        if key in sessions and isinstance(fold, int) and 0 <= fold < n_folds:
-            assignment[key] = fold
-            sizes[fold] += sessions[key].n_images
-            cohorts[fold][sessions[key].cohort] += 1
+        if key in assignable and isinstance(fold, int) and 0 <= fold < n_folds:
+            record(key, fold)
 
-    remaining = [key for key in sessions if key not in assignment]
-    for key in sorted(remaining, key=lambda k: (-sessions[k].n_images, k)):
-        cohort = sessions[key].cohort
-        fold = min(range(n_folds), key=lambda f: (sizes[f], cohorts[f][cohort], f))
-        assignment[key] = fold
-        sizes[fold] += sessions[key].n_images
-        cohorts[fold][cohort] += 1
+    remaining = [key for key in assignable if key not in assignment]
+    for key in sorted(remaining, key=lambda k: (-assignable[k].n_images, k)):
+        diameter_band, brightness_band = bands[key]
+        fold = min(
+            range(n_folds),
+            key=lambda f: (
+                # Only the *absence* of this diameter band outranks fold size. A fold
+                # that has none gets the session; past that, the smallest fold wins.
+                1 if diameter_counts[f][diameter_band] else 0,
+                sizes[f],
+                diameter_counts[f][diameter_band],
+                brightness_counts[f][brightness_band],
+                f,
+            ),
+        )
+        record(key, fold)
     return assignment
 
 
@@ -223,45 +338,101 @@ def build_manifest(
     n_folds: int = 5,
     pool: tuple[tuple[str, str], ...] = DEFAULT_POOL,
     tiny_max_diameter: float = 15.0,
-    existing: dict[str, int] | None = None,
+    previous: dict | None = None,
+    sidecar: dict[str, str] | None = None,
+    batch_name: str | None = None,
+    holdout: set[str] | None = None,
     generated: str | None = None,
+    reassign: bool = False,
 ) -> dict:
-    """Return the complete split manifest for the labelled pool under ``data_root``."""
-    images = discover_pool(data_root, pool)
-    sessions = group_sessions(images)
-    assignment = assign_folds(sessions, n_folds, existing)
+    """Return the complete split manifest for the labelled pool under ``data_root``.
+
+    Provenance already recorded in ``previous`` wins over every live source, so a
+    manifest is self-stabilising: once an image is in it, no later change to a
+    sidecar, a labelme flag, or a folder layout can move that image between folds.
+    A live source that *disagrees* with the record raises rather than repacking.
+    """
+    generated = generated or date.today().isoformat()
+    images, located = discover_pool(data_root, pool)
+
+    resolved = provenance_module.resolve(
+        located,
+        sidecar=sidecar,
+        batch_name=batch_name or f"unknown_batch_{generated}",
+    )
+
+    already = {} if reassign else frozen_sessions(previous)
+    conflicts = [
+        (key, already[key], resolved[key].session)
+        for key in sorted(resolved)
+        if key in already and already[key] != resolved[key].session
+    ]
+    if conflicts:
+        detail = "; ".join(f"{key}: {was!r} -> {now!r}" for key, was, now in conflicts[:5])
+        raise ValueError(
+            f"{len(conflicts)} image(s) already recorded under a different session: {detail}. "
+            "Fold assignments are frozen once written, so this would silently invalidate "
+            "every previously recorded run. Fix the provenance source, or pass --reassign "
+            "to repack everything deliberately."
+        )
+    for key, session in already.items():
+        if key in resolved:
+            resolved[key] = provenance_module.Provenance(session, "frozen")
+
+    sessions = group_sessions(images, resolved)
+    bands, cutpoints = stratify(sessions)
+
+    holdout = set(holdout or ())
+    if not reassign and previous:
+        holdout |= {
+            entry["session"]
+            for entry in previous["sessions"]
+            if entry.get("holdout") and entry["session"] in sessions
+        }
+
+    existing = {} if reassign else frozen_folds(previous)
+    assignment = assign_folds(sessions, bands, n_folds, existing, holdout)
+
+    session_rows = [
+        {
+            "session": key,
+            "fold": assignment[key],
+            "holdout": key in holdout,
+            "source": session.source,
+            "stratum": stratum_label(bands[key]),
+            "n_images": session.n_images,
+            "n_tiny": session.n_tiny(tiny_max_diameter),
+            "median_diameter": round(session.median_diameter(), 2),
+            "median_brightness": round(session.median_brightness(), 2),
+        }
+        for key, session in sorted(sessions.items(), key=lambda kv: (assignment[kv[0]], kv[0]))
+    ]
+
     return {
         "schema": SCHEMA_VERSION,
-        "generated": generated or date.today().isoformat(),
-        "grouping": "session (one animal, one date, one condition)",
+        "generated": generated,
+        "grouping": "session recorded at intake (one animal, one date, one condition)",
+        "stratified_by": ["median_diameter", "median_brightness"],
         "n_folds": n_folds,
         "n_images": len(images),
         "n_sessions": len(sessions),
+        "n_holdout_sessions": len(holdout),
         "pool": [list(entry) for entry in pool],
         "tiny_max_diameter": tiny_max_diameter,
-        "sessions": [
-            {
-                "session": key,
-                "fold": assignment[key],
-                "cohort": session.cohort,
-                "animal": session.animal,
-                "n_recordings": len(session.recordings()),
-                "n_images": session.n_images,
-                "n_tiny": session.n_tiny(tiny_max_diameter),
-                "median_diameter": round(session.median_diameter(), 2),
-            }
-            for key, session in sorted(sessions.items(), key=lambda kv: (assignment[kv[0]], kv[0]))
-        ],
+        "stratum_cutpoints": cutpoints,
+        "sessions": session_rows,
         "images": [
             {
-                "stem": image.stem,
+                "key": image.key,
                 "image": image.image,
                 "mask": image.mask,
-                "session": image.identity.session,
-                "fold": assignment[image.identity.session],
+                "session": resolved[image.key].session,
+                "fold": assignment[resolved[image.key].session],
+                "holdout": resolved[image.key].session in holdout,
                 "diameter": round(image.diameter, 2),
+                "brightness": round(image.brightness, 2),
             }
-            for image in sorted(images, key=lambda i: i.stem)
+            for image in sorted(images, key=lambda i: i.key)
         ],
     }
 
@@ -271,9 +442,15 @@ def load_manifest(path: Path) -> dict:
     manifest = json.loads(Path(path).read_text(encoding="utf-8"))
     schema = manifest.get("schema")
     if schema != SCHEMA_VERSION:
+        hint = (
+            " Schema 1 derived sessions from filenames; migrate it with "
+            "`python training/data_splits.py --migrate-from <old manifest>`."
+            if schema == 1
+            else ""
+        )
         raise ValueError(
-            f"{path} declares schema {schema!r}, but this code understands {SCHEMA_VERSION}. "
-            "Regenerate it with training/data_splits.py."
+            f"{path} declares schema {schema!r}, but this code understands "
+            f"{SCHEMA_VERSION}.{hint}"
         )
     return manifest
 
@@ -282,12 +459,9 @@ def write_manifest(path: Path, manifest: dict) -> None:
     Path(path).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
-def existing_assignment(path: Path) -> dict[str, int]:
-    """Return the session-to-fold mapping already recorded at ``path``, if any."""
-    if not Path(path).exists():
-        return {}
-    manifest = load_manifest(path)
-    return {entry["session"]: entry["fold"] for entry in manifest["sessions"]}
+def read_previous(path: Path) -> dict | None:
+    """Return the manifest already at ``path``, or ``None`` if there is none."""
+    return load_manifest(path) if Path(path).exists() else None
 
 
 def fold_paths(
@@ -297,8 +471,9 @@ def fold_paths(
 ) -> tuple[tuple[list[Path], list[Path]], tuple[list[Path], list[Path]]]:
     """Return ``((train_images, train_masks), (val_images, val_masks))`` for one fold.
 
-    The held-out fold is validation; every other fold trains. Paths come back in a
-    stable order so a run is reproducible from the manifest alone.
+    The held-out fold is validation; every other fold trains. Holdout sessions appear
+    in neither: they are the final gate and must stay unseen by every fold, or the
+    gate reports on data the model was trained on.
     """
     n_folds = manifest["n_folds"]
     if not 0 <= fold < n_folds:
@@ -307,7 +482,9 @@ def fold_paths(
 
     train: tuple[list[Path], list[Path]] = ([], [])
     validation: tuple[list[Path], list[Path]] = ([], [])
-    for entry in sorted(manifest["images"], key=lambda e: e["stem"]):
+    for entry in sorted(manifest["images"], key=lambda e: e["key"]):
+        if entry.get("holdout"):
+            continue
         target = validation if entry["fold"] == fold else train
         target[0].append(data_root / entry["image"])
         target[1].append(data_root / entry["mask"])
@@ -319,77 +496,201 @@ def fold_paths(
     return train, validation
 
 
+def holdout_paths(manifest: dict, data_root: Path) -> tuple[list[Path], list[Path]]:
+    """Return the held-out gate set, which no fold trains or validates on."""
+    data_root = Path(data_root)
+    images, masks = [], []
+    for entry in sorted(manifest["images"], key=lambda e: e["key"]):
+        if entry.get("holdout"):
+            images.append(data_root / entry["image"])
+            masks.append(data_root / entry["mask"])
+    return images, masks
+
+
+def final_paths(
+    manifest: dict,
+    data_root: Path,
+) -> tuple[tuple[list[Path], list[Path]], tuple[list[Path], list[Path]]]:
+    """Return ``((train, holdout))`` for the release-candidate run.
+
+    Cross-validation compares configurations; this trains the winning one on every
+    image the folds were allowed to see and scores it against the holdout, which no
+    fold and no earlier run ever touched. That is the only number in the project
+    measured on data the training procedure has never been tuned against.
+    """
+    data_root = Path(data_root)
+    train: tuple[list[Path], list[Path]] = ([], [])
+    gate: tuple[list[Path], list[Path]] = ([], [])
+    for entry in sorted(manifest["images"], key=lambda e: e["key"]):
+        target = gate if entry.get("holdout") else train
+        target[0].append(data_root / entry["image"])
+        target[1].append(data_root / entry["mask"])
+
+    if not gate[0]:
+        raise ValueError(
+            "This manifest sets no holdout, so there is nothing to gate against. "
+            "Regenerate it with --holdout SESSION, choosing by condition rather than "
+            "by animal."
+        )
+    return train, gate
+
+
+def holdout_sessions(manifest: dict) -> list[str]:
+    """Return the session keys set aside as the final gate."""
+    return [entry["session"] for entry in manifest["sessions"] if entry.get("holdout")]
+
+
 def fold_sessions(manifest: dict, fold: int) -> list[str]:
     """Return the session keys held out by one fold."""
-    return [entry["session"] for entry in manifest["sessions"] if entry["fold"] == fold]
+    return [
+        entry["session"]
+        for entry in manifest["sessions"]
+        if entry["fold"] == fold and not entry.get("holdout")
+    ]
 
 
-def session_of_stem(manifest: dict) -> dict[str, str]:
-    """Map every image stem to its session key, for per-session reporting."""
-    return {entry["stem"]: entry["session"] for entry in manifest["images"]}
+def session_of_key(manifest: dict) -> dict[str, str]:
+    """Map every image key to its session, for per-session reporting."""
+    return {entry["key"]: entry["session"] for entry in manifest["images"]}
+
+
+def session_of_path(manifest: dict, data_root: Path) -> dict[Path, str]:
+    """Map every image's resolved path to its session.
+
+    Callers hold paths, not keys, and a key cannot be recovered from a path without
+    knowing which pool folder it came from. Going through the manifest's own recorded
+    paths avoids re-deriving it and the chance of deriving it differently.
+    """
+    data_root = Path(data_root)
+    return {
+        (data_root / entry["image"]).resolve(): entry["session"] for entry in manifest["images"]
+    }
 
 
 def format_census(manifest: dict) -> str:
-    """Render the fold assignment as a review table."""
+    """Render the fold assignment and its stratification balance as a review table."""
     tiny_max = manifest["tiny_max_diameter"]
     lines = [
-        f"{'session':<40} {'cohort':<8} {'fold':>4} {'recs':>5} {'imgs':>5} "
-        f"{'tiny':>5} {'med_d':>6}",
+        f"{'session':<38} {'src':<8} {'fold':>4} {'strat':>6} {'imgs':>5} "
+        f"{'tiny':>5} {'med_d':>6} {'med_b':>6}",
     ]
     for entry in manifest["sessions"]:
+        fold = "hold" if entry.get("holdout") else str(entry["fold"])
         lines.append(
-            f"{entry['session'][:38]:<40} {entry['cohort']:<8} {entry['fold']:>4} "
-            f"{entry['n_recordings']:>5} {entry['n_images']:>5} {entry['n_tiny']:>5} "
-            f"{entry['median_diameter']:>6.1f}"
+            f"{entry['session'][:36]:<38} {entry['source']:<8} {fold:>4} "
+            f"{entry['stratum']:>6} {entry['n_images']:>5} {entry['n_tiny']:>5} "
+            f"{entry['median_diameter']:>6.1f} {entry['median_brightness']:>6.1f}"
         )
 
+    active = [entry for entry in manifest["sessions"] if not entry.get("holdout")]
+    total = sum(entry["n_images"] for entry in active)
     lines.append("")
-    lines.append(f"{'fold':>4} {'sessions':>9} {'images':>7} {'share':>6} {'tiny':>5}  cohorts")
-    total = manifest["n_images"]
+    lines.append(
+        f"{'fold':>4} {'sessions':>9} {'images':>7} {'share':>6} {'tiny':>5} "
+        f"{'med_d':>6} {'med_b':>6}  strata"
+    )
     for fold in range(manifest["n_folds"]):
-        held = [entry for entry in manifest["sessions"] if entry["fold"] == fold]
-        images = sum(entry["n_images"] for entry in held)
+        held = [entry for entry in active if entry["fold"] == fold]
+        n_images = sum(entry["n_images"] for entry in held)
         tiny = sum(entry["n_tiny"] for entry in held)
-        cohorts = Counter(entry["cohort"] for entry in held)
+        med_d = statistics.median([entry["median_diameter"] for entry in held]) if held else 0.0
+        med_b = statistics.median([entry["median_brightness"] for entry in held]) if held else 0.0
+        strata = sorted(entry["stratum"] for entry in held)
         lines.append(
-            f"{fold:>4} {len(held):>9} {images:>7} {100 * images / total:>5.0f}% {tiny:>5}  "
-            f"{dict(sorted(cohorts.items()))}"
+            f"{fold:>4} {len(held):>9} {n_images:>7} {100 * n_images / total:>5.0f}% {tiny:>5} "
+            f"{med_d:>6.1f} {med_b:>6.1f}  {' '.join(strata)}"
         )
 
-    unparsed = [entry for entry in manifest["sessions"] if entry["cohort"] == "unparsed"]
-    if unparsed:
+    holdout = [entry for entry in manifest["sessions"] if entry.get("holdout")]
+    if holdout:
+        images = sum(entry["n_images"] for entry in holdout)
         lines.append("")
         lines.append(
-            f"WARNING: {len(unparsed)} session(s) have unrecognised filenames and were each "
-            "treated as their own session:"
-        )
-        for entry in unparsed[:10]:
-            lines.append(f"  {entry['session']}")
-        lines.append(
-            "  Grouping is only as good as the filenames. See training/data_collection.md."
+            f"holdout: {len(holdout)} session(s), {images} image(s), in no fold. "
+            "Trained on never, validated on never -- this is the final gate."
         )
 
-    tiny_total = sum(entry["n_tiny"] for entry in manifest["sessions"])
+    batch = [entry for entry in manifest["sessions"] if entry["source"] == "batch"]
+    if batch:
+        lines.append("")
+        lines.append(
+            f"NOTE: {len(batch)} session(s) had no recorded provenance and were merged into "
+            "one group each by the batch fallback:"
+        )
+        for entry in batch:
+            lines.append(f"  {entry['session']} ({entry['n_images']} images)")
+        lines.append(
+            "  Safe but lumpy -- the whole batch lands in one fold. Record the session at "
+            "intake instead; see training/data_collection.md."
+        )
+
+    tiny_total = sum(entry["n_tiny"] for entry in active)
     empty = [
         fold
         for fold in range(manifest["n_folds"])
-        if not any(entry["n_tiny"] for entry in manifest["sessions"] if entry["fold"] == fold)
+        if not any(entry["n_tiny"] for entry in active if entry["fold"] == fold)
     ]
     if tiny_total and empty:
         lines.append("")
         lines.append(
             f"NOTE: folds {empty} hold no masks at or below {tiny_max:g} model pixels, so their "
-            "tiny-bin IoU is undefined. Small pupils concentrate in very few sessions."
+            "tiny-bin IoU is undefined. Stratification spreads what exists; it cannot "
+            "manufacture small pupils that were never labelled."
         )
     return "\n".join(lines)
+
+
+def _migration_sidecar(old_manifest: Path) -> dict[str, str]:
+    """Read the key-to-session mapping out of a schema-1 manifest.
+
+    This is the only place the old filename-derived grouping is ever used. It runs
+    once, to carry the sessions that were already worked out into the recorded model,
+    after which the regex that produced them is gone.
+    """
+    raw = json.loads(Path(old_manifest).read_text(encoding="utf-8"))
+    if raw.get("schema") != 1:
+        raise ValueError(f"{old_manifest} is schema {raw.get('schema')!r}, expected 1.")
+    # Schema 1 predates intake subfolders, so its stems are already pool-relative keys.
+    return {entry["stem"]: entry["session"] for entry in raw["images"]}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=Path.cwd())
-    parser.add_argument("--out", type=Path, default=Path("splits.json"))
+    parser.add_argument(
+        "--out",
+        type=Path,
+        help="Manifest to write and to read frozen assignments from "
+        "(default: <data-root>/splits.json). A manifest belongs to the pool it "
+        "describes, so this follows --data-root rather than the working directory.",
+    )
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--tiny-max-diameter", type=float, default=15.0)
+    parser.add_argument(
+        "--sidecar",
+        type=Path,
+        help="Explicit key-to-session mapping (.csv or .json). Defaults to "
+        "provenance.csv or provenance.json at the data root, if present.",
+    )
+    parser.add_argument(
+        "--batch-name",
+        help="Group name for images with no recorded provenance. Pass the same name "
+        "for two batches you believe share a recording.",
+    )
+    parser.add_argument(
+        "--holdout",
+        action="append",
+        default=[],
+        metavar="SESSION",
+        help="Set a session aside as the final gate: in no fold, trained on never. "
+        "Repeatable. Choose by condition, not by animal.",
+    )
+    parser.add_argument(
+        "--migrate-from",
+        type=Path,
+        help="Seed sessions from a schema-1 manifest and write them to a sidecar. "
+        "One-time migration off filename-derived grouping.",
+    )
     parser.add_argument(
         "--show",
         action="store_true",
@@ -398,21 +699,45 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--reassign",
         action="store_true",
-        help="Repack every session from scratch, discarding existing fold assignments. "
+        help="Repack every session from scratch, discarding frozen assignments. "
         "This makes new runs incomparable to previously recorded ones.",
     )
     args = parser.parse_args(argv)
+    if args.out is None:
+        args.out = Path(args.data_root) / "splits.json"
 
-    existing = {} if args.reassign else existing_assignment(args.out)
+    sidecar_path = args.sidecar or provenance_module.find_sidecar(args.data_root)
+    sidecar = provenance_module.load_sidecar(sidecar_path) if sidecar_path else {}
+    if sidecar_path:
+        print(f"Provenance sidecar: {sidecar_path} ({len(sidecar)} entries)")
+
+    # A migration deliberately starts from no history: the manifest being replaced is
+    # schema 1, which this code cannot read and must not carry folds over from.
+    previous = None if (args.reassign or args.migrate_from) else read_previous(args.out)
+    if args.migrate_from:
+        sidecar = {**_migration_sidecar(args.migrate_from), **sidecar}
+        print(
+            f"Migrating from {args.migrate_from}: {len(sidecar)} key(s) seeded from the "
+            "schema-1 filename grouping. Folds are repacked with stratification, so "
+            "numbers recorded against the old manifest are a different experiment."
+        )
+
     manifest = build_manifest(
         data_root=args.data_root,
         n_folds=args.folds,
         tiny_max_diameter=args.tiny_max_diameter,
-        existing=existing,
+        previous=previous,
+        sidecar=sidecar,
+        batch_name=args.batch_name,
+        holdout=set(args.holdout),
+        reassign=args.reassign,
     )
+    print()
     print(format_census(manifest))
+    active = manifest["n_sessions"] - manifest["n_holdout_sessions"]
     print(
-        f"\n{manifest['n_images']} images, {manifest['n_sessions']} sessions, "
+        f"\n{manifest['n_images']} images, {manifest['n_sessions']} sessions "
+        f"({active} in folds, {manifest['n_holdout_sessions']} held out), "
         f"{manifest['n_folds']} folds"
     )
 
@@ -420,9 +745,16 @@ def main(argv: list[str] | None = None) -> int:
         print("\n--show given; manifest not written.")
         return 0
 
-    kept = sum(1 for key in existing if key in {e["session"] for e in manifest["sessions"]})
+    kept = len(frozen_sessions(previous).keys() & {e["key"] for e in manifest["images"]})
     write_manifest(args.out, manifest)
-    print(f"Wrote {args.out} ({kept} session assignment(s) carried over).")
+    print(f"Wrote {args.out} ({kept} image assignment(s) carried over unchanged).")
+
+    if args.migrate_from:
+        target = Path(args.data_root) / "provenance.csv"
+        provenance_module.write_sidecar(
+            target, {e["key"]: e["session"] for e in manifest["images"]}
+        )
+        print(f"Wrote {target} -- the recorded provenance, independent of any filename.")
     return 0
 
 

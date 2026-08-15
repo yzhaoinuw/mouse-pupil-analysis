@@ -107,7 +107,7 @@ Read only what the task needs:
 - `treaty_docs/work_log.md` and `treaty_docs/work_log_archive/`: recent decisions and verification evidence; read the two latest dates when history matters.
 - `README.md`: user-facing installation, usage, packaging, and I/O expectations.
 - `training/README.md`: the training workflow, including grouped splits and cross-validation.
-- `training/data_collection.md`: which incoming frames to label, how filenames set the session
+- `training/data_collection.md`: which incoming frames to label, how the session is recorded at intake
   grouping, and how a labelled batch joins the split.
 - `RELEASING.md`: PyPI Trusted Publishing setup, Zenodo archiving, and the per-release sequence.
 - `CHANGELOG.md`: user-facing change history; update the `Unreleased` section as features land.

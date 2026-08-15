@@ -21,24 +21,34 @@ that also supplied training images, with **no validation-only animals**. Every I
 reported before 2026-08-14 therefore measures held-out frames from seen recordings.
 
 `training/data_splits.py` now groups the pool into **sessions** (one animal, one date, one
-condition) and packs whole sessions into folds, recorded in `splits.json`. `training/run_cv.py`
-runs every fold. `training/data_collection.md` documents the labelling and naming policy.
+condition) and packs whole sessions into **stratified** folds, recorded in `splits.json`.
+`training/run_cv.py` runs every fold. `training/data_collection.md` documents the labelling
+policy and how a session gets recorded.
 
 **Settled: the grouping unit is the session.** Not the recording file — same-day siblings like
 `HQL086_whiskerb250923_{002,005,008}` are one sitting with the camera untouched. Not the animal
 — every animal appears in one cohort and mostly one condition, so animal-grouping is nearly
 redundant with session-grouping and only costs training data. The 222 images are **16 sessions**,
-not 25 recordings and not 10 animals. Do not re-litigate; extend `parse_identity` instead if a
-new naming scheme arrives.
+not 25 recordings and not 10 animals. Do not re-litigate.
+
+**Settled: the session is recorded at intake, not inferred.** Measured, not assumed — crop
+geometry splits 6 of 16 sessions, agglomerative clustering on preprocessed frames tears 3 at
+k=5 and 6 at k=10, and file mtime is destroyed by copying. The images are tight eye crops with
+no rig context left to fingerprint. Filenames are no longer parsed at all; provenance comes from
+an intake subfolder, a labelme `session` flag, or `provenance.csv`, and anything unresolved
+becomes one safe over-merged group. Do not re-litigate; add a provenance *source* to
+`training/provenance.py` if a new intake route appears.
 
 Two structural facts that constrain every future comparison:
 
-- The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible. Fold 0 is
-  that session alone; the other four hold 39-41 images. A single fixed holdout is untenable.
-- `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Three of five
-  folds contain no tiny mask at all, so `balanced_iou` averages a different set of bins per fold
-  and cannot be compared across them. Report mean per-session IoU instead; `run_cv.py` prints
-  which bins each fold actually scored.
+- The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible. Fold 0
+  carries it plus two small sessions at 65 images; the other four hold 34-47. A single fixed
+  holdout costs 15-27% of the pool, which is why none is set by default.
+- `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Stratification
+  spread the rest so 4 of 5 folds now contain some tiny mask, up from 2 of 5, and cut the
+  cross-fold median-diameter spread from 3.03x to 1.78x. It cannot fix the last fold: only four
+  sessions contain a tiny mask at all. Report mean per-session IoU; `run_cv.py` prints which
+  bins each fold actually scored.
 
 Next action:
 

@@ -85,6 +85,7 @@ class TrainingConfig:
     finetune_checkpoint: Path | None = None
     split_manifest: Path | None = None
     fold: int | None = None
+    final: bool = False
     use_attention: bool = True
     batch_size: int = 8
     scratch_learning_rate: float = 1e-3
@@ -118,7 +119,14 @@ class TrainingConfig:
     def __post_init__(self) -> None:
         if self.device not in DEVICE_CHOICES:
             raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
-        if (self.split_manifest is None) != (self.fold is None):
+        if self.final and self.fold is not None:
+            raise ValueError(
+                "final and fold are alternatives: a fold run holds one fold out for "
+                "validation, a final run holds the gate sessions out instead."
+            )
+        if self.final and self.split_manifest is None:
+            raise ValueError("final needs split_manifest: the holdout is recorded there.")
+        if not self.final and (self.split_manifest is None) != (self.fold is None):
             raise ValueError(
                 "split_manifest and fold must be given together: a manifest selects the "
                 "grouped split, and fold selects which group is held out."
@@ -180,6 +188,9 @@ def make_split_datasets(
     manifest and no whole session spans the boundary. Without it, the historical fixed
     ``images_train`` / ``images_validation`` folders are used, which share recordings
     across the split and therefore measure held-out frames rather than generalisation.
+
+    Under ``final``, training takes every image the folds were allowed to see and
+    validation is the recorded holdout, which no fold ever trained or validated on.
     """
     if config.split_manifest is None:
         return (
@@ -196,7 +207,10 @@ def make_split_datasets(
         )
 
     manifest = data_splits.load_manifest(config.split_manifest)
-    train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
+    if config.final:
+        train, validation = data_splits.final_paths(manifest, config.data_root)
+    else:
+        train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
     return (
         SegmentationDataset(train[0], train[1], augment=True),
         SegmentationDataset(validation[0], validation[1], augment=False),
@@ -208,10 +222,19 @@ def split_description(config: TrainingConfig) -> str:
     if config.split_manifest is None:
         return "fixed images_train/images_validation folders (recordings shared across split)"
     manifest = data_splits.load_manifest(config.split_manifest)
+    name = Path(config.split_manifest).name
+    if config.final:
+        gate = data_splits.holdout_sessions(manifest)
+        return (
+            f"{name} final run: trained on every non-holdout image, validated on the "
+            f"{len(gate)} gate session(s): {', '.join(sorted(gate))}"
+        )
     held_out = data_splits.fold_sessions(manifest, config.fold)
+    gate = data_splits.holdout_sessions(manifest)
+    suffix = f", gate sessions excluded entirely: {', '.join(sorted(gate))}" if gate else ""
     return (
-        f"{Path(config.split_manifest).name} fold {config.fold}/{manifest['n_folds']}, "
-        f"holding out {len(held_out)} session(s): {', '.join(sorted(held_out))}"
+        f"{name} fold {config.fold}/{manifest['n_folds']}, "
+        f"holding out {len(held_out)} session(s): {', '.join(sorted(held_out))}{suffix}"
     )
 
 
@@ -412,7 +435,11 @@ def default_run_name(config: TrainingConfig) -> str:
     )
     name = f"{run_kind}_{sampling}_lr{learning_rate_text}_s{config.seed}"
     # Cross-validation runs differ only by fold, so the fold has to reach the folder name.
-    return name if config.fold is None else f"{name}_f{config.fold}"
+    if config.fold is not None:
+        return f"{name}_f{config.fold}"
+    # A final run must not be mistaken for a plain whole-pool run: it is the only one
+    # whose validation number was measured against the gate.
+    return f"{name}_final" if config.final else name
 
 
 def _write_metadata(
@@ -683,6 +710,12 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Fold held out for validation; every other fold trains. Requires --split-manifest.",
     )
     parser.add_argument(
+        "--final",
+        action="store_true",
+        help="Release-candidate run: train on every non-holdout image and validate on the "
+        "manifest's gate sessions. Requires --split-manifest, excludes --fold.",
+    )
+    parser.add_argument(
         "--learning-rate",
         type=float,
         help="Override the mode-specific default (1e-4 fine-tuning; 1e-3 fresh training).",
@@ -739,6 +772,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.split_manifest.resolve() if args.split_manifest is not None else None
             ),
             fold=args.fold,
+            final=args.final,
             use_attention=not args.no_attention,
             batch_size=args.batch_size,
             n_epochs=args.epochs,

@@ -85,10 +85,10 @@ def per_session_iou(
     )
     iou, _ = trainer.per_image_overlap_scores(probabilities, targets, report.threshold)
 
-    session_of = data_splits.session_of_stem(manifest)
+    session_of = data_splits.session_of_path(manifest, config.data_root)
     grouped: dict[str, list[float]] = defaultdict(list)
     for path, score in zip(image_paths, iou.cpu().numpy().tolist()):
-        grouped[session_of[Path(path).stem]].append(score)
+        grouped[session_of[Path(path).resolve()]].append(score)
     return {session: statistics.fmean(scores) for session, scores in grouped.items()}
 
 
@@ -121,6 +121,14 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = data_splits.load_manifest(args.split_manifest)
     folds = args.folds if args.folds else list(range(manifest["n_folds"]))
+
+    gate = data_splits.holdout_sessions(manifest)
+    if gate:
+        held = sum(e["n_images"] for e in manifest["sessions"] if e.get("holdout"))
+        print(
+            f"Holdout excluded from every fold: {len(gate)} session(s), {held} image(s) "
+            f"({', '.join(sorted(gate))}). Score them with run_train.py --final."
+        )
 
     started = time.perf_counter()
     results = []

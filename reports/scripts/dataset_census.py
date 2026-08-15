@@ -1,96 +1,94 @@
 # -*- coding: utf-8 -*-
-"""Census the local training data: mask sizes, and how much validation leaks.
+"""Census the local training data: mask sizes, and how much the legacy split leaks.
 
-Filenames carry the recording an image came from, so overlap between the splits
-is measurable. Validation images drawn from a recording that also appears in
-training measure held-out frames, not generalisation.
+The historical `images_train` / `images_validation` folders were populated by hand and
+share recordings across the boundary, so validation IoU measured against them reports
+held-out frames rather than generalisation. This quantifies that, which is the evidence
+behind moving to the grouped manifest.
 
-    python reports/scripts/dataset_census.py --data-root .
+    python reports/scripts/dataset_census.py --data-root . --split-manifest splits.json
 
-Two naming schemes are in use and both have variable-length middle segments, so
-this splits on structural markers rather than tokenising:
-
-    HQL080_whiskerb_250722_007_eye_06622  -> animal HQL080, recording ..._007
-    250530_5003_Green_..._2025-05-30T09-27-57.042_0000 -> animal 5003
+Sessions are read from the manifest rather than parsed out of filenames, so the census
+and the fold assignment cannot disagree about which recording an image came from. That
+also means this script reports at the session level only: the animal and cohort
+breakdowns it used to print were themselves filename-derived, and filenames are no
+longer treated as a source of truth. See `training/data_collection.md`.
 """
 
 from __future__ import annotations
 
 import argparse
-import runpy
-from collections import Counter
+import importlib.util
+import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
 
-from mouse_pupil_analysis.augmentation import mask_equivalent_diameter, paired_image_mask_paths
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# One parser, shared with the split generator, so a naming change cannot make the
-# census and the fold assignment disagree about which recording an image came from.
-_splits = runpy.run_path(str(PROJECT_ROOT / "training" / "data_splits.py"))
 
-
-def parse_identity(stem: str) -> tuple[str, str, str]:
-    """Return ``(cohort, animal, recording)`` for one image stem."""
-    identity = _splits["parse_identity"](stem)
-    return (identity.cohort, identity.animal, identity.recording)
+def _load_data_splits():
+    path = PROJECT_ROOT / "training" / "data_splits.py"
+    spec = importlib.util.spec_from_file_location("training_data_splits_census", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=Path.cwd())
+    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
     parser.add_argument("--tiny-max-diameter", type=float, default=15.0)
     parser.add_argument("--large-min-diameter", type=float, default=80.0)
     args = parser.parse_args(argv)
 
-    splits = {}
-    for split in ("train", "validation"):
-        images, masks = paired_image_mask_paths(
-            args.data_root / f"images_{split}", args.data_root / f"masks_{split}"
-        )
-        diameters = np.array([mask_equivalent_diameter(path) for path in masks])
-        identities = [parse_identity(path.stem) for path in images]
-        splits[split] = identities
-        unparsed = sum(cohort == "unparsed" for cohort, _, _ in identities)
+    manifest = _load_data_splits().load_manifest(args.split_manifest)
+
+    # The first path component is the pool folder an image physically sits in, which is
+    # exactly what the legacy split used to decide train from validation.
+    by_folder: dict[str, list[dict]] = defaultdict(list)
+    for entry in manifest["images"]:
+        by_folder[Path(entry["image"]).parts[0]].append(entry)
+
+    for folder in sorted(by_folder):
+        entries = by_folder[folder]
+        diameters = np.array([entry["diameter"] for entry in entries])
+        sessions = {entry["session"] for entry in entries}
         print(
-            f"{split:<11} n={len(images):>3}  "
+            f"{folder:<19} n={len(entries):>3}  "
             f"tiny={int((diameters <= args.tiny_max_diameter).sum()):>3}  "
             f"large={int((diameters >= args.large_min_diameter).sum()):>3}  "
             f"median d={np.median(diameters):>5.1f}  "
-            f"range {diameters.min():.1f}-{diameters.max():.1f}"
+            f"range {diameters.min():.1f}-{diameters.max():.1f}  "
+            f"sessions={len(sessions)}"
         )
+
+    train = by_folder.get("images_train", [])
+    validation = by_folder.get("images_validation", [])
+    if train and validation:
+        train_sessions = {entry["session"] for entry in train}
+        shared = sum(entry["session"] in train_sessions for entry in validation)
+        print("\nleakage in the legacy fixed-folder split")
         print(
-            f"{'':<11} cohorts={dict(Counter(c for c, _, _ in identities))}  "
-            f"animals={len({a for _, a, _ in identities})}  "
-            f"recordings={len({r for _, _, r in identities})}"
-            + (f"  UNPARSED={unparsed}" if unparsed else "")
+            f"  images_validation drawn from a session that also appears in "
+            f"images_train: {shared}/{len(validation)} "
+            f"({100 * shared / len(validation):>3.0f}%)"
         )
+        only = {entry["session"] for entry in validation} - train_sessions
+        print(f"  validation-only sessions: {sorted(only) or 'NONE'}")
 
-    train_animals = {a for _, a, _ in splits["train"]}
-    train_recordings = {r for _, _, r in splits["train"]}
-    validation = splits["validation"]
+    print("\nfold assignment now in force (sessions never span a fold)")
+    per_fold: Counter = Counter()
+    for entry in manifest["images"]:
+        per_fold["holdout" if entry.get("holdout") else entry["fold"]] += 1
+    for fold, count in sorted(per_fold.items(), key=lambda kv: str(kv[0])):
+        print(f"  fold {str(fold):<8} {count:>3} images")
 
-    print("\nleakage into validation")
-    for cohort in sorted({c for c, _, _ in validation}) + [None]:
-        subset = [v for v in validation if cohort is None or v[0] == cohort]
-        if not subset:
-            continue
-        by_recording = sum(r in train_recordings for _, _, r in subset)
-        by_animal = sum(a in train_animals for _, a, _ in subset)
-        print(
-            f"  {cohort or 'ALL':<9} n={len(subset):>3}  "
-            f"same recording as training {by_recording:>3}/{len(subset)} "
-            f"({100 * by_recording / len(subset):>3.0f}%)  "
-            f"same animal {by_animal:>3}/{len(subset)} "
-            f"({100 * by_animal / len(subset):>3.0f}%)"
-        )
-
-    validation_only = {a for _, a, _ in validation} - train_animals
-    print(f"\n  validation-only animals: {sorted(validation_only) or 'NONE'}")
     print(
-        f"  images per training animal: {Counter(a for _, a, _ in splits['train']).most_common()}"
+        f"\n  images per session: {Counter(e['session'] for e in manifest['images']).most_common()}"
     )
     return 0
 
