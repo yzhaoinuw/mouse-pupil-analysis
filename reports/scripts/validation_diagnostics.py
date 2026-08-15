@@ -6,7 +6,12 @@ while under-measuring every diameter by 4%. It is also mechanically harsher on
 small pupils, so a low tiny-bin IoU is not by itself evidence of a small-pupil
 weakness. This prints both, per threshold and per size bin.
 
-    python reports/scripts/validation_diagnostics.py --data-root .
+    python reports/scripts/validation_diagnostics.py --data-root . --fold 0
+
+Scores one fold of the grouped split. There is no standing validation folder any
+more -- the labelled pairs are one flat pool and the manifest decides what is held
+out -- so which images this reports on is a choice, and ``--fold`` is it. Pass
+``--holdout`` instead to score the gate sessions.
 
 The "implied boundary error" column converts each bin's IoU back into pixels
 (IoU ~ 1 - k/d for a disc of diameter d), which is comparable across sizes in a
@@ -30,12 +35,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=Path.cwd())
+    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
+    parser.add_argument("--fold", type=int, default=0, help="Fold to score as validation.")
+    parser.add_argument(
+        "--holdout",
+        action="store_true",
+        help="Score the manifest's holdout sessions instead of a fold.",
+    )
     parser.add_argument("--checkpoint", type=Path, help="Default: the packaged checkpoint.")
     parser.add_argument("--tiny-max-diameter", type=float, default=15.0)
     parser.add_argument("--large-min-diameter", type=float, default=80.0)
     args = parser.parse_args(argv)
 
     trainer = runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
+    data_splits = runpy.run_path(str(PROJECT_ROOT / "training" / "data_splits.py"))
     from mouse_pupil_analysis.pupil_predictions import (
         find_default_checkpoint,
         load_unet_checkpoint,
@@ -45,9 +58,14 @@ def main(argv: list[str] | None = None) -> int:
     checkpoint = args.checkpoint or find_default_checkpoint()
     device = torch.device("cpu")
     model = load_unet_checkpoint(checkpoint, device)
-    dataset = trainer["make_dataset"](
-        args.data_root / "images_validation", args.data_root / "masks_validation"
-    )
+    manifest = data_splits["load_manifest"](args.split_manifest)
+    if args.holdout:
+        images, masks = data_splits["holdout_paths"](manifest, args.data_root)
+        scope = f"holdout ({', '.join(data_splits['holdout_sessions'](manifest))})"
+    else:
+        _, (images, masks) = data_splits["fold_paths"](manifest, args.fold, args.data_root)
+        scope = f"fold {args.fold}/{manifest['n_folds']}"
+    dataset = trainer["SegmentationDataset"](images, masks, augment=False)
 
     probabilities, targets = [], []
     with torch.no_grad():
@@ -63,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         area = (probabilities > threshold).sum(dim=(1, 2, 3)).float().numpy()
         return np.sqrt(4.0 * area / math.pi)
 
-    print(f"checkpoint: {checkpoint.name}   n={len(truth_diameter)}\n")
+    print(f"checkpoint: {checkpoint.name}   scope: {scope}   n={len(truth_diameter)}\n")
     print(f"{'thr':>5} {'macro IoU':>10} {'signed diam':>12} {'|diam|':>8}")
     for threshold in np.arange(0.20, 0.81, 0.05):
         iou, _ = trainer["per_image_overlap_scores"](probabilities, targets, float(threshold))

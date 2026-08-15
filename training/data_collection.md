@@ -111,11 +111,11 @@ So: **record it**. Any one of these works, and they are checked in this order.
    session:
 
    ```text
-   images_train/HQL091_sleep260820/frame_0001.png   ->  session HQL091_sleep260820
-   images_train/whatever_you_like/img_00042.png     ->  session whatever_you_like
+   labeled_data/HQL091_sleep260820/frame_0001.png   ->  session HQL091_sleep260820
+   labeled_data/whatever_you_like/img_00042.png     ->  session whatever_you_like
    ```
 
-   Masks may mirror the same subfolders or sit flat in `masks_train/`; both are paired
+   Masks may mirror the same subfolders or sit flat in `labeled_masks/`; both are paired
    by filename.
 
    **Filenames need not be unique between folders.** Two recordings may each contain a
@@ -153,10 +153,10 @@ So: **record it**. Any one of these works, and they are checked in this order.
 
 ## Adding a labelled batch to the split
 
-1. Put images and masks under `images_train/` and `masks_train/`, in a per-recording
-   subfolder if you can. **Which pool folder they land in does not decide the split** —
-   the manifest does. `images_train/` and `images_validation/` are read as one flat
-   pool and exist only for historical reasons.
+1. Put images and masks under `labeled_data/` and `labeled_masks/`, in a per-recording
+   subfolder if you can. There is one flat pool and no train/validation folders: the
+   manifest decides what trains and what validates, so adding data never moves a file
+   and re-splitting never moves one either.
 2. Regenerate the manifest:
 
    ```bash

@@ -37,7 +37,7 @@ def _write_pair(
     root: Path,
     stem: str,
     radius: int,
-    split: str = "train",
+    split: str = "labelled",
     session: str | None = None,
     grey: int = 100,
     labelme_session: str | None = None,
@@ -48,8 +48,10 @@ def _write_pair(
     sets the mask's equivalent diameter, so a test can place a pair in a chosen
     stratum on purpose.
     """
-    image_dir = root / f"images_{split}" / (session or "")
-    mask_dir = root / f"masks_{split}" / (session or "")
+    folders = {"labelled": ("labeled_data", "labeled_masks")}
+    image_root, mask_root = folders.get(split, (f"images_{split}", f"masks_{split}"))
+    image_dir = root / image_root / (session or "")
+    mask_dir = root / mask_root / (session or "")
     image_dir.mkdir(parents=True, exist_ok=True)
     mask_dir.mkdir(parents=True, exist_ok=True)
 
@@ -80,7 +82,7 @@ def _sessions(root: Path, sidecar=None, batch_name="unknown_batch"):
 
 @pytest.fixture
 def pool(tmp_path: Path) -> Path:
-    """Six sessions recorded as intake folders, spanning both pool directories.
+    """Six sessions recorded as intake folders, one spanning two pool directories.
 
     Radii and greys are chosen so the sessions land in different diameter and
     brightness bands rather than all collapsing into one stratum.
@@ -194,7 +196,7 @@ def test_no_session_is_split_across_folds(pool: Path):
         assert entry["fold"] == fold_of_session[entry["session"]]
 
     across = [e for e in manifest["images"] if e["session"] == "rig9_day9"]
-    assert {Path(e["image"]).parts[0] for e in across} == {"images_train", "images_validation"}
+    assert {Path(e["image"]).parts[0] for e in across} == {"labeled_data", "images_validation"}
     assert len({e["fold"] for e in across}) == 1
 
 
@@ -307,19 +309,19 @@ def test_a_flat_mask_folder_still_pairs_with_nested_images(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
     _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
     # Move one mask out of its mirrored subfolder into the flat mask root.
-    nested = tmp_path / "masks_train" / "rig1_day1" / "frame1.png"
-    nested.rename(tmp_path / "masks_train" / "frame1.png")
+    nested = tmp_path / "labeled_masks" / "rig1_day1" / "frame1.png"
+    nested.rename(tmp_path / "labeled_masks" / "frame1.png")
     nested.parent.rmdir()
 
     manifest = data_splits.build_manifest(tmp_path, n_folds=2)
     masks = {e["key"]: e["mask"] for e in manifest["images"]}
-    assert masks["rig1_day1/frame1"] == "masks_train/frame1.png"
-    assert masks["rig2_day2/frame2"] == "masks_train/rig2_day2/frame2.png"
+    assert masks["rig1_day1/frame1"] == "labeled_masks/frame1.png"
+    assert masks["rig2_day2/frame2"] == "labeled_masks/rig2_day2/frame2.png"
 
 
 def test_an_image_with_no_mask_is_rejected(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
-    (tmp_path / "masks_train" / "rig1_day1" / "frame1.png").unlink()
+    (tmp_path / "labeled_masks" / "rig1_day1" / "frame1.png").unlink()
 
     with pytest.raises(FileNotFoundError, match="No mask for"):
         data_splits.build_manifest(tmp_path, n_folds=2)
@@ -368,10 +370,10 @@ def test_brightness_tracks_the_background_not_the_pupil(tmp_path: Path):
     _write_pair(tmp_path, "bright", radius=20, session="b", grey=200)
 
     dim = image_background_brightness(
-        tmp_path / "images_train/a/dim.png", tmp_path / "masks_train/a/dim.png"
+        tmp_path / "labeled_data/a/dim.png", tmp_path / "labeled_masks/a/dim.png"
     )
     bright = image_background_brightness(
-        tmp_path / "images_train/b/bright.png", tmp_path / "masks_train/b/bright.png"
+        tmp_path / "labeled_data/b/bright.png", tmp_path / "labeled_masks/b/bright.png"
     )
     # The bright image has the far larger pupil, so a whole-frame mean would narrow
     # the gap; excluding the mask keeps this a measure of lighting.

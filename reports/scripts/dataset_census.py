@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Census the local training data: mask sizes, and how much the legacy split leaks.
+"""Census the local training data: mask sizes per pool folder and per fold.
 
 The historical `images_train` / `images_validation` folders were populated by hand and
-share recordings across the boundary, so validation IoU measured against them reports
-held-out frames rather than generalisation. This quantifies that, which is the evidence
-behind moving to the grouped manifest.
+shared recordings across the boundary, so validation IoU measured against them reported
+held-out frames rather than generalisation. That evidence is what moved this project to
+the grouped manifest, and the labelled pairs now live in one flat `labeled_data` pool.
+The leakage section below therefore only prints for a checkout still laid out the old
+way; it is kept because that comparison is the argument for the current design.
 
     python reports/scripts/dataset_census.py --data-root . --split-manifest splits.json
 
@@ -48,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = _load_data_splits().load_manifest(args.split_manifest)
 
     # The first path component is the pool folder an image physically sits in, which is
-    # exactly what the legacy split used to decide train from validation.
+    # what the legacy split used to decide train from validation. One folder now.
     by_folder: dict[str, list[dict]] = defaultdict(list)
     for entry in manifest["images"]:
         by_folder[Path(entry["image"]).parts[0]].append(entry)

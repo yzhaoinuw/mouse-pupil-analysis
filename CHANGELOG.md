@@ -12,8 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recording-grouped, condition-stratified data splits. `training/data_splits.py` groups the
   labelled pool into *sessions* — one animal, one date, one condition — and packs whole
   sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.
-  `images_train/` and `images_validation/` are now read as one flat pool, so re-splitting
-  moves no labelled files. `run_train.py` gains `--split-manifest` and `--fold`; without
+  The labelled pairs are one flat `labeled_data/` + `labeled_masks/` pool -- the former
+  `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` were merged
+  into it, and are still read where an older checkout has them. The manifest decides what
+  trains and what validates, so re-splitting moves no labelled files and adding data moves
+  none either. Because an image is keyed by its path *within* the pool folder, the merge
+  itself moved no image between folds. `run_train.py` gains `--split-manifest` and `--fold`; without
   them it keeps the previous fixed-folder behaviour. Grouping is worth 0.25 IoU against a
   0.02 seed noise floor: copying a nearest neighbour's mask scores 0.652 when the neighbour
   shares a session and 0.399 when it does not.

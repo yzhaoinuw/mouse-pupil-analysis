@@ -57,6 +57,8 @@ build/
 checkpoints_exp/
 images_test*/
 images_test*_result/
+/labeled_data/
+/labeled_masks/
 /images_train/
 /images_validation/
 /masks_train/

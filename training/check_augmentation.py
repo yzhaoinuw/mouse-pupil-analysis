@@ -80,8 +80,8 @@ def show_augmented_samples(
 
 # example paths, paired by filename stem rather than by independent sort order
 image_paths, mask_paths = paired_image_mask_paths(
-    DATA_ROOT / "images_train",
-    DATA_ROOT / "masks_train",
+    DATA_ROOT / ("labeled_data" if (DATA_ROOT / "labeled_data").is_dir() else "images_train"),
+    DATA_ROOT / ("labeled_masks" if (DATA_ROOT / "labeled_data").is_dir() else "masks_train"),
 )
 
 dataset = SegmentationDataset(

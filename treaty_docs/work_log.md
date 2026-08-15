@@ -6,6 +6,19 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Merged the four pool folders into one flat `labeled_data/` + `labeled_masks/`.** The
+  maintainer proposed this at the start of the session; I agreed and then dropped it when
+  summarising the design, and it went unbuilt for the whole build. Caught on review. The
+  merge moved 222 image/mask pairs plus their labelme JSON, copy-verify-delete against
+  sha256, and **no fold moved** -- an image is keyed by its path *within* its pool folder,
+  so `images_train/X.png` and `labeled_data/X.png` are both key `X`. `DEFAULT_POOL` still
+  lists the legacy pairs after `labeled_data`, so an older checkout and `sample_data` keep
+  working with no change.
+- **Two bugs the merge surfaced**, both now fixed: regenerating without `--folds` used the
+  default 5 rather than the manifest's own 4 and silently wrote an empty fold; and an empty
+  fold could reach the manifest at all. `--folds` now defaults to the existing manifest's
+  count, and a fold that would hold no images raises and names `--reassign`.
+
 - **The maintainer challenged filename-derived grouping: what happens when incoming images
   follow a different convention, or none?** Fair, and the answer was not a better parser.
   Tested whether session identity can be recovered from the data instead of a name, against

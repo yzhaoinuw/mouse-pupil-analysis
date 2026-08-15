@@ -54,10 +54,15 @@ import provenance as provenance_module  # noqa: E402
 SCHEMA_VERSION = 2
 HOLDOUT_FOLD = -1
 
-DEFAULT_POOL = (
+# One flat pool of labelled pairs. ``labeled_data`` is where new data goes; the two
+# historical folders are still read so an older local checkout keeps working, and a
+# pair moving between any of them keeps its key and therefore its fold.
+LABELLED_POOL = ("labeled_data", "labeled_masks")
+LEGACY_POOL = (
     ("images_train", "masks_train"),
     ("images_validation", "masks_validation"),
 )
+DEFAULT_POOL = (LABELLED_POOL,) + LEGACY_POOL
 
 
 @dataclass
@@ -128,9 +133,9 @@ def discover_pool(
     an intake subfolder. The bare filename will not do -- per-recording exports routinely
     restart their numbering, so two intake folders can each hold a ``frame_0001.png``,
     and the whole point of the folders is that filenames need not be unique. Excluding
-    the pool folder from the key means moving a pair between ``images_train`` and
-    ``images_validation`` does not change its identity, which is what keeps the split
-    frozen when the historical folders are reshuffled.
+    the pool folder from the key means moving a pair between ``labeled_data`` and the
+    historical ``images_train`` / ``images_validation`` does not change its identity,
+    which is what let the pool be consolidated without any fold moving.
     """
     data_root = Path(data_root)
     found: list[PoolImage] = []
@@ -167,6 +172,15 @@ def discover_pool(
             f"No labelled images found under {data_root} in {[d for d, _ in pool]}."
         )
     return found, located
+
+
+def existing_pool(
+    data_root: Path,
+    pool: tuple[tuple[str, str], ...] = DEFAULT_POOL,
+) -> tuple[tuple[str, str], ...]:
+    """Return only the pool folder pairs that are actually present."""
+    data_root = Path(data_root)
+    return tuple(entry for entry in pool if (data_root / entry[0]).is_dir())
 
 
 def frozen_sessions(previous: dict | None) -> dict[str, str]:
@@ -330,6 +344,14 @@ def assign_folds(
             ),
         )
         record(key, fold)
+
+    empty = [fold for fold in range(n_folds) if not sizes[fold]]
+    if empty:
+        raise ValueError(
+            f"Folds {empty} would hold no images. This usually means --folds was raised "
+            f"above the {len(assignable)} session(s) the frozen assignment already covers; "
+            "pass --reassign to repack every session across the new fold count."
+        )
     return assignment
 
 
@@ -664,7 +686,12 @@ def main(argv: list[str] | None = None) -> int:
         "(default: <data-root>/splits.json). A manifest belongs to the pool it "
         "describes, so this follows --data-root rather than the working directory.",
     )
-    parser.add_argument("--folds", type=int, default=5)
+    parser.add_argument(
+        "--folds",
+        type=int,
+        help="Number of cross-validation folds (default: whatever the existing manifest "
+        "uses, else 5). Changing this requires --reassign.",
+    )
     parser.add_argument("--tiny-max-diameter", type=float, default=15.0)
     parser.add_argument(
         "--sidecar",
@@ -714,6 +741,10 @@ def main(argv: list[str] | None = None) -> int:
     # A migration deliberately starts from no history: the manifest being replaced is
     # schema 1, which this code cannot read and must not carry folds over from.
     previous = None if (args.reassign or args.migrate_from) else read_previous(args.out)
+    if args.folds is None:
+        # A manifest already records its fold count; silently substituting a default
+        # here would repack against a different one and leave folds empty.
+        args.folds = previous["n_folds"] if previous else 5
     if args.migrate_from:
         sidecar = {**_migration_sidecar(args.migrate_from), **sidecar}
         print(

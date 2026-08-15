@@ -188,11 +188,20 @@ def make_split_datasets(
     manifest and no whole session spans the boundary. Without it, the historical fixed
     ``images_train`` / ``images_validation`` folders are used, which share recordings
     across the split and therefore measure held-out frames rather than generalisation.
+    Those folders no longer exist in the maintained dataset, whose labelled pairs live
+    in one flat ``labeled_data`` / ``labeled_masks`` pool, so that path now applies only
+    to a dataset still laid out the old way -- ``sample_data`` among them.
 
     Under ``final``, training takes every image the folds were allowed to see and
     validation is the recorded holdout, which no fold ever trained or validated on.
     """
     if config.split_manifest is None:
+        if not (config.data_root / "images_train").is_dir():
+            raise FileNotFoundError(
+                f"No images_train/ under {config.data_root}. The labelled pool is one flat "
+                "labeled_data/ folder now, and splitting it needs the grouped manifest: "
+                "pass --split-manifest splits.json --fold N. See training/data_collection.md."
+            )
         return (
             make_dataset(
                 config.data_root / "images_train",
@@ -702,7 +711,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         "--split-manifest",
         type=Path,
         help="Grouped split from training/data_splits.py. Requires --fold. Without it, the "
-        "fixed images_train/images_validation folders are used, which share recordings.",
+        "fixed images_train/images_validation folders are used where they exist, which "
+        "share recordings across the split.",
     )
     parser.add_argument(
         "--fold",

@@ -23,22 +23,24 @@ Label creation also requires [Labelme](https://github.com/wkentaro/labelme). Ins
 Create these local folders at the repository root:
 
 ```text
-images_train/
-masks_train/
-images_validation/
-masks_validation/
+labeled_data/     # every labelled image
+labeled_masks/    # every matching mask
 ```
+
+One flat pool. There is no train/validation folder split any more: `splits.json` decides what trains and what validates, so a labelled pair never moves on disk when the split changes. The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` are still read if a checkout still has them, so an older layout keeps working.
 
 Images and masks must be PNG files whose filenames correspond one-to-one by stem. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
 
-**Which of the two folders a file lands in no longer decides the split.** Both pairs are read as one flat pool, and `splits.json` decides what trains and what validates; see [Grouped splits](#grouped-splits) below. The folders are kept because existing local datasets use them. For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
+For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
 
-Subdirectories inside the image folders are walked, and a per-recording subfolder is the easiest way to record which session a batch belongs to:
+Subdirectories inside `labeled_data/` are walked, and a per-recording subfolder is the easiest way to record which session a batch belongs to:
 
 ```text
-images_train/HQL091_sleep260820/frame_0001.png    ->  session HQL091_sleep260820
-masks_train/HQL091_sleep260820/frame_0001.png     (or flat in masks_train/; both pair by filename)
+labeled_data/HQL091_sleep260820/frame_0001.png    ->  session HQL091_sleep260820
+labeled_masks/HQL091_sleep260820/frame_0001.png   (or flat in labeled_masks/; both pair by filename)
 ```
+
+Filenames need not be unique between subfolders — two recordings may each hold a `frame_0001.png`, because an image is identified by its path within the pool folder.
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
@@ -55,7 +57,7 @@ See [`sample_data/README.md`](../sample_data/README.md) for the fixture's scope 
 ## 1. Create masks with Labelme
 
 1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
-2. Save each JSON file beside its image in `images_train/` or `images_validation/`.
+2. Save each JSON file beside its image in `labeled_data/`.
 3. In `labelme_json2png.py`, set `dataset_type` to `"train"` or `"validation"`.
 4. Run:
 
@@ -100,10 +102,11 @@ already sits in, so adding data does not invalidate earlier results. A provenanc
 that contradicts the manifest is an error rather than a silent repack; `--reassign`
 repacks everything deliberately and does invalidate earlier numbers.
 
-Without `--split-manifest`, the trainer falls back to the fixed `images_train` /
-`images_validation` folders. That split shares recordings across the boundary, so its
-IoU measures held-out frames from seen recordings rather than generalisation. Prefer the
-manifest for anything you intend to compare.
+`--split-manifest` is how the pool gets split. Without it the trainer looks for the old
+fixed `images_train` / `images_validation` folders, which the maintained dataset no
+longer has; that path remains only for a checkout still laid out the old way, such as
+`sample_data`, and it shares recordings across the boundary so its IoU measures held-out
+frames rather than generalisation.
 
 ### The holdout gate
 
