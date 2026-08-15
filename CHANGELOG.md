@@ -31,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mouse_pupil_analysis.augmentation.image_background_brightness`), and a new session
   prefers a fold holding no session of its diameter band, then the smallest fold.
   Grouping alone had left a 3.03x spread in median diameter across folds with only 2 of 5
-  containing any small mask; it is now 1.78x and 4 of 5. Letting only the *absence* of a
+  containing any small mask; at the four folds the pool now uses, it is 1.60x and 4 of 4.
+  Letting only the *absence* of a
   band outrank fold size is what makes one rule work both when packing from scratch and
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with

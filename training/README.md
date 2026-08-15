@@ -85,7 +85,7 @@ measurements that ruled out recovering the grouping from the images themselves.
 Folds are also **stratified**: sessions are banded by median pupil diameter and median
 background brightness, and a new session prefers a fold holding no session of its
 diameter band, then the smallest fold. Grouping alone left three of five folds with no
-small pupil at all.
+small pupil at all; the pool now uses four folds, and every one of them holds some.
 
 Generate the manifest once, then refresh it whenever labelled data is added:
 

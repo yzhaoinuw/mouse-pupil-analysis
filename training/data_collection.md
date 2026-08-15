@@ -62,8 +62,9 @@ In priority order. Spend the budget top-down.
 3. **Small pupils from a session that is not already the small-pupil session.** Only
    four sessions in the pool contain any mask at or below 15 model pixels, and one holds
    10 of the 14. Stratification spreads what exists across folds; it cannot manufacture
-   small pupils that were never labelled, so one fold still has none. Small pupils from
-   a *different* setting fix that; more from the same one do not.
+   small pupils that were never labelled. Every fold currently holds at least one, but
+   three of them hold only one or two, so the tiny-bin IoU is still thin. Small pupils
+   from a *different* setting fix that; more from the same one do not.
 4. **Frames where the packaged model visibly fails.** Run inference first and label what
    it gets wrong. Frames it already segments correctly mostly confirm what the weights
    encode.
@@ -208,15 +209,30 @@ over, which is what keeps folds even as sessions trickle in one at a time:
 Band coverage is identical either way (5 of 5 folds hold all three diameter bands), so
 this costs nothing. Simulated over 200 arrival orders from the current assignment.
 
-Fold sizes are currently uneven — 65/47/41/35/34 — and most of that is not fixable by
-any rule: the 62-image `5003` session cannot be divided, so one fold is at least 62
-images whatever you do. The rest is the granularity of the remaining session sizes. It
-self-corrects as data arrives; five new sessions bring the spread to about 1.35x.
+Fold sizes are uneven — currently 76/58/44/44 over four folds — and most of that is not
+fixable by any rule: the 62-image `5003` session cannot be divided, so one fold is at
+least 62 images whatever you do. The rest is the granularity of the remaining session
+sizes. It self-corrects as data arrives; five new sessions bring the spread to about
+1.35x.
+
+The pool is split into **four** folds rather than five. Four holds a small pupil in every
+fold and gives a tighter condition balance, because each fold holds more sessions and the
+indivisible 62-image session is a smaller share of a larger target:
+
+| | 5 folds | 4 folds |
+| --- | --- | --- |
+| folds containing any mask ≤15 px | 4 of 5 | **4 of 4** |
+| median diameter spread across folds | 1.78x | 1.60x |
+| fold size spread | 1.91x | 1.73x |
+
+The cost is that each model trains on 75% of the pool instead of 80%, and four numbers
+are averaged instead of five. At this pool size that is the better trade; revisit it if
+the pool grows enough that five folds also cover every size band.
 
 |  | before | after |
 | --- | --- | --- |
-| median diameter spread across folds | 3.03x | 1.78x |
-| folds containing any mask ≤15 px | 2 of 5 | 4 of 5 |
+| median diameter spread across folds | 3.03x | 1.60x |
+| folds containing any mask ≤15 px | 2 of 5 | 4 of 4 |
 
 Brightness is measured as the mean grey level outside the pupil mask, on the original
 image rather than the padded model input — `resize_with_pad` fills with black, so a

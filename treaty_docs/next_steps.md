@@ -41,12 +41,14 @@ becomes one safe over-merged group. Do not re-litigate; add a provenance *source
 
 Two structural facts that constrain every future comparison:
 
-- The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible. Fold 0
-  carries it plus two small sessions at 65 images; the other four hold 34-47. A single fixed
-  holdout costs 15-27% of the pool, which is why none is set by default.
+- The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible, so one
+  fold is always at least that big. The pool uses **4 folds**, not 5: four puts a small pupil
+  in every fold and tightens the condition balance, because each fold holds more sessions and
+  the 62-image session is a smaller share of a larger target. Current sizes 76/58/44/44. A
+  single fixed holdout costs 15-27% of the pool, which is why none is set by default.
 - `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Stratification
-  spread the rest so 4 of 5 folds now contain some tiny mask, up from 2 of 5, and cut the
-  cross-fold median-diameter spread from 3.03x to 1.78x. It cannot fix the last fold: only four
+  spread the rest so every fold now contains some tiny mask, up from 2 of 5, and cut the
+  cross-fold median-diameter spread from 3.03x to 1.60x. Coverage is still thin: only four
   sessions contain a tiny mask at all. Report mean per-session IoU; `run_cv.py` prints which
   bins each fold actually scored.
 
@@ -72,7 +74,7 @@ Status: measured; no change made yet. See `reports/2026-08-14-checkpoint-noise-f
   `balanced_iou` is the mean of the tiny, medium, and large bins; the old validation set held
   exactly 2 tiny masks, and across the whole pool `HQL080_sleep250625` holds 10 of the 14. So
   the tiny bin measures one recording setting, not a size regime, and under grouped folds it is
-  absent from three folds of five. Small pupils are not a training-data bottleneck: in absolute
+  thin in most folds. Small pupils are not a training-data bottleneck: in absolute
   pixel terms the model is about twice as accurate on them as on medium pupils, and low
   tiny-bin IoU is a mechanical property of IoU on small objects. What would actually help is
   small-pupil labels from a *different* session; more from the same one would not.
