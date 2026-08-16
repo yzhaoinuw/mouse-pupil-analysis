@@ -97,11 +97,13 @@ class TrainingConfig:
     scheduler_patience: int = 8
     promotion_target_iou: float = 0.85
     min_improvement: float = 1e-4
+    # Floored at 0.50 deliberately. Measured over the 24 grouped-fold checkpoints of
+    # 2026-08-16: on the folds the model handles, the optimum never falls below 0.50 and
+    # allowing lower gains exactly 0.0000 in 10 of 12 runs. Only the failing folds want
+    # lower, where a low threshold over-predicts to scrape back IoU on a bad mask -- a
+    # symptom to surface, not a calibration to adopt. A shipping calibration aimed at
+    # diameter bias rather than IoU is a separate question and may legitimately go lower.
     threshold_candidates: tuple[float, ...] = (
-        0.30,
-        0.35,
-        0.40,
-        0.45,
         0.50,
         0.55,
         0.60,
@@ -109,11 +111,18 @@ class TrainingConfig:
         0.70,
         0.75,
         0.80,
+        0.85,
+        0.90,
     )
     tiny_max_diameter: float = 15.0
     large_min_diameter: float = 80.0
     low_circularity_cutoff: float = 0.45
-    balance_training_sizes: bool = True
+    # Natural sampling won the paired comparison of 2026-08-16 by 0.0354 mean per-session
+    # IoU, at every seed and in 8 of 12 matched fold-seed cells. Equal-mass balancing did
+    # not improve the tiny bin it was added to protect (2-2 across folds, largest gap
+    # favouring natural) while costing large-pupil IoU 0.20 and 0.27 on two folds. The
+    # packaged checkpoint already records sampling: "natural".
+    balance_training_sizes: bool = False
     # ``balanced_iou`` averages the represented size bins equally. Under grouped folds a bin
     # can hold one or two images, so a single noisy image swings a third of the metric;
     # ``macro_iou`` averages over images instead and is what the first grouped sweep showed
@@ -732,17 +741,24 @@ def run_training(config: TrainingConfig) -> Path:
                     print("Early stopping triggered; the best checkpoint remains saved.")
                     break
 
-    # A calibrated threshold that lands on the edge of the grid is censored: the value that
-    # would actually maximise the metric may lie outside the candidates, so the recorded
-    # threshold is a boundary artefact rather than a calibration.
+    # The calibrated threshold landing on the grid edge means the optimum is somewhere
+    # outside it. At the low edge that is a symptom rather than a calibration: a model that
+    # wants a lower threshold is under-segmenting and buying IoU by predicting more pixels
+    # positive, which is what the failing folds did on 2026-08-16.
     calibrated = json.loads(metadata_path.read_text(encoding="utf-8"))["prediction_threshold"]
     low, high = min(config.threshold_candidates), max(config.threshold_candidates)
-    if calibrated in (low, high):
+    if calibrated == low:
         print(
-            f"WARNING: calibrated threshold {calibrated:.2f} is the "
-            f"{'lowest' if calibrated == low else 'highest'} candidate, so the calibration is "
-            f"censored by the grid. Widen --threshold-candidates past {calibrated:.2f} to see "
-            "whether the optimum lies beyond it."
+            f"WARNING: calibrated threshold {calibrated:.2f} is the lowest candidate, so this "
+            "run wanted to go lower still. That usually means the model under-segments these "
+            "validation recordings rather than that the grid is too narrow. Check the "
+            "per-session scores before trusting this checkpoint."
+        )
+    elif calibrated == high:
+        print(
+            f"WARNING: calibrated threshold {calibrated:.2f} is the highest candidate, so the "
+            f"calibration is censored by the grid. Widen --threshold-candidates past "
+            f"{calibrated:.2f} to find the optimum."
         )
 
     print(f"Training log: {log_path}")
@@ -833,10 +849,19 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="Probability grid to calibrate the reported threshold over.",
     )
-    parser.add_argument(
+    sampling = parser.add_mutually_exclusive_group()
+    sampling.add_argument(
+        "--balance-sizes",
+        action="store_true",
+        help="Sample equal mass from the tiny/medium/large bins. Off by default: natural "
+        "sampling measured better on the grouped split and is what the packaged checkpoint "
+        "uses.",
+    )
+    sampling.add_argument(
         "--natural-sampling",
         action="store_true",
-        help="Use the natural training-set distribution instead of equal-mass size bins.",
+        help="Use the natural training-set distribution. This is now the default; the flag is "
+        "accepted so existing commands keep working.",
     )
     parser.add_argument(
         "--no-attention",
@@ -895,7 +920,7 @@ def main(argv: list[str] | None = None) -> int:
             n_epochs=args.epochs,
             early_stopping_patience=args.early_stopping_patience,
             scheduler_patience=args.scheduler_patience,
-            balance_training_sizes=not args.natural_sampling,
+            balance_training_sizes=args.balance_sizes,
             selection_metric=args.selection_metric,
             scheduler_metric=args.scheduler_metric,
             selection_threshold=selection_threshold,

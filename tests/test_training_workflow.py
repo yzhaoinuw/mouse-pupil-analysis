@@ -65,15 +65,22 @@ def test_balanced_sampling_gives_each_size_bin_equal_total_weight():
     assert totals["tiny"] == pytest.approx(totals["large"])
 
 
-def test_default_run_name_is_concise_and_describes_the_main_choices(tmp_path):
+@pytest.mark.parametrize(
+    ("balance_training_sizes", "expected"),
+    [(False, "ft_natural_lr5e-5_s3"), (True, "ft_bal_lr5e-5_s3")],
+)
+def test_default_run_name_is_concise_and_describes_the_main_choices(
+    tmp_path, balance_training_sizes, expected
+):
     config = TrainingConfig(
         checkpoint_dir=tmp_path,
         finetune_checkpoint=tmp_path / "source.pth",
         finetune_learning_rate=5e-5,
+        balance_training_sizes=balance_training_sizes,
         seed=3,
     )
 
-    assert default_run_name(config) == "ft_bal_lr5e-5_s3"
+    assert default_run_name(config) == expected
 
 
 def test_run_name_cannot_escape_the_experiment_directory():

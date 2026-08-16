@@ -107,10 +107,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--tag", default="cv", help="Run-name prefix.")
-    parser.add_argument(
+    sampling = parser.add_mutually_exclusive_group()
+    sampling.add_argument(
+        "--balance-sizes",
+        action="store_true",
+        help="Sample equal mass from the tiny/medium/large bins. Off by default: natural "
+        "sampling won the paired comparison on this split.",
+    )
+    sampling.add_argument(
         "--natural-sampling",
         action="store_true",
-        help="Use the natural size distribution instead of equal-mass size bins.",
+        help="Use the natural size distribution. Now the default; accepted so existing "
+        "commands keep working.",
     )
     parser.add_argument(
         "--selection-metric",
@@ -173,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
             split_manifest=args.split_manifest.resolve(),
             fold=fold,
             finetune_checkpoint=args.finetune_checkpoint,
-            balance_training_sizes=not args.natural_sampling,
+            balance_training_sizes=args.balance_sizes,
             selection_metric=args.selection_metric,
             scheduler_metric=args.scheduler_metric,
             selection_threshold=selection_threshold,
