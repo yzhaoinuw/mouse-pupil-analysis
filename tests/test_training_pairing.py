@@ -73,14 +73,14 @@ def test_empty_image_directory_is_rejected(tmp_path: Path):
 
 
 @pytest.mark.skipif(not SAMPLE_ROOT.is_dir(), reason="sample_data/ needs a source checkout.")
-@pytest.mark.parametrize(("split", "count"), [("train", 8), ("validation", 4)])
-def test_committed_fixture_pairs_cleanly(split, count):
+def test_committed_fixture_pairs_cleanly():
+    # One flat pool, mirroring the maintained dataset: no train/validation folders.
     image_paths, mask_paths = paired_image_mask_paths(
-        SAMPLE_ROOT / f"images_{split}",
-        SAMPLE_ROOT / f"masks_{split}",
+        SAMPLE_ROOT / "labeled_data",
+        SAMPLE_ROOT / "labeled_masks",
     )
 
-    assert len(image_paths) == count
+    assert len(image_paths) == len(mask_paths) == 32
     assert [path.stem for path in image_paths] == [path.stem for path in mask_paths]
 
 

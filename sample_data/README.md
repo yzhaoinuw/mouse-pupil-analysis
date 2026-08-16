@@ -6,10 +6,12 @@ This directory is a small public fixture for trying the repository from a fresh 
 
 ```text
 sample_data/
-|- images_train/          # 8 curated cropped images
-|- masks_train/           # 8 matching hand-labeled masks
-|- images_validation/     # 4 curated cropped images
-|- masks_validation/      # 4 matching hand-labeled masks
+|- labeled_data/          # 32 curated cropped images (+ their labelme JSON)
+|- labeled_masks/         # 32 matching hand-labeled masks
+|- provenance.csv         # which recording session each image came from
+|- splits.json            # the grouped, stratified fold assignment
+|- folds/                 # the same split as folders, generated from splits.json
+|  |- cv1/ cv2/ cv3/ cv4/ #   each with images/ and masks/
 |- raw_frames/            # 6 uncropped frames grouped by recording
 |  |- recording_250530/
 |  |- recording_250616/
@@ -18,7 +20,28 @@ sample_data/
 |- README.md
 ```
 
-`manifest.csv` records the source recording, source-frame suffix, transformation, and intended role of each logical sample.
+This mirrors the maintained dataset's layout exactly: one flat labelled pool, a
+`provenance.csv` recording the session behind each image, and `splits.json` deciding
+what trains and what validates. There are no train/validation folders.
+
+`manifest.csv` records the session, fold, source recording, source-frame suffix, and
+transformation of each logical sample.
+
+The 32 pairs are a real subset of the maintained pool, chosen so the fixture exercises
+the split rather than merely containing images:
+
+| | fixture | maintained pool |
+| --- | --- | --- |
+| labelled pairs | 32 | 222 |
+| sessions | 10 | 16 |
+| images per session | 6 5 4 4 3 3 3 2 1 1 | 62 32 18 17 15 13 13 13 12 11 5 4 3 2 1 1 |
+| mask diameter range | 8.8 - 109.7 | 8.8 - 109.7 |
+| folds containing a mask <=15 px | 3 of 4 | 4 of 4 |
+
+Several sessions are deep enough that holding one out removes a block of related frames,
+which is what the grouping exists to do; a fixture of one image per session would satisfy
+"no session spans a fold" vacuously. One fold holds no small pupil, which is the same
+honest limitation the real pool has and worth seeing in a test.
 
 ## Try segmentation on uncropped frames
 
@@ -71,7 +94,7 @@ python training\check_augmentation.py
 Or run the training script with terminal arguments:
 
 ```powershell
-python training\run_train.py --data-root sample_data --epochs 1
+python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
 ```
 
 For an IDE plumbing check, set `DATA_ROOT = PROJECT_ROOT / "sample_data"` and `n_epochs=1` in
@@ -80,22 +103,36 @@ best checkpoint, JSON metadata, and log are written to one descriptive run folde
 `checkpoints_exp/` regardless of score. A model trained on eight images is expected to
 overfit and must not be treated as a useful trained model.
 
-To exercise the grouped, stratified split on the fixture, point both the data root and the
-manifest at it:
+## Try the grouped, stratified split
 
 ```powershell
-python training\data_splits.py --data-root sample_data --folds 3 --show
+python training\data_splits.py --data-root sample_data --show
 ```
 
-`sample_data/provenance.csv` records which recording session each of the 12 images came from,
-which is what the split groups on — see [`../training/data_collection.md`](../training/data_collection.md).
-Twelve images across eight sessions is enough to check the split mechanics, not to train
-anything.
+prints the per-session census and the per-fold summary. `sample_data/splits.json` and
+`sample_data/folds/` are both committed, so a fresh clone can read the split without
+running anything; regenerate them with:
+
+```powershell
+python training\data_splits.py --data-root sample_data --materialize
+```
+
+`folds/` is derived output rebuilt from `splits.json` and never read back, so editing it
+changes nothing. Train one fold with:
+
+```powershell
+python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
+```
+
+See [`../training/data_collection.md`](../training/data_collection.md) for how sessions are
+recorded and how folds are packed. Thirty-two images is enough to check the split mechanics,
+not to train anything.
 
 ## Provenance and use
 
-- The cropped image/mask pairs were copied unchanged from the project's hand-curated local training and validation collections.
-- `provenance.csv` records the session each image belongs to, carried over from the main pool's sidecar.
+- The cropped image/mask pairs were copied unchanged from the project's hand-curated local labelled pool.
+- Their labelme JSON annotations were copied with `imageData` set to null. Labelme embeds a base64 copy of the whole image in that field, which duplicated every PNG and accounted for 1.5 MB of a 5.6 MB fixture; labelme reloads the image from `imagePath` when it is null, so the annotations still open. Nothing else in them was touched.
+- `provenance.csv` records the session each image belongs to, carried over from the main pool's sidecar. `splits.json` and `folds/` are generated from it by `training/data_splits.py`.
 - The raw frames were copied unchanged from two original recording frame directories.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.

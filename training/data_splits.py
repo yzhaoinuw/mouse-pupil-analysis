@@ -192,6 +192,13 @@ def frozen_sessions(previous: dict | None) -> dict[str, str]:
     return {entry["key"]: entry["session"] for entry in previous["images"]}
 
 
+def frozen_source(previous: dict | None) -> dict[str, str]:
+    """Return the ``session -> source`` already recorded in a manifest."""
+    if not previous:
+        return {}
+    return {entry["session"]: entry["source"] for entry in previous["sessions"]}
+
+
 def frozen_folds(previous: dict | None) -> dict[str, int]:
     """Return the ``session -> fold`` already recorded in a manifest."""
     if not previous:
@@ -386,10 +393,15 @@ def build_manifest(
     )
 
     already = {} if reassign else frozen_sessions(previous)
+    # The batch fallback is not a claim about provenance, it is the absence of one, so
+    # it never contradicts a recorded session -- otherwise deleting a sidecar row would
+    # read as a deliberate reassignment.
     conflicts = [
         (key, already[key], resolved[key].session)
         for key in sorted(resolved)
-        if key in already and already[key] != resolved[key].session
+        if key in already
+        and resolved[key].source != "batch"
+        and already[key] != resolved[key].session
     ]
     if conflicts:
         detail = "; ".join(f"{key}: {was!r} -> {now!r}" for key, was, now in conflicts[:5])
@@ -399,9 +411,17 @@ def build_manifest(
             "every previously recorded run. Fix the provenance source, or pass --reassign "
             "to repack everything deliberately."
         )
+    # The recorded session wins, but the *source* stays whatever the live sources say.
+    # Stamping "frozen" over it made the manifest differ from itself on regeneration,
+    # and worse, silently retired the census warning about sessions that have no
+    # recorded provenance at all -- they would warn once and never again.
+    carried = frozen_source(previous)
     for key, session in already.items():
         if key in resolved:
-            resolved[key] = provenance_module.Provenance(session, "frozen")
+            source = resolved[key].source
+            if source == "batch":
+                source = carried.get(session, source)
+            resolved[key] = provenance_module.Provenance(session, source)
 
     sessions = group_sessions(images, resolved)
     bands, cutpoints = stratify(sessions)

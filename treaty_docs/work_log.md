@@ -6,6 +6,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Mirrored the layout into `sample_data/` and expanded it 12 -> 32 real pairs.** The
+  fixture now has the same shape as the maintained pool: flat `labeled_data/`, sidecar,
+  `splits.json`, and a committed `folds/cv1..cv4`. Selection was the point, not the count:
+  the old fixture had **no mask below 15 px**, so the tiny size bin was undefined in every
+  fold, and half its sessions held one image, which satisfies "no session spans a fold"
+  vacuously. The new 32 span 8.8-109.7 px across 10 sessions with several 5-6 deep, and a
+  1-epoch run on fold 0 now populates all three size bins. Cannot expand `raw_frames`:
+  the original recording directories are not on this machine -- **blocked pending a path
+  from the maintainer**.
+- **Two bugs found by round-tripping the fixture.** The recorded `source` degraded to
+  `frozen` on every regeneration, so a manifest differed from itself on a no-op rerun and
+  the "no recorded provenance" census warning fired once and then silently retired forever.
+  The session still freezes; the source now reports the live sources, and a batch fallback
+  no longer counts as contradicting a recorded session. Also updated `test_sample_data.py`
+  and `test_training_pairing.py`, which still asserted the train/validation folders --
+  worth noting they *caught* the layout change rather than being collateral.
 - **Built `--materialize`, which writes the folds to disk as `folds/cv1..cvN`.** The
   maintainer asked for this in their first message; I argued against it (the folders are
   gitignored, so folds-on-disk would not survive a fresh clone), offered `--materialize` as

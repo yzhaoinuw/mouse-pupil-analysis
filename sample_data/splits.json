@@ -1,0 +1,472 @@
+{
+  "schema": 2,
+  "generated": "2026-08-15",
+  "grouping": "session recorded at intake (one animal, one date, one condition)",
+  "stratified_by": [
+    "median_diameter",
+    "median_brightness"
+  ],
+  "n_folds": 4,
+  "n_images": 32,
+  "n_sessions": 10,
+  "n_holdout_sessions": 0,
+  "pool": [
+    [
+      "labeled_data",
+      "labeled_masks"
+    ],
+    [
+      "images_train",
+      "masks_train"
+    ],
+    [
+      "images_validation",
+      "masks_validation"
+    ]
+  ],
+  "tiny_max_diameter": 15.0,
+  "stratum_cutpoints": {
+    "diameter": [
+      37.61,
+      49.56
+    ],
+    "brightness": [
+      87.76,
+      112.59
+    ]
+  },
+  "sessions": [
+    {
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d1b0",
+      "n_images": 6,
+      "n_tiny": 3,
+      "median_diameter": 39.62,
+      "median_brightness": 77.27
+    },
+    {
+      "session": "HQL086_whiskerb250923",
+      "fold": 0,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d2b1",
+      "n_images": 2,
+      "n_tiny": 0,
+      "median_diameter": 81.07,
+      "median_brightness": 108.77
+    },
+    {
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d2b1",
+      "n_images": 5,
+      "n_tiny": 0,
+      "median_diameter": 55.81,
+      "median_brightness": 112.57
+    },
+    {
+      "session": "HQL086_sleep250909",
+      "fold": 1,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d0b2",
+      "n_images": 3,
+      "n_tiny": 1,
+      "median_diameter": 16.31,
+      "median_brightness": 112.59
+    },
+    {
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 2,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d2b2",
+      "n_images": 4,
+      "n_tiny": 0,
+      "median_diameter": 49.56,
+      "median_brightness": 152.66
+    },
+    {
+      "session": "251016_5212_purple_Day10",
+      "fold": 2,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d0b0",
+      "n_images": 1,
+      "n_tiny": 0,
+      "median_diameter": 25.73,
+      "median_brightness": 80.93
+    },
+    {
+      "session": "HQL073_250515",
+      "fold": 2,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d1b0",
+      "n_images": 3,
+      "n_tiny": 0,
+      "median_diameter": 37.61,
+      "median_brightness": 72.81
+    },
+    {
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 3,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d1b1",
+      "n_images": 1,
+      "n_tiny": 0,
+      "median_diameter": 44.97,
+      "median_brightness": 87.76
+    },
+    {
+      "session": "HQL090_sleep251012",
+      "fold": 3,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d0b2",
+      "n_images": 4,
+      "n_tiny": 1,
+      "median_diameter": 21.03,
+      "median_brightness": 119.75
+    },
+    {
+      "session": "HQL090_whiskerb251020",
+      "fold": 3,
+      "holdout": false,
+      "source": "sidecar",
+      "stratum": "d2b2",
+      "n_images": 3,
+      "n_tiny": 0,
+      "median_diameter": 79.56,
+      "median_brightness": 113.4
+    }
+  ],
+  "images": [
+    {
+      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 107.91,
+      "brightness": 80.57
+    },
+    {
+      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 109.73,
+      "brightness": 112.57
+    },
+    {
+      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 19.41,
+      "brightness": 123.69
+    },
+    {
+      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 52.49,
+      "brightness": 131.95
+    },
+    {
+      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "session": "250530_5003_Green_Training_very_dm_light",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 55.81,
+      "brightness": 69.76
+    },
+    {
+      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 16.81,
+      "brightness": 141.98
+    },
+    {
+      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 68.77,
+      "brightness": 172.4
+    },
+    {
+      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 30.36,
+      "brightness": 156.99
+    },
+    {
+      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "session": "250616_5120_Purple_sleep_trial_1",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 101.37,
+      "brightness": 148.33
+    },
+    {
+      "key": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857",
+      "image": "labeled_data/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "mask": "labeled_masks/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "session": "251016_5212_purple_Day10",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 25.73,
+      "brightness": 80.93
+    },
+    {
+      "key": "251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127",
+      "image": "labeled_data/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "mask": "labeled_masks/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "session": "251018_5213_Purple_awake pupil recording",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 44.97,
+      "brightness": 87.76
+    },
+    {
+      "key": "HQL073_250515_002_eye_19699",
+      "image": "labeled_data/HQL073_250515_002_eye_19699.png",
+      "mask": "labeled_masks/HQL073_250515_002_eye_19699.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 52.85,
+      "brightness": 73.89
+    },
+    {
+      "key": "HQL073_250515_002_eye_36845",
+      "image": "labeled_data/HQL073_250515_002_eye_36845.png",
+      "mask": "labeled_masks/HQL073_250515_002_eye_36845.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 37.61,
+      "brightness": 72.81
+    },
+    {
+      "key": "HQL073_250515_004_eye_45595",
+      "image": "labeled_data/HQL073_250515_004_eye_45595.png",
+      "mask": "labeled_masks/HQL073_250515_004_eye_45595.png",
+      "session": "HQL073_250515",
+      "fold": 2,
+      "holdout": false,
+      "diameter": 16.7,
+      "brightness": 72.04
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_11980",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_11980.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_11980.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 75.07,
+      "brightness": 78.95
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_15066",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_15066.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_15066.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 11.89,
+      "brightness": 72.53
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_34448",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_34448.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_34448.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 10.4,
+      "brightness": 75.56
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_34505",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_34505.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_34505.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 8.81,
+      "brightness": 75.59
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_39360",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_39360.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_39360.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 67.35,
+      "brightness": 87.7
+    },
+    {
+      "key": "HQL080_sleep250625_003_eye_48292",
+      "image": "labeled_data/HQL080_sleep250625_003_eye_48292.png",
+      "mask": "labeled_masks/HQL080_sleep250625_003_eye_48292.png",
+      "session": "HQL080_sleep250625",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 71.46,
+      "brightness": 88.25
+    },
+    {
+      "key": "HQL086_sleep250909_011_eye_22730",
+      "image": "labeled_data/HQL086_sleep250909_011_eye_22730.png",
+      "mask": "labeled_masks/HQL086_sleep250909_011_eye_22730.png",
+      "session": "HQL086_sleep250909",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 16.31,
+      "brightness": 105.17
+    },
+    {
+      "key": "HQL086_sleep250909_011_eye_29786",
+      "image": "labeled_data/HQL086_sleep250909_011_eye_29786.png",
+      "mask": "labeled_masks/HQL086_sleep250909_011_eye_29786.png",
+      "session": "HQL086_sleep250909",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 21.73,
+      "brightness": 118.21
+    },
+    {
+      "key": "HQL086_sleep250909_011_eye_57658",
+      "image": "labeled_data/HQL086_sleep250909_011_eye_57658.png",
+      "mask": "labeled_masks/HQL086_sleep250909_011_eye_57658.png",
+      "session": "HQL086_sleep250909",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.45,
+      "brightness": 112.59
+    },
+    {
+      "key": "HQL086_whiskerb250923_005_eye_46658",
+      "image": "labeled_data/HQL086_whiskerb250923_005_eye_46658.png",
+      "mask": "labeled_masks/HQL086_whiskerb250923_005_eye_46658.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 102.03,
+      "brightness": 92.25
+    },
+    {
+      "key": "HQL086_whiskerb250923_008_eye_50170",
+      "image": "labeled_data/HQL086_whiskerb250923_008_eye_50170.png",
+      "mask": "labeled_masks/HQL086_whiskerb250923_008_eye_50170.png",
+      "session": "HQL086_whiskerb250923",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 60.11,
+      "brightness": 125.28
+    },
+    {
+      "key": "HQL090_sleep251012_010_eye_06588",
+      "image": "labeled_data/HQL090_sleep251012_010_eye_06588.png",
+      "mask": "labeled_masks/HQL090_sleep251012_010_eye_06588.png",
+      "session": "HQL090_sleep251012",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 24.12,
+      "brightness": 120.77
+    },
+    {
+      "key": "HQL090_sleep251012_010_eye_06771",
+      "image": "labeled_data/HQL090_sleep251012_010_eye_06771.png",
+      "mask": "labeled_masks/HQL090_sleep251012_010_eye_06771.png",
+      "session": "HQL090_sleep251012",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 17.95,
+      "brightness": 118.73
+    },
+    {
+      "key": "HQL090_sleep251012_010_eye_44600",
+      "image": "labeled_data/HQL090_sleep251012_010_eye_44600.png",
+      "mask": "labeled_masks/HQL090_sleep251012_010_eye_44600.png",
+      "session": "HQL090_sleep251012",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 53.9,
+      "brightness": 131.34
+    },
+    {
+      "key": "HQL090_sleep251012_010_eye_49052",
+      "image": "labeled_data/HQL090_sleep251012_010_eye_49052.png",
+      "mask": "labeled_masks/HQL090_sleep251012_010_eye_49052.png",
+      "session": "HQL090_sleep251012",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 11.28,
+      "brightness": 111.3
+    },
+    {
+      "key": "HQL090_whiskerb251020_006_eye_31417",
+      "image": "labeled_data/HQL090_whiskerb251020_006_eye_31417.png",
+      "mask": "labeled_masks/HQL090_whiskerb251020_006_eye_31417.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 100.44,
+      "brightness": 105.07
+    },
+    {
+      "key": "HQL090_whiskerb251020_009_eye_15701",
+      "image": "labeled_data/HQL090_whiskerb251020_009_eye_15701.png",
+      "mask": "labeled_masks/HQL090_whiskerb251020_009_eye_15701.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 79.56,
+      "brightness": 124.42
+    },
+    {
+      "key": "HQL090_whiskerb251020_009_eye_52558",
+      "image": "labeled_data/HQL090_whiskerb251020_009_eye_52558.png",
+      "mask": "labeled_masks/HQL090_whiskerb251020_009_eye_52558.png",
+      "session": "HQL090_whiskerb251020",
+      "fold": 3,
+      "holdout": false,
+      "diameter": 51.1,
+      "brightness": 113.4
+    }
+  ]
+}

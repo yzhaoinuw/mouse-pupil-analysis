@@ -1,5 +1,7 @@
 import csv
+import json
 import re
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -15,24 +17,65 @@ def _png_names(directory: Path) -> list[str]:
 
 
 def test_cropped_sample_pairs_match_and_masks_are_binary():
-    for split, expected_count in (("train", 8), ("validation", 4)):
-        image_dir = SAMPLE_ROOT / f"images_{split}"
-        mask_dir = SAMPLE_ROOT / f"masks_{split}"
-        image_names = _png_names(image_dir)
-        mask_names = _png_names(mask_dir)
+    image_dir = SAMPLE_ROOT / "labeled_data"
+    mask_dir = SAMPLE_ROOT / "labeled_masks"
+    image_names = _png_names(image_dir)
 
-        assert len(image_names) == expected_count
-        assert mask_names == image_names
+    assert len(image_names) == 32
+    assert _png_names(mask_dir) == image_names
 
-        for image_name in image_names:
-            with Image.open(image_dir / image_name) as image:
-                image_size = image.size
-            with Image.open(mask_dir / image_name) as mask:
-                mask_values = set(np.unique(np.asarray(mask.convert("L"))).tolist())
-                assert mask.size == image_size
-            assert 0 in mask_values
-            assert len(mask_values) <= 2
-            assert max(mask_values) > 0
+    for image_name in image_names:
+        with Image.open(image_dir / image_name) as image:
+            image_size = image.size
+        with Image.open(mask_dir / image_name) as mask:
+            mask_values = set(np.unique(np.asarray(mask.convert("L"))).tolist())
+            assert mask.size == image_size
+        assert 0 in mask_values
+        assert len(mask_values) <= 2
+        assert max(mask_values) > 0
+
+
+def test_fixture_split_mirrors_the_maintained_layout():
+    """The fixture exists to exercise the split, not merely to hold images.
+
+    Each assertion here is a property the old train/validation fixture could not
+    satisfy: it had no mask small enough to populate the tiny size bin, and half its
+    sessions held a single image, which satisfies "no session spans a fold" vacuously.
+    """
+    manifest = json.loads((SAMPLE_ROOT / "splits.json").read_text(encoding="utf-8"))
+
+    assert manifest["n_images"] == 32
+    assert manifest["n_sessions"] == 10
+    assert manifest["n_folds"] == 4
+
+    fold_of_session = {e["session"]: e["fold"] for e in manifest["sessions"]}
+    for entry in manifest["images"]:
+        assert entry["fold"] == fold_of_session[entry["session"]]
+
+    per_session = Counter(entry["session"] for entry in manifest["images"])
+    assert max(per_session.values()) >= 5, "no session deep enough to exercise grouping"
+
+    tiny = [e for e in manifest["images"] if e["diameter"] <= manifest["tiny_max_diameter"]]
+    assert len({e["session"] for e in tiny}) >= 2, "tiny masks must span several sessions"
+
+    # provenance.csv is the durable record; the images are only reachable through it.
+    with (SAMPLE_ROOT / "provenance.csv").open(newline="", encoding="utf-8") as handle:
+        recorded = {row["key"]: row["session"] for row in csv.DictReader(handle)}
+    assert recorded == {e["key"]: e["session"] for e in manifest["images"]}
+
+
+def test_committed_folds_match_the_manifest():
+    manifest = json.loads((SAMPLE_ROOT / "splits.json").read_text(encoding="utf-8"))
+    folds = SAMPLE_ROOT / "folds"
+
+    for entry in manifest["images"]:
+        name = f"cv{entry['fold'] + 1}"
+        assert (folds / name / "images" / f"{entry['key']}.png").is_file()
+        assert (folds / name / "masks" / f"{entry['key']}.png").is_file()
+
+    # Folds partition the pool: nothing duplicated, nothing stale left behind.
+    written = list(folds.glob("cv*/images/**/*.png"))
+    assert len(written) == manifest["n_images"]
 
 
 def test_raw_and_velocity_fixture_contracts():
@@ -64,8 +107,14 @@ def test_manifest_covers_every_logical_sample():
     with (SAMPLE_ROOT / "manifest.csv").open(newline="", encoding="utf-8") as manifest_file:
         rows = list(csv.DictReader(manifest_file))
 
-    assert len(rows) == 49
+    assert len(rows) == 69
     assert {row["category"] for row in rows} == {"cropped", "raw", "velocity"}
+
+    # Every cropped sample carries the session it came from and the fold it landed in;
+    # the old `split` column recorded a train/validation division that no longer exists.
+    cropped = [row for row in rows if row["category"] == "cropped"]
+    assert len(cropped) == 32
+    assert all(row["session"] and re.fullmatch(r"cv[1-4]", row["fold"]) for row in cropped)
     for row in rows:
         assert (PROJECT_ROOT / row["image_path"]).is_file()
         if row["mask_path"]:

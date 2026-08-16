@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
   identical band coverage.
+- `sample_data/` mirrors the maintained layout: one flat `labeled_data/` +
+  `labeled_masks/` pool, `provenance.csv`, `splits.json`, and a committed `folds/`
+  with `cv1..cv4`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
+  fixture exercises the split rather than only containing images -- several sessions are
+  5-6 images deep, so holding one out removes a block of related frames, and the mask
+  diameter range now spans 8.8-109.7 px, matching the maintained pool and populating
+  every size bin. The labelme JSON annotations are included with `imageData` set to null,
+  which drops 1.5 MB of base64 duplicating the PNGs beside them.
 - `data_splits.py --materialize`, which writes the fold assignment to disk as
   `folds/cv1/`, `folds/cv2/`, ... each with `images/` and `masks/` (and `holdout/` where
   set), so the split can be inspected as folders rather than JSON. Derived output: rebuilt
@@ -85,6 +93,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`10.5281/zenodo.21897796`) and the concept DOI (`10.5281/zenodo.21897795`), so
   GitHub's "Cite this repository" button now exports a DOI. `README.md` badges the
   concept DOI and `[project.urls]` links it.
+
+### Fixed
+
+- A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
+  so the manifest differed from itself on a no-op rerun and, worse, the census warning
+  about sessions with no recorded provenance fired once and then silently retired. The
+  recorded *session* still wins; the *source* now reports what the live sources say. A
+  batch fallback no longer counts as contradicting a recorded session either, so removing
+  a sidecar row does not read as a deliberate reassignment.
 
 ### Changed
 
@@ -174,6 +191,15 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
   fixture. Synthetic input segments plausibly regardless of which weights are loaded,
   so only the real-image tests detect a corrupted or swapped checkpoint.
 
+### Fixed
+
+- A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
+  so the manifest differed from itself on a no-op rerun and, worse, the census warning
+  about sessions with no recorded provenance fired once and then silently retired. The
+  recorded *session* still wins; the *source* now reports what the live sources say. A
+  batch fallback no longer counts as contradicting a recorded session either, so removing
+  a sidecar row does not read as a deliberate reassignment.
+
 ### Changed
 
 - **Breaking (packaging).** The distribution is renamed from `pupil-tracking` to
@@ -236,6 +262,15 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 - `CITATION.cff` and MIT license metadata so GitHub can display citation information.
 - Collaboration and project-overview documentation.
+
+### Fixed
+
+- A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
+  so the manifest differed from itself on a no-op rerun and, worse, the census warning
+  about sessions with no recorded provenance fired once and then silently retired. The
+  recorded *session* still wins; the *source* now reports what the live sources say. A
+  batch fallback no longer counts as contradicting a recorded session either, so removing
+  a sidecar row does not read as a deliberate reassignment.
 
 ### Changed
 
