@@ -19,7 +19,7 @@ def _png_names(directory: Path) -> list[str]:
 
 
 def test_cropped_sample_pairs_match_and_masks_are_binary():
-    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_data").iterdir() if p.is_dir())
+    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_frames").iterdir() if p.is_dir())
     assert len(sessions) == 10
 
     total = 0
@@ -70,9 +70,12 @@ def test_fixture_split_mirrors_the_maintained_layout():
     for entry in manifest["images"]:
         assert entry["key"].startswith(f"{entry['session']}/")
         assert (
-            entry["image"] == f"labeled_data/{entry['session']}/images/{Path(entry['image']).name}"
+            entry["image"]
+            == f"labeled_frames/{entry['session']}/images/{Path(entry['image']).name}"
         )
-        assert entry["mask"] == f"labeled_data/{entry['session']}/masks/{Path(entry['mask']).name}"
+        assert (
+            entry["mask"] == f"labeled_frames/{entry['session']}/masks/{Path(entry['mask']).name}"
+        )
     assert all(e["source"] == "folder" for e in manifest["sessions"])
 
 

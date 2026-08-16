@@ -4,7 +4,7 @@
 The historical `images_train` / `images_validation` folders were populated by hand and
 shared recordings across the boundary, so validation IoU measured against them reported
 held-out frames rather than generalisation. That evidence is what moved this project to
-the grouped manifest, and the labelled pairs now live in one flat `labeled_data` pool.
+the grouped manifest, and the labelled pairs now live in one flat `labeled_frames` pool.
 The leakage section below therefore only prints for a checkout still laid out the old
 way; it is kept because that comparison is the argument for the current design.
 

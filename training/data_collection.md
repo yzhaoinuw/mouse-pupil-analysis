@@ -109,7 +109,7 @@ So: **record it**. And the layout records it for you.
 ### The session is a directory
 
 ```text
-labeled_data/
+labeled_frames/
   HQL091_sleep260820/          <- one recording session
     images/  frame_0001.png    the frame, and its .json annotation
     masks/   frame_0001.png    the mask, same filename
@@ -168,14 +168,14 @@ folder, so they can also correct one.
 
 ## Adding a labelled batch to the split
 
-1. Drop the batch in as `labeled_data/<session>/images/`, one folder per recording.
+1. Drop the batch in as `labeled_frames/<session>/images/`, one folder per recording.
    Convert the annotations to masks:
 
    ```bash
    python training/labelme_json2png.py --data-root . --session <session>
    ```
 
-   which writes each mask into `labeled_data/<session>/masks/` beside its image. There
+   which writes each mask into `labeled_frames/<session>/masks/` beside its image. There
    are no train/validation folders: the manifest decides what trains and what validates,
    so adding data never moves a file and re-splitting never moves one either.
 2. Regenerate the manifest:
@@ -268,7 +268,7 @@ what makes it usable as a lighting axis.
 `cvN` is fold `N-1`.
 
 Derived output, one way: rebuilt from the manifest, never read back, overwritten on the
-next run. Do not add labelled data there — it goes in `labeled_data/`, and the folders
+next run. Do not add labelled data there — it goes in `labeled_frames/`, and the folders
 are regenerated. The manifest remains the record because it is committed while the image
 folders are not, so it is the only part of the split that survives a fresh clone.
 

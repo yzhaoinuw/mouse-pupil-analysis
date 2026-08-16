@@ -23,7 +23,7 @@ Label creation also requires [Labelme](https://github.com/wkentaro/labelme). Ins
 Create these local folders at the repository root:
 
 ```text
-labeled_data/
+labeled_frames/
   <session>/        # one recording session: one animal, one date, one condition
     images/         # the frames, and their .json annotations
     masks/          # the masks, same filenames
@@ -35,7 +35,7 @@ Images and masks must be PNG files whose filenames correspond one-to-one by stem
 
 For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
 
-Adding data is: drop `labeled_data/<new session>/images/`, convert the annotations, refresh the split.
+Adding data is: drop `labeled_frames/<new session>/images/`, convert the annotations, refresh the split.
 
 ```powershell
 python training\labelme_json2png.py --data-root . --session <new session>
@@ -59,7 +59,7 @@ See [`sample_data/README.md`](../sample_data/README.md) for the fixture's scope 
 ## 1. Create masks with Labelme
 
 1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
-2. Save each JSON file beside its image in `labeled_data/<session>/images/`.
+2. Save each JSON file beside its image in `labeled_frames/<session>/images/`.
 3. Run:
 
 ```powershell

@@ -18,7 +18,7 @@ Four recorded sources, most explicit first:
    folder without the extension: ``frame_0001`` flat, ``rig2_day3/frame_0001`` nested. Use for a batch that arrived already mixed.
 2. **Labelme flag** -- ``flags.session`` in the ``<stem>.json`` beside the image. The
    labeller sets it once per batch in the UI, at the moment they know it.
-3. **Session folder** -- ``labeled_data/<session>/images/``. This is the normal route
+3. **Session folder** -- ``labeled_frames/<session>/images/``. This is the normal route
    and it asks nothing of how files are named: the session is a directory, so an image
    cannot enter the pool without one. The sources above exist for a batch that arrived
    before anyone could sort it.

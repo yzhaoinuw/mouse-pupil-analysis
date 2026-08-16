@@ -45,7 +45,7 @@ def _write_pair(
 ) -> Path:
     """Write one image/mask pair into a session folder, or into a legacy flat folder.
 
-    With ``session``, the pair lands in ``labeled_data/<session>/images|masks``, which
+    With ``session``, the pair lands in ``labeled_frames/<session>/images|masks``, which
     is the layout everything uses now. With ``split`` instead, it lands in the historical
     flat ``images_<split>`` / ``masks_<split>``, which the reader still accepts.
 
@@ -54,8 +54,8 @@ def _write_pair(
     stratum on purpose.
     """
     if session is not None:
-        image_dir = root / "labeled_data" / session / "images"
-        mask_dir = root / "labeled_data" / session / "masks"
+        image_dir = root / "labeled_frames" / session / "images"
+        mask_dir = root / "labeled_frames" / session / "masks"
     else:
         image_dir = root / f"images_{split or 'train'}"
         mask_dir = root / f"masks_{split or 'train'}"
@@ -310,9 +310,9 @@ def test_the_same_key_in_two_pool_layouts_is_rejected(tmp_path: Path):
     legacy = tmp_path / "images_train" / "rig1_day1"
     legacy.mkdir(parents=True)
     (tmp_path / "masks_train" / "rig1_day1").mkdir(parents=True)
-    shutil.copy2(tmp_path / "labeled_data/rig1_day1/images/frame1.png", legacy / "frame1.png")
+    shutil.copy2(tmp_path / "labeled_frames/rig1_day1/images/frame1.png", legacy / "frame1.png")
     shutil.copy2(
-        tmp_path / "labeled_data/rig1_day1/masks/frame1.png",
+        tmp_path / "labeled_frames/rig1_day1/masks/frame1.png",
         tmp_path / "masks_train/rig1_day1/frame1.png",
     )
 
@@ -326,14 +326,14 @@ def test_masks_live_beside_their_images_in_the_session_folder(tmp_path: Path):
 
     manifest = data_splits.build_manifest(tmp_path, n_folds=2)
     masks = {e["key"]: e["mask"] for e in manifest["images"]}
-    assert masks["rig1_day1/frame1"] == "labeled_data/rig1_day1/masks/frame1.png"
-    assert masks["rig2_day2/frame2"] == "labeled_data/rig2_day2/masks/frame2.png"
+    assert masks["rig1_day1/frame1"] == "labeled_frames/rig1_day1/masks/frame1.png"
+    assert masks["rig2_day2/frame2"] == "labeled_frames/rig2_day2/masks/frame2.png"
 
 
 def test_an_image_with_no_mask_is_rejected(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
     _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
-    (tmp_path / "labeled_data" / "rig1_day1" / "masks" / "frame1.png").unlink()
+    (tmp_path / "labeled_frames" / "rig1_day1" / "masks" / "frame1.png").unlink()
 
     with pytest.raises(FileNotFoundError, match="No mask for"):
         data_splits.build_manifest(tmp_path, n_folds=2)
@@ -341,7 +341,7 @@ def test_an_image_with_no_mask_is_rejected(tmp_path: Path):
 
 def test_a_session_folder_without_images_is_rejected(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
-    (tmp_path / "labeled_data" / "stray_folder").mkdir()
+    (tmp_path / "labeled_frames" / "stray_folder").mkdir()
 
     with pytest.raises(FileNotFoundError, match="has no images/ directory"):
         data_splits.build_manifest(tmp_path, n_folds=2)
@@ -390,11 +390,11 @@ def test_brightness_tracks_the_background_not_the_pupil(tmp_path: Path):
     _write_pair(tmp_path, "bright", radius=20, session="b", grey=200)
 
     dim = image_background_brightness(
-        tmp_path / "labeled_data/a/images/dim.png", tmp_path / "labeled_data/a/masks/dim.png"
+        tmp_path / "labeled_frames/a/images/dim.png", tmp_path / "labeled_frames/a/masks/dim.png"
     )
     bright = image_background_brightness(
-        tmp_path / "labeled_data/b/images/bright.png",
-        tmp_path / "labeled_data/b/masks/bright.png",
+        tmp_path / "labeled_frames/b/images/bright.png",
+        tmp_path / "labeled_frames/b/masks/bright.png",
     )
     # The bright image has the far larger pupil, so a whole-frame mean would narrow
     # the gap; excluding the mask keeps this a measure of lighting.

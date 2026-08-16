@@ -3,8 +3,8 @@
 
 The labelled pool is organised by recording session::
 
-    labeled_data/<session>/images/<anything>.png   the frame, and its .json annotation
-    labeled_data/<session>/masks/<anything>.png    written here
+    labeled_frames/<session>/images/<anything>.png   the frame, and its .json annotation
+    labeled_frames/<session>/masks/<anything>.png    written here
 
 Annotate in Labelme and save each ``.json`` beside its image, then run::
 
@@ -26,7 +26,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
-LABELLED_ROOT = "labeled_data"
+LABELLED_ROOT = "labeled_frames"
 
 
 def export_session(session_dir: Path) -> tuple[int, int]:

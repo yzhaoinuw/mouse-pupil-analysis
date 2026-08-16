@@ -6,6 +6,15 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Renamed `labeled_data/` to `labeled_frames/`** to pair with `unlabeled_frames/`: both
+  hold frames, and the distinction is whether masks exist. No fold moved -- keys are
+  `<session>/<filename>` and never included the pool root, which is the same property that
+  made the earlier merge and restructure free.
+- **Dropped the 32 labelme `.json` from the fixture.** I had added them; the original
+  12-pair fixture had none. Audited what reads them: `labelme_json2png.py` skips every one
+  because the masks exist, `provenance.labelme_session` finds empty `flags`, no test opens
+  them, and `labelme_export_json` is not installed so a regeneration test would skip
+  everywhere. 128 KB of files nothing uses. Tracked `sample_data` is 2.3 MB.
 - **Restored those frames as `sample_data/unlabeled_frames/`, and untracked
   `sample_data/folds/`.** The rename is the substantive part: "raw" distinguished nothing
   once `labeled_data/` was also raw frames. What actually separates these six is that they

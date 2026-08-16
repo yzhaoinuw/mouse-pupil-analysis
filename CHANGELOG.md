@@ -13,14 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   labelled pool into *sessions* — one animal, one date, one condition — and packs whole
   sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.
   The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/`
-  were merged into `labeled_data/`, and are still read where an older checkout has them. The manifest decides what
+  were merged into `labeled_frames/`, and are still read where an older checkout has them. The manifest decides what
   trains and what validates, so re-splitting moves no labelled files and adding data moves
   none either. Because an image is keyed by its path *within* the pool folder, the merge
   itself moved no image between folds. `run_train.py` gains `--split-manifest` and `--fold`; without
   them it keeps the previous fixed-folder behaviour. Grouping is worth 0.25 IoU against a
   0.02 seed noise floor: copying a nearest neighbour's mask scores 0.652 when the neighbour
   shares a session and 0.399 when it does not.
-- The labelled pool is organised by recording session: `labeled_data/<session>/images/`
+- The labelled pool is organised by recording session: `labeled_frames/<session>/images/`
   and `.../masks/`. The session is the grouping unit for the split, so it is a directory --
   an image cannot enter the pool without one, which makes provenance a consequence of where
   the file goes rather than a convention to remember, and means the whole split regenerates
@@ -43,12 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
   identical band coverage.
+- The labelled pool directory is `labeled_frames/`, not `labeled_data/`, to match
+  `unlabeled_frames/`: both hold frames, and what separates them is whether masks exist.
+  Keys are `<session>/<filename>` and exclude the pool root, so the rename moved no fold.
 - `sample_data/raw_frames/` is renamed `sample_data/unlabeled_frames/`. "Raw" said
-  nothing useful once `labeled_data/` held raw frames too; these six are distinguished by
+  nothing useful once `labeled_frames/` held raw frames too; these six are distinguished by
   having *no masks*, which is exactly what makes them usable as a promotion gate. Frames
-  from `labeled_data/` are training data, so `hard_frame_check.py` aimed there would pass
+  from `labeled_frames/` are training data, so `hard_frame_check.py` aimed there would pass
   unconditionally.
-- `sample_data/` mirrors the maintained layout: `labeled_data/<session>/images|masks`,
+- `sample_data/` mirrors the maintained layout: `labeled_frames/<session>/images|masks`,
   `splits.json`, and a `folds/` rebuilt on demand with `--materialize`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
   fixture exercises the split rather than only containing images -- several sessions are
   5-6 images deep, so holding one out removes a block of related frames, and the mask

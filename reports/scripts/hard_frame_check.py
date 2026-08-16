@@ -12,7 +12,7 @@ selecting on it would repeat the mistake it exists to catch.
     python reports/scripts/hard_frame_check.py --checkpoints checkpoints_exp/*/best.pth
 
 Whatever ``--frames`` points at must be frames the candidate never trained on.
-Frames from ``labeled_data/`` are training data, so aiming it there would make
+Frames from ``labeled_frames/`` are training data, so aiming it there would make
 this gate pass unconditionally.
 """
 

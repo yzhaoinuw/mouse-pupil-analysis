@@ -189,7 +189,7 @@ def make_split_datasets(
     ``images_train`` / ``images_validation`` folders are used, which share recordings
     across the split and therefore measure held-out frames rather than generalisation.
     Those folders no longer exist in the maintained dataset, whose labelled pairs live
-    in one flat ``labeled_data`` / ``labeled_masks`` pool, so that path now applies only
+    in one flat ``labeled_frames`` / ``labeled_masks`` pool, so that path now applies only
     to a dataset still laid out the old way -- ``sample_data`` among them.
 
     Under ``final``, training takes every image the folds were allowed to see and
@@ -199,7 +199,7 @@ def make_split_datasets(
         if not (config.data_root / "images_train").is_dir():
             raise FileNotFoundError(
                 f"No images_train/ under {config.data_root}. The labelled pool is one flat "
-                "labeled_data/ folder now, and splitting it needs the grouped manifest: "
+                "labeled_frames/ folder now, and splitting it needs the grouped manifest: "
                 "pass --split-manifest splits.json --fold N. See training/data_collection.md."
             )
         return (

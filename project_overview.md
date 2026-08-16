@@ -154,13 +154,13 @@ mouse-pupil-analysis/
 |  |- README.md
 |  |- manifest.csv
 |  |- splits.json
-|  |- labeled_data/
+|  |- labeled_frames/
 |  |  |- <session>/
 |  |     |- images/
 |  |     |- masks/
 |  |- unlabeled_frames/
 |  |- velocity_frames/
-|- labeled_data/            (local, gitignored)
+|- labeled_frames/            (local, gitignored)
 |  |- <session>/
 |     |- images/
 |     |- masks/
@@ -209,7 +209,7 @@ Active local/developer scripts:
 Local/generated surfaces to treat carefully:
 
 - `images_test_*`, `images_*_result`, `predicted_masks_*`, `predictions_test/`, and `results/` are local analysis outputs.
-- Root `labeled_data/` holds the local labelled pool, one directory per recording session, each with `images/` and `masks/`. It is gitignored, as is the derived `folds/`. `splits.json` records the grouped, stratified fold assignment and *is* committed, so it is the only part of the split that survives a fresh clone. The `sample_data/` versions of both are intentionally tracked fixtures.
+- Root `labeled_frames/` holds the local labelled pool, one directory per recording session, each with `images/` and `masks/`. It is gitignored, as is the derived `folds/`. `splits.json` records the grouped, stratified fold assignment and *is* committed, so it is the only part of the split that survives a fresh clone. The `sample_data/` versions of both are intentionally tracked fixtures.
 - `checkpoints_exp/` holds experimental training checkpoints.
 - `build/`, `dist/`, `*.egg-info`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` are generated.
 - `archive/` and `sketch*.py` style files are not the active package path.

@@ -6,9 +6,9 @@ This directory is a small public fixture for trying the repository from a fresh 
 
 ```text
 sample_data/
-|- labeled_data/          # 32 curated cropped pairs, one folder per session
+|- labeled_frames/          # 32 curated cropped pairs, one folder per session
 |  |- <session>/
-|  |  |- images/          #   the frames, and their labelme JSON
+|  |  |- images/          #   the frames
 |  |  |- masks/           #   the matching hand-labeled masks
 |- splits.json            # the grouped, stratified fold assignment
 |- unlabeled_frames/      # 6 frames from two recordings, no masks, never trained on
@@ -133,8 +133,8 @@ not to train anything.
 
 ## Provenance and use
 
-- The cropped image/mask pairs were copied unchanged from the project's hand-curated local labelled pool.
-- Their labelme JSON annotations were copied with `imageData` set to null. Labelme embeds a base64 copy of the whole image in that field, which duplicated every PNG and accounted for 1.5 MB of a 5.6 MB fixture; labelme reloads the image from `imagePath` when it is null, so the annotations still open. Nothing else in them was touched.
+- The image/mask pairs were copied unchanged from the project's local labelled pool.
+- The labelme `.json` annotations are not shipped. Nothing reads them: `labelme_json2png.py` skips every one because the masks already exist, and the fixture's session comes from its folder rather than a labelme flag.
 - Each pair sits in the folder of the recording session it came from, which is what the split groups on. `splits.json` and `folds/` are generated from that layout by `training/data_splits.py`.
 - The unlabelled frames were copied unchanged from two original recording frame directories. They were briefly named `raw_frames/`.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.

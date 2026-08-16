@@ -58,14 +58,14 @@ HOLDOUT_FOLD = -1
 
 # The labelled pool, one session per directory::
 #
-#     labeled_data/<session>/images/<anything>.png
-#     labeled_data/<session>/masks/<anything>.png
+#     labeled_frames/<session>/images/<anything>.png
+#     labeled_frames/<session>/masks/<anything>.png
 #
 # The session is the grouping unit, so it is a directory: an image cannot enter the pool
 # without one, which makes provenance a consequence of where the file goes rather than a
 # convention someone has to remember. The two historical flat pairs are still read, so an
 # older local checkout keeps working.
-LABELLED_ROOT = "labeled_data"
+LABELLED_ROOT = "labeled_frames"
 LEGACY_POOL = (
     ("images_train", "masks_train"),
     ("images_validation", "masks_validation"),
@@ -143,7 +143,7 @@ def discover_pool(
 ) -> tuple[list[PoolImage], dict[str, tuple[Path, str | None]]]:
     """Read every labelled pair under ``data_root`` as one collection.
 
-    Reads ``labeled_data/<session>/images`` plus, for an older checkout, any flat
+    Reads ``labeled_frames/<session>/images`` plus, for an older checkout, any flat
     ``pool`` pair still present. Returns the pool alongside the
     ``key -> (image path, session or None)`` map provenance resolution needs; a session
     folder states its own session, so those entries arrive already resolved.

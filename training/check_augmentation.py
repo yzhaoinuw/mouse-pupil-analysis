@@ -16,6 +16,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
 
+def _first_session(data_root: Path) -> tuple[Path, Path]:
+    """Return the ``(images, masks)`` of the first session folder, or the legacy pair."""
+    labelled = data_root / "labeled_frames"
+    if labelled.is_dir():
+        for session in sorted(p for p in labelled.iterdir() if p.is_dir()):
+            return session / "images", session / "masks"
+    return data_root / "images_train", data_root / "masks_train"
+
+
 def show_augmented_samples(
     dataset,
     n_samples=5,
@@ -80,8 +89,8 @@ def show_augmented_samples(
 
 # example paths, paired by filename stem rather than by independent sort order
 image_paths, mask_paths = paired_image_mask_paths(
-    DATA_ROOT / ("labeled_data" if (DATA_ROOT / "labeled_data").is_dir() else "images_train"),
-    DATA_ROOT / ("labeled_masks" if (DATA_ROOT / "labeled_data").is_dir() else "masks_train"),
+    # Review augmentation on one session; any session folder works.
+    *_first_session(DATA_ROOT),
 )
 
 dataset = SegmentationDataset(

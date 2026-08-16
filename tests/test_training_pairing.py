@@ -75,7 +75,7 @@ def test_empty_image_directory_is_rejected(tmp_path: Path):
 @pytest.mark.skipif(not SAMPLE_ROOT.is_dir(), reason="sample_data/ needs a source checkout.")
 def test_committed_fixture_pairs_cleanly():
     # One directory per recording session, each holding images/ and masks/.
-    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_data").iterdir() if p.is_dir())
+    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_frames").iterdir() if p.is_dir())
     assert len(sessions) == 10
 
     total = 0
