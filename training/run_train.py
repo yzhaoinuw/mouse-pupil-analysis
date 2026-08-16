@@ -35,6 +35,8 @@ DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fi
 
 SIZE_BIN_NAMES = ("tiny", "medium", "large")
 DEVICE_CHOICES = ("auto", "cuda", "mps", "cpu")
+SELECTION_METRICS = ("balanced_iou", "macro_iou")
+SCHEDULER_METRICS = ("val_loss", "balanced_iou", "macro_iou")
 
 
 def _load_data_splits():
@@ -112,6 +114,20 @@ class TrainingConfig:
     large_min_diameter: float = 80.0
     low_circularity_cutoff: float = 0.45
     balance_training_sizes: bool = True
+    # ``balanced_iou`` averages the represented size bins equally. Under grouped folds a bin
+    # can hold one or two images, so a single noisy image swings a third of the metric;
+    # ``macro_iou`` averages over images instead and is what the first grouped sweep showed
+    # to be the stabler selection signal. See reports/2026-08-16-selection-metric-repair.md.
+    selection_metric: str = "balanced_iou"
+    # The learning-rate plateau signal. Driving it from a size-bin IoU let one spiking epoch
+    # define the high-water mark and decay the rate to its floor while the model was still
+    # improving; validation loss is the quantity the gradient actually descends.
+    scheduler_metric: str = "val_loss"
+    # Threshold used for the per-epoch selection comparison only. ``None`` restores the old
+    # behaviour of selecting on the best of ``threshold_candidates``, which makes each epoch's
+    # score a maximum over 11 draws before the epoch maximum is taken on top of it. The
+    # metadata written for the winning epoch is always fully calibrated either way.
+    selection_threshold: float | None = 0.5
     console_interval: int = 10
     seed: int = 0
     device: str = "auto"
@@ -145,6 +161,12 @@ class TrainingConfig:
             not 0 < threshold < 1 for threshold in self.threshold_candidates
         ):
             raise ValueError("threshold_candidates must contain probabilities between 0 and 1.")
+        if self.selection_metric not in SELECTION_METRICS:
+            raise ValueError(f"selection_metric must be one of {', '.join(SELECTION_METRICS)}.")
+        if self.scheduler_metric not in SCHEDULER_METRICS:
+            raise ValueError(f"scheduler_metric must be one of {', '.join(SCHEDULER_METRICS)}.")
+        if self.selection_threshold is not None and not 0 < self.selection_threshold < 1:
+            raise ValueError("selection_threshold must be a probability between 0 and 1.")
         if self.tiny_max_diameter >= self.large_min_diameter:
             raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
         if not 0 <= self.promotion_target_iou <= 1:
@@ -344,10 +366,17 @@ def evaluate_thresholds(
     tiny_max_diameter: float,
     large_min_diameter: float,
     low_circularity_cutoff: float,
+    metric: str = "balanced_iou",
 ) -> ValidationReport:
-    """Select a threshold by equal-weighted tiny/medium/large validation IoU."""
+    """Score every candidate threshold and return the one maximising ``metric``.
+
+    With a single candidate this is a plain evaluation at that threshold, which is how the
+    per-epoch selection comparison uses it.
+    """
     if not thresholds:
         raise ValueError("At least one threshold candidate is required.")
+    if metric not in SELECTION_METRICS:
+        raise ValueError(f"metric must be one of {', '.join(SELECTION_METRICS)}.")
     diameters = _target_diameters(targets)
     size_labels = size_bin_labels(diameters, tiny_max_diameter, large_min_diameter)
     low_circularity = _low_circularity_targets(targets, low_circularity_cutoff)
@@ -382,7 +411,7 @@ def evaluate_thresholds(
     return max(
         reports,
         key=lambda report: (
-            report.balanced_iou,
+            getattr(report, metric),
             report.macro_iou,
             -abs(report.threshold - 0.7),
         ),
@@ -595,13 +624,14 @@ def run_training(config: TrainingConfig) -> Path:
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode="max",
+        # Validation loss is minimised; the IoU metrics are maximised.
+        mode="min" if config.scheduler_metric == "val_loss" else "max",
         factor=0.5,
         patience=config.scheduler_patience,
         min_lr=learning_rate * 0.5**5,
     )
 
-    best_balanced_iou = -math.inf
+    best_selection_score = -math.inf
     patience_counter = 0
     with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
         log_file.write(
@@ -635,8 +665,30 @@ def run_training(config: TrainingConfig) -> Path:
                 config.tiny_max_diameter,
                 config.large_min_diameter,
                 config.low_circularity_cutoff,
+                config.selection_metric,
             )
-            scheduler.step(report.balanced_iou)
+            # The reported threshold is calibrated over every candidate, but selecting on that
+            # maximum makes each epoch's score a max over 11 draws, and the epoch maximum is
+            # then taken on top of it. Compare epochs at one fixed threshold instead.
+            selection_report = (
+                report
+                if config.selection_threshold is None
+                else evaluate_thresholds(
+                    probabilities,
+                    targets,
+                    (config.selection_threshold,),
+                    config.tiny_max_diameter,
+                    config.large_min_diameter,
+                    config.low_circularity_cutoff,
+                    config.selection_metric,
+                )
+            )
+            selection_score = getattr(selection_report, config.selection_metric)
+            scheduler.step(
+                val_loss
+                if config.scheduler_metric == "val_loss"
+                else getattr(report, config.scheduler_metric)
+            )
             current_lr = optimizer.param_groups[0]["lr"]
 
             log_line = (
@@ -653,9 +705,9 @@ def run_training(config: TrainingConfig) -> Path:
                 print(log_line)
             log_file.write(log_line + "\n")
 
-            improved = report.balanced_iou > best_balanced_iou + config.min_improvement
+            improved = selection_score > best_selection_score + config.min_improvement
             if improved:
-                best_balanced_iou = report.balanced_iou
+                best_selection_score = selection_score
                 patience_counter = 0
                 torch.save(model.state_dict(), checkpoint_path)
                 _write_metadata(
@@ -674,11 +726,24 @@ def run_training(config: TrainingConfig) -> Path:
                 if show_epoch:
                     print(
                         f"Patience: {patience_counter}/{config.early_stopping_patience} "
-                        f"(best balanced IoU {best_balanced_iou:.4f})"
+                        f"(best {config.selection_metric} {best_selection_score:.4f})"
                     )
                 if patience_counter >= config.early_stopping_patience:
                     print("Early stopping triggered; the best checkpoint remains saved.")
                     break
+
+    # A calibrated threshold that lands on the edge of the grid is censored: the value that
+    # would actually maximise the metric may lie outside the candidates, so the recorded
+    # threshold is a boundary artefact rather than a calibration.
+    calibrated = json.loads(metadata_path.read_text(encoding="utf-8"))["prediction_threshold"]
+    low, high = min(config.threshold_candidates), max(config.threshold_candidates)
+    if calibrated in (low, high):
+        print(
+            f"WARNING: calibrated threshold {calibrated:.2f} is the "
+            f"{'lowest' if calibrated == low else 'highest'} candidate, so the calibration is "
+            f"censored by the grid. Widen --threshold-candidates past {calibrated:.2f} to see "
+            "whether the optimum lies beyond it."
+        )
 
     print(f"Training log: {log_path}")
     print(f"Threshold and validation metadata: {metadata_path}")
@@ -742,6 +807,33 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Training device. 'auto' prefers CUDA, then Apple MPS, then CPU.",
     )
     parser.add_argument(
+        "--selection-metric",
+        choices=SELECTION_METRICS,
+        default="balanced_iou",
+        help="Validation metric that decides the best checkpoint and early stopping. "
+        "'balanced_iou' weights the size bins equally, so a bin holding one or two images "
+        "swings a third of it; 'macro_iou' averages over images instead.",
+    )
+    parser.add_argument(
+        "--scheduler-metric",
+        choices=SCHEDULER_METRICS,
+        default="val_loss",
+        help="Plateau signal for the learning-rate scheduler (default: val_loss).",
+    )
+    parser.add_argument(
+        "--selection-threshold",
+        default="0.5",
+        help="Fixed threshold for the per-epoch selection comparison, or 'calibrated' to "
+        "select on the best of --threshold-candidates as earlier runs did (default: 0.5). "
+        "The winning epoch's metadata is fully calibrated either way.",
+    )
+    parser.add_argument(
+        "--threshold-candidates",
+        type=float,
+        nargs="+",
+        help="Probability grid to calibrate the reported threshold over.",
+    )
+    parser.add_argument(
         "--natural-sampling",
         action="store_true",
         help="Use the natural training-set distribution instead of equal-mass size bins.",
@@ -772,6 +864,21 @@ def main(argv: list[str] | None = None) -> int:
         )
         learning_rate_override[key] = args.learning_rate
 
+    if args.selection_threshold == "calibrated":
+        selection_threshold = None
+    else:
+        try:
+            selection_threshold = float(args.selection_threshold)
+        except ValueError:
+            _build_cli_parser().error(
+                "--selection-threshold takes a probability or the word 'calibrated'."
+            )
+    threshold_override = (
+        {"threshold_candidates": tuple(args.threshold_candidates)}
+        if args.threshold_candidates
+        else {}
+    )
+
     run_training(
         TrainingConfig(
             data_root=data_root,
@@ -789,9 +896,13 @@ def main(argv: list[str] | None = None) -> int:
             early_stopping_patience=args.early_stopping_patience,
             scheduler_patience=args.scheduler_patience,
             balance_training_sizes=not args.natural_sampling,
+            selection_metric=args.selection_metric,
+            scheduler_metric=args.scheduler_metric,
+            selection_threshold=selection_threshold,
             seed=args.seed,
             device=args.device,
             **learning_rate_override,
+            **threshold_override,
         )
     )
     return 0

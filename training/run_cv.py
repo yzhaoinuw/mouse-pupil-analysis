@@ -14,9 +14,12 @@ Use this to compare *configurations* -- sampling, loss, augmentation, architectu
 It is not how the shipped checkpoint is built: once a configuration wins, retrain it
 on the whole pool and gate the result with ``reports/scripts/hard_frame_check.py``.
 
-Differences below roughly 0.02 balanced IoU are inside the seed noise floor measured
-in ``reports/2026-08-14-checkpoint-noise-floor.md``. Cross-validation narrows the
-sampling noise, not the seed noise; repeat with ``--seed`` to separate the two.
+Cross-validation narrows sampling noise, not seed noise; repeat with ``--seed`` to
+separate the two. The +/-0.0069 floor in ``reports/2026-08-14-checkpoint-noise-floor.md``
+was measured on the old leaky split and understates this one. On the grouped split,
+three seeds put the sd at 0.0273 for the mean per-session IoU and as high as 0.0873
+for a single fold, so treat differences below roughly 0.05 on one fold as noise
+(``reports/2026-08-16-selection-metric-repair.md``).
 """
 
 from __future__ import annotations
@@ -82,6 +85,7 @@ def per_session_iou(
         config.tiny_max_diameter,
         config.large_min_diameter,
         config.low_circularity_cutoff,
+        config.selection_metric,
     )
     iou, _ = trainer.per_image_overlap_scores(probabilities, targets, report.threshold)
 
@@ -109,12 +113,38 @@ def main(argv: list[str] | None = None) -> int:
         help="Use the natural size distribution instead of equal-mass size bins.",
     )
     parser.add_argument(
+        "--selection-metric",
+        choices=("balanced_iou", "macro_iou"),
+        default="balanced_iou",
+        help="Validation metric deciding the best checkpoint and early stopping. Grouped folds "
+        "can leave a size bin holding one or two images, which makes 'balanced_iou' volatile.",
+    )
+    parser.add_argument(
+        "--scheduler-metric",
+        choices=("val_loss", "balanced_iou", "macro_iou"),
+        default="val_loss",
+        help="Plateau signal for the learning-rate scheduler (default: val_loss).",
+    )
+    parser.add_argument(
+        "--selection-threshold",
+        default="0.5",
+        help="Fixed threshold for the per-epoch selection comparison, or 'calibrated' for the "
+        "previous behaviour of selecting on the best candidate (default: 0.5).",
+    )
+    parser.add_argument(
         "--finetune-checkpoint",
         type=Path,
         help="Fine-tune these weights instead of training fresh. Only valid if the weights "
         "were not themselves trained on this pool, or every fold leaks.",
     )
     args = parser.parse_args(argv)
+    if args.selection_threshold == "calibrated":
+        selection_threshold = None
+    else:
+        try:
+            selection_threshold = float(args.selection_threshold)
+        except ValueError:
+            parser.error("--selection-threshold takes a probability or the word 'calibrated'.")
 
     trainer = _load("run_train")
     data_splits = _load("data_splits")
@@ -144,6 +174,9 @@ def main(argv: list[str] | None = None) -> int:
             fold=fold,
             finetune_checkpoint=args.finetune_checkpoint,
             balance_training_sizes=not args.natural_sampling,
+            selection_metric=args.selection_metric,
+            scheduler_metric=args.scheduler_metric,
+            selection_threshold=selection_threshold,
             batch_size=args.batch_size,
             n_epochs=args.epochs,
             seed=args.seed,
