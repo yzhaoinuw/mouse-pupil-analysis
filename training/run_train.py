@@ -742,17 +742,21 @@ def run_training(config: TrainingConfig) -> Path:
                     break
 
     # The calibrated threshold landing on the grid edge means the optimum is somewhere
-    # outside it. At the low edge that is a symptom rather than a calibration: a model that
-    # wants a lower threshold is under-segmenting and buying IoU by predicting more pixels
-    # positive, which is what the failing folds did on 2026-08-16.
+    # outside it. At the low edge that reflects the image-weighted majority of the
+    # validation set wanting more pixels predicted -- which says nothing about the minority.
+    # Measured on 2026-08-16 fold 1: the threshold sat on the floor because the 32-image
+    # session under-predicted (0.72x the labelled area), while the two sessions that
+    # actually failed were over-predicting by 4.8x and 7.8x and needed the opposite. One
+    # global threshold cannot serve sessions whose errors point in different directions.
     calibrated = json.loads(metadata_path.read_text(encoding="utf-8"))["prediction_threshold"]
     low, high = min(config.threshold_candidates), max(config.threshold_candidates)
     if calibrated == low:
         print(
             f"WARNING: calibrated threshold {calibrated:.2f} is the lowest candidate, so this "
-            "run wanted to go lower still. That usually means the model under-segments these "
-            "validation recordings rather than that the grid is too narrow. Check the "
-            "per-session scores before trusting this checkpoint."
+            "run wanted to go lower still. That is driven by whichever sessions supply the most "
+            "validation images, and can coexist with severe over-segmentation elsewhere. Check "
+            "the per-session scores, and the predicted-to-labelled area ratio, before trusting "
+            "this checkpoint."
         )
     elif calibrated == high:
         print(
