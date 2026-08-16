@@ -6,6 +6,21 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Removed `sample_data/raw_frames/` at the maintainer's direction.** Checked the two
+  things they asked me to check first: there is **no cropping script anywhere in the
+  codebase** (the only `.crop()` calls are inside `random_zoom_translate_pil` and
+  `random_pad_and_crop_pil`, both random augmentation), so `labeled_data/` images are to
+  be treated as raw images; and `raw_frames` had **zero stem overlap** with `labeled_data`
+  (5-digit `_00000` vs 4-digit `_0000` numbering), so it was not a duplicate. Its two
+  real dependents were repointed at `labeled_data` session folders rather than deleted:
+  the end-to-end inference test and the input-pixel rescale test. `hard_frame_check.py`
+  lost its bundled default and now requires `--frames`; **the promotion gate has no data
+  of its own any more**, and pointing it at `labeled_data` would be meaningless since
+  those are training frames.
+- One assertion had to move with it: the inference test bounded model diameter at
+  `MODEL_IMAGE_SIZE / 2`, calibrated for the wider raw frames. On `labeled_data` frames a
+  dilated pupil legitimately reaches 110 of 148, so the bound is now 0.95 of the frame,
+  which still catches "segmented everything".
 - **The session is now a directory: `labeled_data/<session>/images|masks`.** The
   maintainer's observation that `labeled_data` + `labeled_masks` split one thing across two
   top-level names was right, and the deeper win is that this makes provenance *structural* --

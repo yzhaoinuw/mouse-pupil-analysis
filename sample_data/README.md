@@ -13,9 +13,6 @@ sample_data/
 |- splits.json            # the grouped, stratified fold assignment
 |- folds/                 # the same split as folders, generated from splits.json
 |  |- cv1/ cv2/ cv3/ cv4/ #   each with images/ and masks/
-|- raw_frames/            # 6 uncropped frames grouped by recording
-|  |- recording_250530/
-|  |- recording_250616/
 |- velocity_frames/       # 31 consecutive prepared frames
 |- manifest.csv
 |- README.md
@@ -45,18 +42,18 @@ which is what the grouping exists to do; a fixture of one image per session woul
 "no session spans a fold" vacuously. One fold holds no small pupil, which is the same
 honest limitation the real pool has and worth seeing in a test.
 
-## Try segmentation on uncropped frames
+## Try segmentation on real frames
 
 From the repository root, activate an environment where the package is installed and run:
 
 ```powershell
 run-pupil-analysis `
-    --image_dir sample_data\raw_frames\recording_250530 `
-    --result_dir results\sample_raw_250530 `
-    --output_mask_dir results\sample_raw_250530\overlays
+    --image_dir sample_data\labeled_data\HQL080_sleep250625\images `
+    --result_dir results\sample_HQL080_sleep250625 `
+    --output_mask_dir results\sample_HQL080_sleep250625\overlays
 ```
 
-Repeat with `recording_250616` to try the second acquisition setup. Each folder is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays. All six inputs retain their original uncropped dimensions.
+Any session folder works. Each is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays.
 
 ## Try the velocity pipeline
 
@@ -136,7 +133,7 @@ not to train anything.
 - The cropped image/mask pairs were copied unchanged from the project's hand-curated local labelled pool.
 - Their labelme JSON annotations were copied with `imageData` set to null. Labelme embeds a base64 copy of the whole image in that field, which duplicated every PNG and accounted for 1.5 MB of a 5.6 MB fixture; labelme reloads the image from `imagePath` when it is null, so the annotations still open. Nothing else in them was touched.
 - Each pair sits in the folder of the recording session it came from, which is what the split groups on. `splits.json` and `folds/` are generated from that layout by `training/data_splits.py`.
-- The raw frames were copied unchanged from two original recording frame directories.
+- `raw_frames/` (6 unlabelled frames from two recordings) was removed on 2026-08-15; the labelled session folders serve the demos it covered.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.
 

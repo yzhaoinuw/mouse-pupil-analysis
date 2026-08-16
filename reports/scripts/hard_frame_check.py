@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
 """Gate candidate checkpoints on real frames that validation does not cover.
 
-``sample_data/raw_frames/recording_250616`` contains a small pupil that is not in
-the validation set. A checkpoint that loses it entirely is broken in a way
-validation IoU cannot see -- in the 2026-08-14 seed study the three runs with the
-*highest* validation IoU were exactly the three that lost it.
+A checkpoint can lose a real pupil entirely and still score well: in the
+2026-08-14 seed study the three runs with the *highest* validation IoU were
+exactly the three that lost a small pupil no validation image covered. Point this
+at unlabelled frames from a recording and check that the pupil is still found.
 
-Use this as a pass/fail gate before promoting anything, not as a score to
-maximise: selecting on it would repeat the mistake it exists to catch.
+Use it as a pass/fail gate before promoting anything, not as a score to maximise:
+selecting on it would repeat the mistake it exists to catch.
 
-    python reports/scripts/hard_frame_check.py --checkpoints checkpoints_exp/*/best.pth
+    python reports/scripts/hard_frame_check.py \
+        --frames <dir of unlabelled frames> \
+        --checkpoints checkpoints_exp/*/best.pth
+
+``--frames`` has no default. It used to point at ``sample_data/raw_frames``, a
+small bundled set of unlabelled frames, which was removed on 2026-08-15. Give it
+frames the candidate has never trained on -- frames from ``labeled_data/`` are
+training data and would make this gate report nothing.
 """
 
 from __future__ import annotations
@@ -20,7 +27,6 @@ import warnings
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_FRAMES = PROJECT_ROOT / "sample_data" / "raw_frames" / "recording_250616"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -31,7 +37,12 @@ def main(argv: list[str] | None = None) -> int:
         nargs="*",
         help="Checkpoints to test. Default: the packaged one.",
     )
-    parser.add_argument("--frames", type=Path, default=DEFAULT_FRAMES)
+    parser.add_argument(
+        "--frames",
+        type=Path,
+        required=True,
+        help="Directory of unlabelled frames the candidate has never trained on.",
+    )
     parser.add_argument(
         "--min-diameter",
         type=float,

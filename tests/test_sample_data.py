@@ -88,19 +88,7 @@ def test_committed_folds_match_the_manifest():
     assert len(written) == manifest["n_images"]
 
 
-def test_raw_and_velocity_fixture_contracts():
-    raw_root = SAMPLE_ROOT / "raw_frames"
-    assert {
-        directory.name: len(list(directory.glob("*.png")))
-        for directory in raw_root.iterdir()
-        if directory.is_dir()
-    } == {"recording_250530": 3, "recording_250616": 3}
-    raw_paths = sorted(raw_root.glob("*/*.png"))
-    assert len(raw_paths) == 6
-    for raw_path in raw_paths:
-        with Image.open(raw_path) as image:
-            assert image.width > 148 or image.height > 148
-
+def test_velocity_fixture_contract():
     velocity_paths = sorted(
         (SAMPLE_ROOT / "velocity_frames").glob("*.png"),
         key=lambda path: int(FRAME_SUFFIX.search(path.name).group(1)),
@@ -117,8 +105,8 @@ def test_manifest_covers_every_logical_sample():
     with (SAMPLE_ROOT / "manifest.csv").open(newline="", encoding="utf-8") as manifest_file:
         rows = list(csv.DictReader(manifest_file))
 
-    assert len(rows) == 69
-    assert {row["category"] for row in rows} == {"cropped", "raw", "velocity"}
+    assert len(rows) == 63
+    assert {row["category"] for row in rows} == {"cropped", "velocity"}
 
     # Every cropped sample carries the session it came from and the fold it landed in;
     # the old `split` column recorded a train/validation division that no longer exists.
