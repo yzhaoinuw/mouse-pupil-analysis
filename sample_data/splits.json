@@ -12,10 +12,6 @@
   "n_holdout_sessions": 0,
   "pool": [
     [
-      "labeled_data",
-      "labeled_masks"
-    ],
-    [
       "images_train",
       "masks_train"
     ],
@@ -40,7 +36,7 @@
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d1b0",
       "n_images": 6,
       "n_tiny": 3,
@@ -51,7 +47,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 0,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d2b1",
       "n_images": 2,
       "n_tiny": 0,
@@ -62,7 +58,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d2b1",
       "n_images": 5,
       "n_tiny": 0,
@@ -73,7 +69,7 @@
       "session": "HQL086_sleep250909",
       "fold": 1,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d0b2",
       "n_images": 3,
       "n_tiny": 1,
@@ -84,7 +80,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 2,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d2b2",
       "n_images": 4,
       "n_tiny": 0,
@@ -95,7 +91,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 2,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d0b0",
       "n_images": 1,
       "n_tiny": 0,
@@ -106,7 +102,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d1b0",
       "n_images": 3,
       "n_tiny": 0,
@@ -117,7 +113,7 @@
       "session": "251018_5213_Purple_awake pupil recording",
       "fold": 3,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d1b1",
       "n_images": 1,
       "n_tiny": 0,
@@ -128,7 +124,7 @@
       "session": "HQL090_sleep251012",
       "fold": 3,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d0b2",
       "n_images": 4,
       "n_tiny": 1,
@@ -139,7 +135,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
-      "source": "sidecar",
+      "source": "folder",
       "stratum": "d2b2",
       "n_images": 3,
       "n_tiny": 0,
@@ -149,9 +145,9 @@
   ],
   "images": [
     {
-      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000",
-      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
-      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "key": "250530_5003_Green_Training_very_dm_light/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light/images/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
+      "mask": "labeled_data/250530_5003_Green_Training_very_dm_light/masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_0000.png",
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
@@ -159,9 +155,9 @@
       "brightness": 80.57
     },
     {
-      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918",
-      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
-      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "key": "250530_5003_Green_Training_very_dm_light/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light/images/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
+      "mask": "labeled_data/250530_5003_Green_Training_very_dm_light/masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_47918.png",
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
@@ -169,9 +165,9 @@
       "brightness": 112.57
     },
     {
-      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547",
-      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
-      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "key": "250530_5003_Green_Training_very_dm_light/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light/images/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
+      "mask": "labeled_data/250530_5003_Green_Training_very_dm_light/masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_82547.png",
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
@@ -179,9 +175,9 @@
       "brightness": 123.69
     },
     {
-      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360",
-      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
-      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "key": "250530_5003_Green_Training_very_dm_light/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light/images/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
+      "mask": "labeled_data/250530_5003_Green_Training_very_dm_light/masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_85360.png",
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
@@ -189,9 +185,9 @@
       "brightness": 131.95
     },
     {
-      "key": "250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215",
-      "image": "labeled_data/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
-      "mask": "labeled_masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "key": "250530_5003_Green_Training_very_dm_light/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215",
+      "image": "labeled_data/250530_5003_Green_Training_very_dm_light/images/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
+      "mask": "labeled_data/250530_5003_Green_Training_very_dm_light/masks/250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042_9215.png",
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 1,
       "holdout": false,
@@ -199,9 +195,9 @@
       "brightness": 69.76
     },
     {
-      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450",
-      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
-      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "key": "250616_5120_Purple_sleep_trial_1/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1/images/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
+      "mask": "labeled_data/250616_5120_Purple_sleep_trial_1/masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_0450.png",
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 2,
       "holdout": false,
@@ -209,9 +205,9 @@
       "brightness": 141.98
     },
     {
-      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700",
-      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
-      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "key": "250616_5120_Purple_sleep_trial_1/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1/images/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
+      "mask": "labeled_data/250616_5120_Purple_sleep_trial_1/masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_17700.png",
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 2,
       "holdout": false,
@@ -219,9 +215,9 @@
       "brightness": 172.4
     },
     {
-      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260",
-      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
-      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "key": "250616_5120_Purple_sleep_trial_1/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1/images/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
+      "mask": "labeled_data/250616_5120_Purple_sleep_trial_1/masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_19260.png",
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 2,
       "holdout": false,
@@ -229,9 +225,9 @@
       "brightness": 156.99
     },
     {
-      "key": "250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230",
-      "image": "labeled_data/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
-      "mask": "labeled_masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "key": "250616_5120_Purple_sleep_trial_1/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230",
+      "image": "labeled_data/250616_5120_Purple_sleep_trial_1/images/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
+      "mask": "labeled_data/250616_5120_Purple_sleep_trial_1/masks/250616_5120_Purple_sleep_trial_1_2025-06-16T16-31-19.701_22230.png",
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 2,
       "holdout": false,
@@ -239,9 +235,9 @@
       "brightness": 148.33
     },
     {
-      "key": "251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857",
-      "image": "labeled_data/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
-      "mask": "labeled_masks/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "key": "251016_5212_purple_Day10/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857",
+      "image": "labeled_data/251016_5212_purple_Day10/images/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
+      "mask": "labeled_data/251016_5212_purple_Day10/masks/251016_5212_purple_Day10_2025-10-16T17-14-56.825_00857.png",
       "session": "251016_5212_purple_Day10",
       "fold": 2,
       "holdout": false,
@@ -249,9 +245,9 @@
       "brightness": 80.93
     },
     {
-      "key": "251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127",
-      "image": "labeled_data/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
-      "mask": "labeled_masks/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "key": "251018_5213_Purple_awake pupil recording/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127",
+      "image": "labeled_data/251018_5213_Purple_awake pupil recording/images/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
+      "mask": "labeled_data/251018_5213_Purple_awake pupil recording/masks/251018_5213_Purple_awake pupil recording_2025-10-18T13-47-06.854_00127.png",
       "session": "251018_5213_Purple_awake pupil recording",
       "fold": 3,
       "holdout": false,
@@ -259,9 +255,9 @@
       "brightness": 87.76
     },
     {
-      "key": "HQL073_250515_002_eye_19699",
-      "image": "labeled_data/HQL073_250515_002_eye_19699.png",
-      "mask": "labeled_masks/HQL073_250515_002_eye_19699.png",
+      "key": "HQL073_250515/HQL073_250515_002_eye_19699",
+      "image": "labeled_data/HQL073_250515/images/HQL073_250515_002_eye_19699.png",
+      "mask": "labeled_data/HQL073_250515/masks/HQL073_250515_002_eye_19699.png",
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
@@ -269,9 +265,9 @@
       "brightness": 73.89
     },
     {
-      "key": "HQL073_250515_002_eye_36845",
-      "image": "labeled_data/HQL073_250515_002_eye_36845.png",
-      "mask": "labeled_masks/HQL073_250515_002_eye_36845.png",
+      "key": "HQL073_250515/HQL073_250515_002_eye_36845",
+      "image": "labeled_data/HQL073_250515/images/HQL073_250515_002_eye_36845.png",
+      "mask": "labeled_data/HQL073_250515/masks/HQL073_250515_002_eye_36845.png",
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
@@ -279,9 +275,9 @@
       "brightness": 72.81
     },
     {
-      "key": "HQL073_250515_004_eye_45595",
-      "image": "labeled_data/HQL073_250515_004_eye_45595.png",
-      "mask": "labeled_masks/HQL073_250515_004_eye_45595.png",
+      "key": "HQL073_250515/HQL073_250515_004_eye_45595",
+      "image": "labeled_data/HQL073_250515/images/HQL073_250515_004_eye_45595.png",
+      "mask": "labeled_data/HQL073_250515/masks/HQL073_250515_004_eye_45595.png",
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
@@ -289,9 +285,9 @@
       "brightness": 72.04
     },
     {
-      "key": "HQL080_sleep250625_003_eye_11980",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_11980.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_11980.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_11980",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_11980.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_11980.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -299,9 +295,9 @@
       "brightness": 78.95
     },
     {
-      "key": "HQL080_sleep250625_003_eye_15066",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_15066.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_15066.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_15066",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_15066.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_15066.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -309,9 +305,9 @@
       "brightness": 72.53
     },
     {
-      "key": "HQL080_sleep250625_003_eye_34448",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_34448.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_34448.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_34448",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_34448.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_34448.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -319,9 +315,9 @@
       "brightness": 75.56
     },
     {
-      "key": "HQL080_sleep250625_003_eye_34505",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_34505.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_34505.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_34505",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_34505.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_34505.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -329,9 +325,9 @@
       "brightness": 75.59
     },
     {
-      "key": "HQL080_sleep250625_003_eye_39360",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_39360.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_39360.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_39360",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_39360.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_39360.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -339,9 +335,9 @@
       "brightness": 87.7
     },
     {
-      "key": "HQL080_sleep250625_003_eye_48292",
-      "image": "labeled_data/HQL080_sleep250625_003_eye_48292.png",
-      "mask": "labeled_masks/HQL080_sleep250625_003_eye_48292.png",
+      "key": "HQL080_sleep250625/HQL080_sleep250625_003_eye_48292",
+      "image": "labeled_data/HQL080_sleep250625/images/HQL080_sleep250625_003_eye_48292.png",
+      "mask": "labeled_data/HQL080_sleep250625/masks/HQL080_sleep250625_003_eye_48292.png",
       "session": "HQL080_sleep250625",
       "fold": 0,
       "holdout": false,
@@ -349,9 +345,9 @@
       "brightness": 88.25
     },
     {
-      "key": "HQL086_sleep250909_011_eye_22730",
-      "image": "labeled_data/HQL086_sleep250909_011_eye_22730.png",
-      "mask": "labeled_masks/HQL086_sleep250909_011_eye_22730.png",
+      "key": "HQL086_sleep250909/HQL086_sleep250909_011_eye_22730",
+      "image": "labeled_data/HQL086_sleep250909/images/HQL086_sleep250909_011_eye_22730.png",
+      "mask": "labeled_data/HQL086_sleep250909/masks/HQL086_sleep250909_011_eye_22730.png",
       "session": "HQL086_sleep250909",
       "fold": 1,
       "holdout": false,
@@ -359,9 +355,9 @@
       "brightness": 105.17
     },
     {
-      "key": "HQL086_sleep250909_011_eye_29786",
-      "image": "labeled_data/HQL086_sleep250909_011_eye_29786.png",
-      "mask": "labeled_masks/HQL086_sleep250909_011_eye_29786.png",
+      "key": "HQL086_sleep250909/HQL086_sleep250909_011_eye_29786",
+      "image": "labeled_data/HQL086_sleep250909/images/HQL086_sleep250909_011_eye_29786.png",
+      "mask": "labeled_data/HQL086_sleep250909/masks/HQL086_sleep250909_011_eye_29786.png",
       "session": "HQL086_sleep250909",
       "fold": 1,
       "holdout": false,
@@ -369,9 +365,9 @@
       "brightness": 118.21
     },
     {
-      "key": "HQL086_sleep250909_011_eye_57658",
-      "image": "labeled_data/HQL086_sleep250909_011_eye_57658.png",
-      "mask": "labeled_masks/HQL086_sleep250909_011_eye_57658.png",
+      "key": "HQL086_sleep250909/HQL086_sleep250909_011_eye_57658",
+      "image": "labeled_data/HQL086_sleep250909/images/HQL086_sleep250909_011_eye_57658.png",
+      "mask": "labeled_data/HQL086_sleep250909/masks/HQL086_sleep250909_011_eye_57658.png",
       "session": "HQL086_sleep250909",
       "fold": 1,
       "holdout": false,
@@ -379,9 +375,9 @@
       "brightness": 112.59
     },
     {
-      "key": "HQL086_whiskerb250923_005_eye_46658",
-      "image": "labeled_data/HQL086_whiskerb250923_005_eye_46658.png",
-      "mask": "labeled_masks/HQL086_whiskerb250923_005_eye_46658.png",
+      "key": "HQL086_whiskerb250923/HQL086_whiskerb250923_005_eye_46658",
+      "image": "labeled_data/HQL086_whiskerb250923/images/HQL086_whiskerb250923_005_eye_46658.png",
+      "mask": "labeled_data/HQL086_whiskerb250923/masks/HQL086_whiskerb250923_005_eye_46658.png",
       "session": "HQL086_whiskerb250923",
       "fold": 0,
       "holdout": false,
@@ -389,9 +385,9 @@
       "brightness": 92.25
     },
     {
-      "key": "HQL086_whiskerb250923_008_eye_50170",
-      "image": "labeled_data/HQL086_whiskerb250923_008_eye_50170.png",
-      "mask": "labeled_masks/HQL086_whiskerb250923_008_eye_50170.png",
+      "key": "HQL086_whiskerb250923/HQL086_whiskerb250923_008_eye_50170",
+      "image": "labeled_data/HQL086_whiskerb250923/images/HQL086_whiskerb250923_008_eye_50170.png",
+      "mask": "labeled_data/HQL086_whiskerb250923/masks/HQL086_whiskerb250923_008_eye_50170.png",
       "session": "HQL086_whiskerb250923",
       "fold": 0,
       "holdout": false,
@@ -399,9 +395,9 @@
       "brightness": 125.28
     },
     {
-      "key": "HQL090_sleep251012_010_eye_06588",
-      "image": "labeled_data/HQL090_sleep251012_010_eye_06588.png",
-      "mask": "labeled_masks/HQL090_sleep251012_010_eye_06588.png",
+      "key": "HQL090_sleep251012/HQL090_sleep251012_010_eye_06588",
+      "image": "labeled_data/HQL090_sleep251012/images/HQL090_sleep251012_010_eye_06588.png",
+      "mask": "labeled_data/HQL090_sleep251012/masks/HQL090_sleep251012_010_eye_06588.png",
       "session": "HQL090_sleep251012",
       "fold": 3,
       "holdout": false,
@@ -409,9 +405,9 @@
       "brightness": 120.77
     },
     {
-      "key": "HQL090_sleep251012_010_eye_06771",
-      "image": "labeled_data/HQL090_sleep251012_010_eye_06771.png",
-      "mask": "labeled_masks/HQL090_sleep251012_010_eye_06771.png",
+      "key": "HQL090_sleep251012/HQL090_sleep251012_010_eye_06771",
+      "image": "labeled_data/HQL090_sleep251012/images/HQL090_sleep251012_010_eye_06771.png",
+      "mask": "labeled_data/HQL090_sleep251012/masks/HQL090_sleep251012_010_eye_06771.png",
       "session": "HQL090_sleep251012",
       "fold": 3,
       "holdout": false,
@@ -419,9 +415,9 @@
       "brightness": 118.73
     },
     {
-      "key": "HQL090_sleep251012_010_eye_44600",
-      "image": "labeled_data/HQL090_sleep251012_010_eye_44600.png",
-      "mask": "labeled_masks/HQL090_sleep251012_010_eye_44600.png",
+      "key": "HQL090_sleep251012/HQL090_sleep251012_010_eye_44600",
+      "image": "labeled_data/HQL090_sleep251012/images/HQL090_sleep251012_010_eye_44600.png",
+      "mask": "labeled_data/HQL090_sleep251012/masks/HQL090_sleep251012_010_eye_44600.png",
       "session": "HQL090_sleep251012",
       "fold": 3,
       "holdout": false,
@@ -429,9 +425,9 @@
       "brightness": 131.34
     },
     {
-      "key": "HQL090_sleep251012_010_eye_49052",
-      "image": "labeled_data/HQL090_sleep251012_010_eye_49052.png",
-      "mask": "labeled_masks/HQL090_sleep251012_010_eye_49052.png",
+      "key": "HQL090_sleep251012/HQL090_sleep251012_010_eye_49052",
+      "image": "labeled_data/HQL090_sleep251012/images/HQL090_sleep251012_010_eye_49052.png",
+      "mask": "labeled_data/HQL090_sleep251012/masks/HQL090_sleep251012_010_eye_49052.png",
       "session": "HQL090_sleep251012",
       "fold": 3,
       "holdout": false,
@@ -439,9 +435,9 @@
       "brightness": 111.3
     },
     {
-      "key": "HQL090_whiskerb251020_006_eye_31417",
-      "image": "labeled_data/HQL090_whiskerb251020_006_eye_31417.png",
-      "mask": "labeled_masks/HQL090_whiskerb251020_006_eye_31417.png",
+      "key": "HQL090_whiskerb251020/HQL090_whiskerb251020_006_eye_31417",
+      "image": "labeled_data/HQL090_whiskerb251020/images/HQL090_whiskerb251020_006_eye_31417.png",
+      "mask": "labeled_data/HQL090_whiskerb251020/masks/HQL090_whiskerb251020_006_eye_31417.png",
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
@@ -449,9 +445,9 @@
       "brightness": 105.07
     },
     {
-      "key": "HQL090_whiskerb251020_009_eye_15701",
-      "image": "labeled_data/HQL090_whiskerb251020_009_eye_15701.png",
-      "mask": "labeled_masks/HQL090_whiskerb251020_009_eye_15701.png",
+      "key": "HQL090_whiskerb251020/HQL090_whiskerb251020_009_eye_15701",
+      "image": "labeled_data/HQL090_whiskerb251020/images/HQL090_whiskerb251020_009_eye_15701.png",
+      "mask": "labeled_data/HQL090_whiskerb251020/masks/HQL090_whiskerb251020_009_eye_15701.png",
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
@@ -459,9 +455,9 @@
       "brightness": 124.42
     },
     {
-      "key": "HQL090_whiskerb251020_009_eye_52558",
-      "image": "labeled_data/HQL090_whiskerb251020_009_eye_52558.png",
-      "mask": "labeled_masks/HQL090_whiskerb251020_009_eye_52558.png",
+      "key": "HQL090_whiskerb251020/HQL090_whiskerb251020_009_eye_52558",
+      "image": "labeled_data/HQL090_whiskerb251020/images/HQL090_whiskerb251020_009_eye_52558.png",
+      "mask": "labeled_data/HQL090_whiskerb251020/masks/HQL090_whiskerb251020_009_eye_52558.png",
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,

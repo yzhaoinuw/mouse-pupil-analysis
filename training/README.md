@@ -23,24 +23,26 @@ Label creation also requires [Labelme](https://github.com/wkentaro/labelme). Ins
 Create these local folders at the repository root:
 
 ```text
-labeled_data/     # every labelled image
-labeled_masks/    # every matching mask
+labeled_data/
+  <session>/        # one recording session: one animal, one date, one condition
+    images/         # the frames, and their .json annotations
+    masks/          # the masks, same filenames
 ```
 
-One flat pool. There is no train/validation folder split any more: `splits.json` decides what trains and what validates, so a labelled pair never moves on disk when the split changes. The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` are still read if a checkout still has them, so an older layout keeps working.
+One directory per recording session. The session is the grouping unit for the split, so it is a directory: an image cannot enter the pool without one. There is no train/validation folder split — `splits.json` decides what trains and what validates, so a labelled pair never moves on disk when the split changes. The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` are still read if a checkout still has them, so an older layout keeps working.
 
-Images and masks must be PNG files whose filenames correspond one-to-one by stem. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
+Images and masks must be PNG files whose filenames correspond one-to-one by stem within a session. Filenames need not be unique *between* sessions — an image is identified by `<session>/<filename>`. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
 
 For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
 
-Subdirectories inside `labeled_data/` are walked, and a per-recording subfolder is the easiest way to record which session a batch belongs to:
+Adding data is: drop `labeled_data/<new session>/images/`, convert the annotations, refresh the split.
 
-```text
-labeled_data/HQL091_sleep260820/frame_0001.png    ->  session HQL091_sleep260820
-labeled_masks/HQL091_sleep260820/frame_0001.png   (or flat in labeled_masks/; both pair by filename)
+```powershell
+python training\labelme_json2png.py --data-root . --session <new session>
+python training\data_splits.py --data-root . --materialize
 ```
 
-Filenames need not be unique between subfolders — two recordings may each hold a `frame_0001.png`, because an image is identified by its path within the pool folder.
+Existing sessions keep their folds; only the new one is packed.
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
@@ -57,15 +59,15 @@ See [`sample_data/README.md`](../sample_data/README.md) for the fixture's scope 
 ## 1. Create masks with Labelme
 
 1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
-2. Save each JSON file beside its image in `labeled_data/`.
-3. In `labelme_json2png.py`, set `dataset_type` to `"train"` or `"validation"`.
-4. Run:
+2. Save each JSON file beside its image in `labeled_data/<session>/images/`.
+3. Run:
 
 ```powershell
-python training\labelme_json2png.py
+python training\labelme_json2png.py --data-root .
+python training\labelme_json2png.py --data-root . --session HQL091_sleep260820
 ```
 
-The script runs `labelme_export_json`, moves each generated `label.png` into the matching mask folder, and removes Labelme's temporary export directory. Existing masks with the same stem are skipped.
+The script walks every session folder (or just the ones named with `--session`), runs `labelme_export_json`, moves each generated `label.png` into that session's `masks/` under its image's filename, and removes Labelme's temporary export directory. Existing masks are skipped, so re-running only fills in what is missing.
 
 Before training, compare the filenames and counts in each image/mask pair. A mask with the wrong image can train without an obvious file error while corrupting the model.
 
@@ -78,11 +80,12 @@ identity. Copying a neighbour's mask scores 0.652 IoU when the neighbour comes f
 same session and 0.399 when it comes from a different one, against a 0.02 seed noise
 floor — that gap is what a non-grouped split hands the model for free.
 
-Which session an image belongs to is **recorded, never inferred**. It comes from an
-intake subfolder, a `session` flag in the labelme JSON, or a `provenance.csv` sidecar,
-and anything unresolved collapses into one safe over-merged group. Filenames are not
-parsed. [`data_collection.md`](data_collection.md) covers the sources and the
-measurements that ruled out recovering the grouping from the images themselves.
+Which session an image belongs to is **recorded, never inferred** — and the layout
+records it: the session is the directory the pair sits in. A `session` flag in the
+labelme JSON or a `provenance.csv` sidecar can override that for a batch that arrived
+pre-mixed, and anything still unresolved collapses into one safe over-merged group.
+Filenames are not parsed. [`data_collection.md`](data_collection.md) covers the sources
+and the measurements that ruled out recovering the grouping from the images themselves.
 
 Folds are also **stratified**: sessions are banded by median pupil diameter and median
 background brightness, and a new session prefers a fold holding no session of its

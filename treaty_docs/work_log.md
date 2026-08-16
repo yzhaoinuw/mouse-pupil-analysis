@@ -6,6 +6,24 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **The session is now a directory: `labeled_data/<session>/images|masks`.** The
+  maintainer's observation that `labeled_data` + `labeled_masks` split one thing across two
+  top-level names was right, and the deeper win is that this makes provenance *structural* --
+  an image cannot enter the pool without landing in a session folder, so the grouping can
+  never disagree with where the file sits, and the sidecar stops being something to maintain.
+  **The whole split now regenerates from the layout alone**: deleting `splits.json` and
+  `provenance.csv` and rebuilding gives byte-identical folds. Keys gained their session
+  prefix (`<session>/<filename>`), migrated deliberately with folds carried across and
+  verified unchanged for all 222 images.
+- **Retired `provenance.csv` from both pools.** It is now redundant with the directory
+  structure *and* actively risky: it outranks the folder, so a stale sidecar would silently
+  override moving an image to a different session folder. The sidecar mechanism stays for
+  batches that arrive pre-mixed, and that hazard is documented.
+- **`labelme_json2png.py` was broken and I had missed it.** It still wrote to
+  `masks_validation/`, deleted by the pool merge, and selected its target through an edited
+  `dataset_type` module variable. Rewritten to walk session folders with `--data-root` and
+  `--session`. Worth noting the pattern: the merge commit updated every *reader* of the pool
+  and missed the one *writer*.
 - **Mirrored the layout into `sample_data/` and expanded it 12 -> 32 real pairs.** The
   fixture now has the same shape as the maintained pool: flat `labeled_data/`, sidecar,
   `splits.json`, and a committed `folds/cv1..cv4`. Selection was the point, not the count:

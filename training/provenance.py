@@ -18,9 +18,10 @@ Four recorded sources, most explicit first:
    folder without the extension: ``frame_0001`` flat, ``rig2_day3/frame_0001`` nested. Use for a batch that arrived already mixed.
 2. **Labelme flag** -- ``flags.session`` in the ``<stem>.json`` beside the image. The
    labeller sets it once per batch in the UI, at the moment they know it.
-3. **Intake folder** -- the image's own subdirectory under the pool root. Drop each
-   recording's frames in their own folder and the folder name *is* the session. This
-   asks nothing of how the files are named, which is the point.
+3. **Session folder** -- ``labeled_data/<session>/images/``. This is the normal route
+   and it asks nothing of how files are named: the session is a directory, so an image
+   cannot enter the pool without one. The sources above exist for a batch that arrived
+   before anyone could sort it.
 4. **Batch fallback** -- everything still unresolved becomes a single group. Merging
    two settings only costs data efficiency; tearing one apart leaks. So the safe
    failure mode is to over-merge, and it needs no human input at all.
@@ -124,35 +125,21 @@ def labelme_session(image_path: Path) -> str | None:
     return None
 
 
-def folder_session(image_path: Path, pool_root: Path) -> str | None:
-    """Return the intake subfolder an image sits in, relative to its pool root.
-
-    An image directly in the pool root has no folder to speak for it and returns
-    ``None``. Nested folders join with ``/`` so ``incoming/june/rig2`` stays distinct
-    from ``incoming/july/rig2``.
-    """
-    try:
-        relative = Path(image_path).resolve().relative_to(Path(pool_root).resolve())
-    except ValueError:
-        return None
-    parents = relative.parent.parts
-    return "/".join(parents) if parents else None
-
-
 def resolve(
-    images: dict[str, tuple[Path, Path]],
+    images: dict[str, tuple[Path, str | None]],
     sidecar: dict[str, str] | None = None,
     batch_name: str = "unknown_batch",
 ) -> dict[str, Provenance]:
     """Resolve every image's session from the recorded sources, in precedence order.
 
-    ``images`` maps key to ``(image_path, pool_root)``. Returns one
-    :class:`Provenance` per key; every key always resolves, because the batch
-    fallback catches whatever the explicit sources missed.
+    ``images`` maps key to ``(image_path, session or None)``, where the session is
+    already known for anything read out of a session folder. Returns one
+    :class:`Provenance` per key; every key always resolves, because the batch fallback
+    catches whatever the explicit sources missed.
     """
     sidecar = sidecar or {}
     resolved: dict[str, Provenance] = {}
-    for key, (image_path, pool_root) in images.items():
+    for key, (image_path, folder) in images.items():
         session = sidecar.get(key)
         if session:
             resolved[key] = Provenance(session, "sidecar")
@@ -163,9 +150,8 @@ def resolve(
             resolved[key] = Provenance(session, "labelme")
             continue
 
-        session = folder_session(image_path, pool_root)
-        if session:
-            resolved[key] = Provenance(session, "folder")
+        if folder:
+            resolved[key] = Provenance(folder, "folder")
             continue
 
         resolved[key] = Provenance(batch_name, "batch")

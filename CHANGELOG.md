@@ -12,20 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recording-grouped, condition-stratified data splits. `training/data_splits.py` groups the
   labelled pool into *sessions* — one animal, one date, one condition — and packs whole
   sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.
-  The labelled pairs are one flat `labeled_data/` + `labeled_masks/` pool -- the former
-  `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` were merged
-  into it, and are still read where an older checkout has them. The manifest decides what
+  The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/`
+  were merged into `labeled_data/`, and are still read where an older checkout has them. The manifest decides what
   trains and what validates, so re-splitting moves no labelled files and adding data moves
   none either. Because an image is keyed by its path *within* the pool folder, the merge
   itself moved no image between folds. `run_train.py` gains `--split-manifest` and `--fold`; without
   them it keeps the previous fixed-folder behaviour. Grouping is worth 0.25 IoU against a
   0.02 seed noise floor: copying a nearest neighbour's mask scores 0.652 when the neighbour
   shares a session and 0.399 when it does not.
-- Session identity is *recorded at intake, never inferred* (`training/provenance.py`). It
-  comes from an intake subfolder, a `session` flag in the labelme JSON, or a
-  `provenance.csv` sidecar, in that order of precedence; anything unresolved collapses into
-  a single over-merged group, which costs data efficiency but cannot leak. No filename is
-  parsed. Once an image is in the manifest its session and fold are frozen, and a
+- The labelled pool is organised by recording session: `labeled_data/<session>/images/`
+  and `.../masks/`. The session is the grouping unit for the split, so it is a directory --
+  an image cannot enter the pool without one, which makes provenance a consequence of where
+  the file goes rather than a convention to remember, and means the whole split regenerates
+  from the layout alone. A `session` flag in the labelme JSON or a `provenance.csv` sidecar
+  overrides the folder for a batch that arrived pre-mixed; anything still unresolved
+  collapses into a single over-merged group, which costs data efficiency but cannot leak.
+  No filename is parsed (`training/provenance.py`). Once an image is in the manifest its session and fold are frozen, and a
   provenance source that later contradicts the record raises instead of silently repacking.
   Recovering the grouping from the images was tested and does not work — crop geometry
   splits 6 of 16 sessions, and agglomerative clustering on preprocessed frames tears 3 at
@@ -41,9 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
   identical band coverage.
-- `sample_data/` mirrors the maintained layout: one flat `labeled_data/` +
-  `labeled_masks/` pool, `provenance.csv`, `splits.json`, and a committed `folds/`
-  with `cv1..cv4`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
+- `sample_data/` mirrors the maintained layout: `labeled_data/<session>/images|masks`,
+  `splits.json`, and a committed `folds/` with `cv1..cv4`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
   fixture exercises the split rather than only containing images -- several sessions are
   5-6 images deep, so holding one out removes a block of related frames, and the mask
   diameter range now spans 8.8-109.7 px, matching the maintained pool and populating
@@ -95,6 +96,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   concept DOI and `[project.urls]` links it.
 
 ### Fixed
+
+- `training/labelme_json2png.py` still wrote to `masks_validation/`, which the pool merge
+  had deleted, and picked its target through an edited `dataset_type` variable. It now
+  walks the session folders, writes each mask beside its image, takes `--data-root` and
+  `--session`, and skips masks that already exist.
 
 - A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
   so the manifest differed from itself on a no-op rerun and, worse, the census warning
@@ -193,6 +199,11 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 ### Fixed
 
+- `training/labelme_json2png.py` still wrote to `masks_validation/`, which the pool merge
+  had deleted, and picked its target through an edited `dataset_type` variable. It now
+  walks the session folders, writes each mask beside its image, takes `--data-root` and
+  `--session`, and skips masks that already exist.
+
 - A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
   so the manifest differed from itself on a no-op rerun and, worse, the census warning
   about sessions with no recorded provenance fired once and then silently retired. The
@@ -264,6 +275,11 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 - Collaboration and project-overview documentation.
 
 ### Fixed
+
+- `training/labelme_json2png.py` still wrote to `masks_validation/`, which the pool merge
+  had deleted, and picked its target through an edited `dataset_type` variable. It now
+  walks the session folders, writes each mask beside its image, takes `--data-root` and
+  `--session`, and skips masks that already exist.
 
 - A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
   so the manifest differed from itself on a no-op rerun and, worse, the census warning

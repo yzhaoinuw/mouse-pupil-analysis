@@ -6,9 +6,10 @@ This directory is a small public fixture for trying the repository from a fresh 
 
 ```text
 sample_data/
-|- labeled_data/          # 32 curated cropped images (+ their labelme JSON)
-|- labeled_masks/         # 32 matching hand-labeled masks
-|- provenance.csv         # which recording session each image came from
+|- labeled_data/          # 32 curated cropped pairs, one folder per session
+|  |- <session>/
+|  |  |- images/          #   the frames, and their labelme JSON
+|  |  |- masks/           #   the matching hand-labeled masks
 |- splits.json            # the grouped, stratified fold assignment
 |- folds/                 # the same split as folders, generated from splits.json
 |  |- cv1/ cv2/ cv3/ cv4/ #   each with images/ and masks/
@@ -20,9 +21,10 @@ sample_data/
 |- README.md
 ```
 
-This mirrors the maintained dataset's layout exactly: one flat labelled pool, a
-`provenance.csv` recording the session behind each image, and `splits.json` deciding
-what trains and what validates. There are no train/validation folders.
+This mirrors the maintained dataset's layout exactly: one directory per recording
+session, each holding `images/` and `masks/`, and `splits.json` deciding what trains and
+what validates. There are no train/validation folders. The session an image belongs to
+is the folder it sits in, so the whole split regenerates from the layout alone.
 
 `manifest.csv` records the session, fold, source recording, source-frame suffix, and
 transformation of each logical sample.
@@ -111,7 +113,8 @@ python training\data_splits.py --data-root sample_data --show
 
 prints the per-session census and the per-fold summary. `sample_data/splits.json` and
 `sample_data/folds/` are both committed, so a fresh clone can read the split without
-running anything; regenerate them with:
+running anything. Both regenerate from the session folders alone — delete them and run
+the command below and the folds come back identical:
 
 ```powershell
 python training\data_splits.py --data-root sample_data --materialize
@@ -132,7 +135,7 @@ not to train anything.
 
 - The cropped image/mask pairs were copied unchanged from the project's hand-curated local labelled pool.
 - Their labelme JSON annotations were copied with `imageData` set to null. Labelme embeds a base64 copy of the whole image in that field, which duplicated every PNG and accounted for 1.5 MB of a 5.6 MB fixture; labelme reloads the image from `imagePath` when it is null, so the annotations still open. Nothing else in them was touched.
-- `provenance.csv` records the session each image belongs to, carried over from the main pool's sidecar. `splits.json` and `folds/` are generated from it by `training/data_splits.py`.
+- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `splits.json` and `folds/` are generated from that layout by `training/data_splits.py`.
 - The raw frames were copied unchanged from two original recording frame directories.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.

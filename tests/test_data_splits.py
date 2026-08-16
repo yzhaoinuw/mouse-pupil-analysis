@@ -10,6 +10,7 @@ invalidates every previously recorded run without raising anything.
 
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -37,21 +38,27 @@ def _write_pair(
     root: Path,
     stem: str,
     radius: int,
-    split: str = "labelled",
+    split: str | None = None,
     session: str | None = None,
     grey: int = 100,
     labelme_session: str | None = None,
 ) -> Path:
-    """Write one image/mask pair, optionally inside an intake subfolder.
+    """Write one image/mask pair into a session folder, or into a legacy flat folder.
+
+    With ``session``, the pair lands in ``labeled_data/<session>/images|masks``, which
+    is the layout everything uses now. With ``split`` instead, it lands in the historical
+    flat ``images_<split>`` / ``masks_<split>``, which the reader still accepts.
 
     ``grey`` sets the background level the brightness feature reads, and ``radius``
     sets the mask's equivalent diameter, so a test can place a pair in a chosen
     stratum on purpose.
     """
-    folders = {"labelled": ("labeled_data", "labeled_masks")}
-    image_root, mask_root = folders.get(split, (f"images_{split}", f"masks_{split}"))
-    image_dir = root / image_root / (session or "")
-    mask_dir = root / mask_root / (session or "")
+    if session is not None:
+        image_dir = root / "labeled_data" / session / "images"
+        mask_dir = root / "labeled_data" / session / "masks"
+    else:
+        image_dir = root / f"images_{split or 'train'}"
+        mask_dir = root / f"masks_{split or 'train'}"
     image_dir.mkdir(parents=True, exist_ok=True)
     mask_dir.mkdir(parents=True, exist_ok=True)
 
@@ -97,9 +104,9 @@ def pool(tmp_path: Path) -> Path:
                 session=session,
                 grey=40 + 40 * index,
             )
-    # A sixth session whose frames are split across both pool folders.
-    _write_pair(tmp_path, "split_a", radius=10, session="rig9_day9", grey=120)
-    _write_pair(tmp_path, "split_b", radius=10, split="validation", session="rig9_day9", grey=120)
+    # A sixth session, written the old flat way, to pin that a legacy checkout still reads.
+    _write_pair(tmp_path, "legacy_a", radius=10, split="validation", grey=120)
+    _write_pair(tmp_path, "legacy_b", radius=11, split="validation", grey=120)
     return tmp_path
 
 
@@ -109,10 +116,11 @@ def pool(tmp_path: Path) -> Path:
 def test_intake_folder_names_the_session_whatever_the_file_is_called(pool: Path):
     manifest = data_splits.build_manifest(pool, n_folds=3)
 
-    sessions = {entry["session"] for entry in manifest["sessions"]}
+    sessions = {entry["session"]: entry["source"] for entry in manifest["sessions"]}
     assert "rig0_day0" in sessions
-    assert all(entry["source"] == "folder" for entry in manifest["sessions"])
-    # Nothing about the stems themselves carries the grouping.
+    # Five session folders speak for themselves; the two legacy flat files cannot.
+    assert sum(source == "folder" for source in sessions.values()) == 5
+    # Nothing about the filenames themselves carries the grouping.
     assert manifest["n_sessions"] == 6
 
 
@@ -189,15 +197,21 @@ def test_sidecar_with_a_blank_session_is_rejected(tmp_path: Path):
 
 
 def test_no_session_is_split_across_folds(pool: Path):
-    manifest = data_splits.build_manifest(pool, n_folds=3)
+    manifest = data_splits.build_manifest(pool, n_folds=3, batch_name="legacy_batch")
 
     fold_of_session = {entry["session"]: entry["fold"] for entry in manifest["sessions"]}
     for entry in manifest["images"]:
         assert entry["fold"] == fold_of_session[entry["session"]]
 
-    across = [e for e in manifest["images"] if e["session"] == "rig9_day9"]
-    assert {Path(e["image"]).parts[0] for e in across} == {"labeled_data", "images_validation"}
-    assert len({e["fold"] for e in across}) == 1
+
+def test_a_legacy_flat_folder_is_still_read(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3, batch_name="legacy_batch")
+
+    legacy = [e for e in manifest["images"] if e["key"].startswith("legacy_")]
+    assert {Path(e["image"]).parts[0] for e in legacy} == {"images_validation"}
+    # Flat files state no session, so they collapse into one safe group.
+    assert {e["session"] for e in legacy} == {"legacy_batch"}
+    assert len({e["fold"] for e in legacy}) == 1
 
 
 def test_every_fold_is_used_and_folds_partition_the_pool(pool: Path):
@@ -271,13 +285,6 @@ def test_more_folds_than_sessions_is_rejected(pool: Path):
         data_splits.build_manifest(pool, n_folds=99)
 
 
-def test_duplicate_stem_across_pool_folders_is_rejected(pool: Path):
-    _write_pair(pool, "split_a", radius=10, split="validation", session="rig9_day9", grey=120)
-
-    with pytest.raises(ValueError, match="appears in both"):
-        data_splits.build_manifest(pool, n_folds=3)
-
-
 def test_two_intake_folders_may_reuse_the_same_filenames(tmp_path: Path):
     # The whole point of intake folders is that filenames need not be unique, and
     # per-recording exports routinely restart numbering at frame_0001.
@@ -296,34 +303,47 @@ def test_two_intake_folders_may_reuse_the_same_filenames(tmp_path: Path):
     assert len({e["session"] for e in same_name}) == 2
 
 
-def test_the_same_pair_in_both_pool_folders_is_still_rejected(tmp_path: Path):
+def test_the_same_key_in_two_pool_layouts_is_rejected(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
     _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
-    _write_pair(tmp_path, "frame1", radius=8, split="validation", session="rig1_day1")
+    # The legacy reader would produce the same key from a flat nested path.
+    legacy = tmp_path / "images_train" / "rig1_day1"
+    legacy.mkdir(parents=True)
+    (tmp_path / "masks_train" / "rig1_day1").mkdir(parents=True)
+    shutil.copy2(tmp_path / "labeled_data/rig1_day1/images/frame1.png", legacy / "frame1.png")
+    shutil.copy2(
+        tmp_path / "labeled_data/rig1_day1/masks/frame1.png",
+        tmp_path / "masks_train/rig1_day1/frame1.png",
+    )
 
     with pytest.raises(ValueError, match="appears in both"):
         data_splits.build_manifest(tmp_path, n_folds=2)
 
 
-def test_a_flat_mask_folder_still_pairs_with_nested_images(tmp_path: Path):
+def test_masks_live_beside_their_images_in_the_session_folder(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
     _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
-    # Move one mask out of its mirrored subfolder into the flat mask root.
-    nested = tmp_path / "labeled_masks" / "rig1_day1" / "frame1.png"
-    nested.rename(tmp_path / "labeled_masks" / "frame1.png")
-    nested.parent.rmdir()
 
     manifest = data_splits.build_manifest(tmp_path, n_folds=2)
     masks = {e["key"]: e["mask"] for e in manifest["images"]}
-    assert masks["rig1_day1/frame1"] == "labeled_masks/frame1.png"
-    assert masks["rig2_day2/frame2"] == "labeled_masks/rig2_day2/frame2.png"
+    assert masks["rig1_day1/frame1"] == "labeled_data/rig1_day1/masks/frame1.png"
+    assert masks["rig2_day2/frame2"] == "labeled_data/rig2_day2/masks/frame2.png"
 
 
 def test_an_image_with_no_mask_is_rejected(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
-    (tmp_path / "labeled_masks" / "rig1_day1" / "frame1.png").unlink()
+    _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
+    (tmp_path / "labeled_data" / "rig1_day1" / "masks" / "frame1.png").unlink()
 
     with pytest.raises(FileNotFoundError, match="No mask for"):
+        data_splits.build_manifest(tmp_path, n_folds=2)
+
+
+def test_a_session_folder_without_images_is_rejected(tmp_path: Path):
+    _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
+    (tmp_path / "labeled_data" / "stray_folder").mkdir()
+
+    with pytest.raises(FileNotFoundError, match="has no images/ directory"):
         data_splits.build_manifest(tmp_path, n_folds=2)
 
 
@@ -370,10 +390,11 @@ def test_brightness_tracks_the_background_not_the_pupil(tmp_path: Path):
     _write_pair(tmp_path, "bright", radius=20, session="b", grey=200)
 
     dim = image_background_brightness(
-        tmp_path / "labeled_data/a/dim.png", tmp_path / "labeled_masks/a/dim.png"
+        tmp_path / "labeled_data/a/images/dim.png", tmp_path / "labeled_data/a/masks/dim.png"
     )
     bright = image_background_brightness(
-        tmp_path / "labeled_data/b/bright.png", tmp_path / "labeled_masks/b/bright.png"
+        tmp_path / "labeled_data/b/images/bright.png",
+        tmp_path / "labeled_data/b/masks/bright.png",
     )
     # The bright image has the far larger pupil, so a whole-frame mean would narrow
     # the gap; excluding the mask keeps this a measure of lighting.
@@ -393,7 +414,7 @@ def test_holdout_sessions_appear_in_no_fold(pool: Path):
 
     for fold in range(3):
         (train_images, _), (val_images, _) = data_splits.fold_paths(manifest, fold, pool)
-        seen = {p.parent.name for p in train_images} | {p.parent.name for p in val_images}
+        seen = {p.parents[1].name for p in train_images} | {p.parents[1].name for p in val_images}
         assert "rig0_day0" not in seen
 
 
@@ -401,8 +422,8 @@ def test_final_run_trains_on_everything_else_and_validates_on_the_gate(pool: Pat
     manifest = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
     (train_images, _), (gate_images, _) = data_splits.final_paths(manifest, pool)
 
-    assert {p.parent.name for p in gate_images} == {"rig0_day0"}
-    assert "rig0_day0" not in {p.parent.name for p in train_images}
+    assert {p.parents[1].name for p in gate_images} == {"rig0_day0"}
+    assert "rig0_day0" not in {p.parents[1].name for p in train_images}
     assert len(train_images) + len(gate_images) == manifest["n_images"]
 
 
@@ -455,7 +476,7 @@ def test_session_lookup_covers_every_image(pool: Path):
     lookup = data_splits.session_of_key(manifest)
 
     assert len(lookup) == manifest["n_images"]
-    assert lookup["rig9_day9/split_a"] == "rig9_day9"
+    assert lookup["rig0_day0/anything_at_all_0_0"] == "rig0_day0"
 
 
 def test_census_flags_a_batch_fallback_group(tmp_path: Path):
@@ -497,7 +518,7 @@ def test_materialize_puts_holdout_in_its_own_folder(pool: Path, tmp_path: Path):
 
     assert "holdout" in counts
     held = list((out / "holdout" / "images").rglob("*.png"))
-    assert held and all("rig0_day0" in str(p) for p in held)
+    assert held and all("rig0_day0" in str(p) for p in held)  # keys carry the session
     # The gate must not also appear in a fold.
     assert not any("rig0_day0" in str(p) for p in out.glob("cv*/images/**/*.png"))
 

@@ -74,14 +74,17 @@ def test_empty_image_directory_is_rejected(tmp_path: Path):
 
 @pytest.mark.skipif(not SAMPLE_ROOT.is_dir(), reason="sample_data/ needs a source checkout.")
 def test_committed_fixture_pairs_cleanly():
-    # One flat pool, mirroring the maintained dataset: no train/validation folders.
-    image_paths, mask_paths = paired_image_mask_paths(
-        SAMPLE_ROOT / "labeled_data",
-        SAMPLE_ROOT / "labeled_masks",
-    )
+    # One directory per recording session, each holding images/ and masks/.
+    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_data").iterdir() if p.is_dir())
+    assert len(sessions) == 10
 
-    assert len(image_paths) == len(mask_paths) == 32
-    assert [path.stem for path in image_paths] == [path.stem for path in mask_paths]
+    total = 0
+    for session in sessions:
+        image_paths, mask_paths = paired_image_mask_paths(session / "images", session / "masks")
+        assert [path.stem for path in image_paths] == [path.stem for path in mask_paths]
+        total += len(image_paths)
+
+    assert total == 32
 
 
 def test_deprecated_shim_accepts_the_original_positional_signature(paired_dirs):

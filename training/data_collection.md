@@ -104,41 +104,56 @@ a recording have been cropped away before anything sees them.
 Filenames are not the answer either. They happen to encode the session today, but a
 parser is one new acquisition program away from silently regrouping the pool.
 
-So: **record it**. Any one of these works, and they are checked in this order.
+So: **record it**. And the layout records it for you.
 
-1. **An intake subfolder** — the simplest, and it asks nothing of how files are named.
-   Drop each recording's frames in their own directory and the directory *is* the
-   session:
+### The session is a directory
 
-   ```text
-   labeled_data/HQL091_sleep260820/frame_0001.png   ->  session HQL091_sleep260820
-   labeled_data/whatever_you_like/img_00042.png     ->  session whatever_you_like
-   ```
+```text
+labeled_data/
+  HQL091_sleep260820/          <- one recording session
+    images/  frame_0001.png    the frame, and its .json annotation
+    masks/   frame_0001.png    the mask, same filename
+  whatever_you_like/
+    images/  img_00042.png
+    masks/   img_00042.png
+```
 
-   Masks may mirror the same subfolders or sit flat in `labeled_masks/`; both are paired
-   by filename.
+This is the whole mechanism. An image cannot enter the pool without landing in a session
+folder, so provenance is a consequence of where the file goes rather than a convention
+anyone has to remember, and the grouping can never disagree with the directory it sits in.
+It asks nothing of how files are named.
 
-   **Filenames need not be unique between folders.** Two recordings may each contain a
-   `frame_0001.png`, which is what per-recording exports usually produce. An image is
-   identified by its path *within* its pool folder — `rig2_day3/frame_0001`, not
-   `frame_0001` — so intake folders keep them apart.
+**Filenames need not be unique between sessions.** Two recordings may each contain a
+`frame_0001.png`, which is what per-recording exports usually produce. An image is
+identified by `<session>/<filename>` — `HQL091_sleep260820/frame_0001` — so the session
+folders keep them apart.
 
-2. **A labelme flag** — set `session` once per batch in the Labelme UI and it lands in
-   the `flags` block of each `<image name>.json`, beside the image. Use this when the
-   files arrive already mixed into one folder.
+The whole split is reproducible from this layout alone: delete `splits.json` and
+regenerate, and the folds come back identical, because the sessions come from the
+directories and the packing is deterministic.
+
+### When a batch arrives pre-mixed
+
+Two fallbacks exist for data you cannot sort into session folders yet. Both outrank the
+folder, so they can also correct one.
+
+1. **A labelme flag** — set `session` once per batch in the Labelme UI and it lands in
+   the `flags` block of each `<image name>.json`, beside the image.
 
    ```json
    { "flags": { "session": "HQL091_sleep260820" }, "shapes": [...] }
    ```
 
-3. **A sidecar** — `provenance.csv` (columns `key,session`) or `provenance.json`
-   (`{key: session}`) at the data root, where a *key* is the identifier described
-   above: `frame_0001` for a flat image, `rig2_day3/frame_0001` for a nested one. This
-   is the durable record: it is committed, unlike the image folders, so it is the only
-   part of the grouping that survives a fresh clone. The migration off filename grouping
-   wrote the current one.
+2. **A sidecar** — `provenance.csv` (columns `key,session`) or `provenance.json`
+   (`{key: session}`) at the data root, where a *key* is `<session>/<filename>` for a
+   pair in a session folder, or the bare filename for one in a legacy flat folder.
 
-4. **Nothing at all** — every unresolved image in a run collapses into a *single* group.
+   The maintained pool no longer keeps a sidecar: the session folders state everything it
+   used to. Note that a stale sidecar *overrides* the folders, so do not leave one lying
+   around after sorting a batch — moving an image to a different session folder would be
+   silently ignored.
+
+3. **Nothing at all** — every unresolved image in a run collapses into a *single* group.
    Over-merging two settings only costs data efficiency; tearing one apart leaks, so
    this is the safe failure and it needs no human input. The census prints a `NOTE`
    naming any such group.
@@ -153,10 +168,16 @@ So: **record it**. Any one of these works, and they are checked in this order.
 
 ## Adding a labelled batch to the split
 
-1. Put images and masks under `labeled_data/` and `labeled_masks/`, in a per-recording
-   subfolder if you can. There is one flat pool and no train/validation folders: the
-   manifest decides what trains and what validates, so adding data never moves a file
-   and re-splitting never moves one either.
+1. Drop the batch in as `labeled_data/<session>/images/`, one folder per recording.
+   Convert the annotations to masks:
+
+   ```bash
+   python training/labelme_json2png.py --data-root . --session <session>
+   ```
+
+   which writes each mask into `labeled_data/<session>/masks/` beside its image. There
+   are no train/validation folders: the manifest decides what trains and what validates,
+   so adding data never moves a file and re-splitting never moves one either.
 2. Regenerate the manifest:
 
    ```bash

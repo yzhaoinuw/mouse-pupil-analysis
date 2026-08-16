@@ -56,15 +56,21 @@ import provenance as provenance_module  # noqa: E402
 SCHEMA_VERSION = 2
 HOLDOUT_FOLD = -1
 
-# One flat pool of labelled pairs. ``labeled_data`` is where new data goes; the two
-# historical folders are still read so an older local checkout keeps working, and a
-# pair moving between any of them keeps its key and therefore its fold.
-LABELLED_POOL = ("labeled_data", "labeled_masks")
+# The labelled pool, one session per directory::
+#
+#     labeled_data/<session>/images/<anything>.png
+#     labeled_data/<session>/masks/<anything>.png
+#
+# The session is the grouping unit, so it is a directory: an image cannot enter the pool
+# without one, which makes provenance a consequence of where the file goes rather than a
+# convention someone has to remember. The two historical flat pairs are still read, so an
+# older local checkout keeps working.
+LABELLED_ROOT = "labeled_data"
 LEGACY_POOL = (
     ("images_train", "masks_train"),
     ("images_validation", "masks_validation"),
 )
-DEFAULT_POOL = (LABELLED_POOL,) + LEGACY_POOL
+DEFAULT_POOL = LEGACY_POOL
 
 
 @dataclass
@@ -120,58 +126,83 @@ def _mask_for(image_path: Path, image_root: Path, mask_root: Path) -> Path:
     )
 
 
+def _pool_image(image_path: Path, mask_path: Path, key: str, data_root: Path) -> PoolImage:
+    return PoolImage(
+        key=key,
+        image=image_path.relative_to(data_root).as_posix(),
+        mask=mask_path.relative_to(data_root).as_posix(),
+        diameter=mask_equivalent_diameter(mask_path),
+        brightness=image_background_brightness(image_path, mask_path),
+    )
+
+
 def discover_pool(
     data_root: Path,
     pool: tuple[tuple[str, str], ...] = DEFAULT_POOL,
-) -> tuple[list[PoolImage], dict[str, tuple[Path, Path]]]:
-    """Read every image/mask pair in the pool directories as one flat collection.
+    labelled_root: str = LABELLED_ROOT,
+) -> tuple[list[PoolImage], dict[str, tuple[Path, str | None]]]:
+    """Read every labelled pair under ``data_root`` as one collection.
 
-    Subdirectories are walked, because an intake subfolder is one of the ways a session
-    gets recorded. Returns the pool alongside the ``key -> (image path, pool root)``
-    map that provenance resolution needs.
+    Reads ``labeled_data/<session>/images`` plus, for an older checkout, any flat
+    ``pool`` pair still present. Returns the pool alongside the
+    ``key -> (image path, session or None)`` map provenance resolution needs; a session
+    folder states its own session, so those entries arrive already resolved.
 
-    An image is identified by its path *within* its pool folder, without the extension:
-    ``frame_0001`` when it sits flat, ``HQL091_sleep260820/frame_0001`` when it sits in
-    an intake subfolder. The bare filename will not do -- per-recording exports routinely
-    restart their numbering, so two intake folders can each hold a ``frame_0001.png``,
-    and the whole point of the folders is that filenames need not be unique. Excluding
-    the pool folder from the key means moving a pair between ``labeled_data`` and the
-    historical ``images_train`` / ``images_validation`` does not change its identity,
-    which is what let the pool be consolidated without any fold moving.
+    An image is identified by ``<session>/<filename>`` without the extension. The bare
+    filename will not do -- per-recording exports routinely restart their numbering, so
+    two sessions can each hold a ``frame_0001.png``, and the whole point of the folders
+    is that filenames need not be unique.
     """
     data_root = Path(data_root)
     found: list[PoolImage] = []
-    located: dict[str, tuple[Path, Path]] = {}
+    located: dict[str, tuple[Path, str | None]] = {}
     seen: dict[str, str] = {}
 
+    def claim(key: str, where: str) -> None:
+        if key in seen:
+            raise ValueError(
+                f"Image {key!r} appears in both {seen[key]} and {where}. "
+                "One key must map to exactly one labelled pair."
+            )
+        seen[key] = where
+
+    labelled = data_root / labelled_root
+    if labelled.is_dir():
+        for session_dir in sorted(p for p in labelled.iterdir() if p.is_dir()):
+            images, masks = session_dir / "images", session_dir / "masks"
+            if not images.is_dir():
+                raise FileNotFoundError(
+                    f"{session_dir.relative_to(data_root).as_posix()} has no images/ "
+                    "directory. Each session folder holds images/ and masks/."
+                )
+            for image_path in sorted(images.rglob("*.png")):
+                relative = image_path.relative_to(images).with_suffix("").as_posix()
+                key = f"{session_dir.name}/{relative}"
+                claim(key, labelled_root)
+                mask_path = masks / image_path.relative_to(images)
+                if not mask_path.is_file():
+                    raise FileNotFoundError(
+                        f"No mask for {key}: expected "
+                        f"{mask_path.relative_to(data_root).as_posix()}."
+                    )
+                found.append(_pool_image(image_path, mask_path, key, data_root))
+                located[key] = (image_path, session_dir.name)
+
     for image_dir, mask_dir in pool:
-        image_root = data_root / image_dir
-        mask_root = data_root / mask_dir
+        image_root, mask_root = data_root / image_dir, data_root / mask_dir
         if not image_root.is_dir():
             continue
         for image_path in sorted(image_root.rglob("*.png")):
             key = image_path.relative_to(image_root).with_suffix("").as_posix()
-            if key in seen:
-                raise ValueError(
-                    f"Image {key!r} appears in both {seen[key]} and {image_dir}. "
-                    "One key must map to exactly one labelled pair."
-                )
-            seen[key] = image_dir
+            claim(key, image_dir)
             mask_path = _mask_for(image_path, image_root, mask_root)
-            found.append(
-                PoolImage(
-                    key=key,
-                    image=image_path.relative_to(data_root).as_posix(),
-                    mask=mask_path.relative_to(data_root).as_posix(),
-                    diameter=mask_equivalent_diameter(mask_path),
-                    brightness=image_background_brightness(image_path, mask_path),
-                )
-            )
-            located[key] = (image_path, image_root)
+            found.append(_pool_image(image_path, mask_path, key, data_root))
+            located[key] = (image_path, None)
 
     if not found:
         raise FileNotFoundError(
-            f"No labelled images found under {data_root} in {[d for d, _ in pool]}."
+            f"No labelled images found under {data_root} in {labelled_root}/ "
+            f"or {[d for d, _ in pool]}."
         )
     return found, located
 

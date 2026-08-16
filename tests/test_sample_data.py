@@ -17,22 +17,27 @@ def _png_names(directory: Path) -> list[str]:
 
 
 def test_cropped_sample_pairs_match_and_masks_are_binary():
-    image_dir = SAMPLE_ROOT / "labeled_data"
-    mask_dir = SAMPLE_ROOT / "labeled_masks"
-    image_names = _png_names(image_dir)
+    sessions = sorted(p for p in (SAMPLE_ROOT / "labeled_data").iterdir() if p.is_dir())
+    assert len(sessions) == 10
 
-    assert len(image_names) == 32
-    assert _png_names(mask_dir) == image_names
+    total = 0
+    for session in sessions:
+        image_names = _png_names(session / "images")
+        assert image_names, f"{session.name} holds no images"
+        assert _png_names(session / "masks") == image_names
+        total += len(image_names)
 
-    for image_name in image_names:
-        with Image.open(image_dir / image_name) as image:
-            image_size = image.size
-        with Image.open(mask_dir / image_name) as mask:
-            mask_values = set(np.unique(np.asarray(mask.convert("L"))).tolist())
-            assert mask.size == image_size
-        assert 0 in mask_values
-        assert len(mask_values) <= 2
-        assert max(mask_values) > 0
+        for image_name in image_names:
+            with Image.open(session / "images" / image_name) as image:
+                image_size = image.size
+            with Image.open(session / "masks" / image_name) as mask:
+                mask_values = set(np.unique(np.asarray(mask.convert("L"))).tolist())
+                assert mask.size == image_size
+            assert 0 in mask_values
+            assert len(mask_values) <= 2
+            assert max(mask_values) > 0
+
+    assert total == 32
 
 
 def test_fixture_split_mirrors_the_maintained_layout():
@@ -58,10 +63,15 @@ def test_fixture_split_mirrors_the_maintained_layout():
     tiny = [e for e in manifest["images"] if e["diameter"] <= manifest["tiny_max_diameter"]]
     assert len({e["session"] for e in tiny}) >= 2, "tiny masks must span several sessions"
 
-    # provenance.csv is the durable record; the images are only reachable through it.
-    with (SAMPLE_ROOT / "provenance.csv").open(newline="", encoding="utf-8") as handle:
-        recorded = {row["key"]: row["session"] for row in csv.DictReader(handle)}
-    assert recorded == {e["key"]: e["session"] for e in manifest["images"]}
+    # The session is structural: every key is prefixed by the folder it came from, so
+    # the grouping cannot disagree with where the file actually sits.
+    for entry in manifest["images"]:
+        assert entry["key"].startswith(f"{entry['session']}/")
+        assert (
+            entry["image"] == f"labeled_data/{entry['session']}/images/{Path(entry['image']).name}"
+        )
+        assert entry["mask"] == f"labeled_data/{entry['session']}/masks/{Path(entry['mask']).name}"
+    assert all(e["source"] == "folder" for e in manifest["sessions"])
 
 
 def test_committed_folds_match_the_manifest():
