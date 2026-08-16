@@ -4,8 +4,11 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - built; run the first real cross-validation sweep to establish the generalization baseline.
-- [Model-selection metric fragility](#model-selection-metric-fragility) - `balanced_iou` rests a third of its weight on two validation images and the calibrated threshold varies 0.30-0.65 across seeds; fix both before the next promotion.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - measured; cross-recording IoU is 0.6245 +/- 0.0322, against the 0.8749 published from the leaky split.
+- [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; `balanced_iou` selection was corrupting runs outright, not merely reporting them optimistically.
+- [Training sampling default](#training-sampling-default) - natural sampling beats size-balanced by 0.0354; the code still defaults to balanced.
+- [Improving cross-recording generalization](#improving-cross-recording-generalization) - transfer is bimodal; diagnose the failing sessions before choosing an augmentation.
+- [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - decide whether incoming sessions become the holdout gate *before* they are merged into the pool.
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
@@ -14,7 +17,8 @@ When a new thread starts, add a short bullet here with a link to its section bel
 
 ## Recording-Grouped Data Splits
 
-Status: built; no cross-validation results measured yet
+Status: built and measured (2026-08-16); baseline established, see
+`reports/2026-08-16-selection-metric-repair.md`
 
 The old fixed split leaked almost completely: 54 of 56 validation images came from a recording
 that also supplied training images, with **no validation-only animals**. Every IoU this project
@@ -52,23 +56,157 @@ Two structural facts that constrain every future comparison:
   sessions contain a tiny mask at all. Report mean per-session IoU; `run_cv.py` prints which
   bins each fold actually scored.
 
-Next action:
+**Measured on 2026-08-16.** See `reports/2026-08-16-selection-metric-repair.md`. Seven sweeps,
+28 fold-trainings, ~1 h 40 m on MPS.
 
-- Run the first real sweep (`python training/run_cv.py --data-root . --split-manifest splits.json
-  --out checkpoints_exp/cv --epochs 400`) to establish the generalization baseline. Every number
-  this project has published is an interpolation number; this produces the first one that is not.
+- **Cross-recording mean per-session IoU is 0.6245 +/- 0.0322** (natural sampling, three seeds),
+  against the 0.8749 macro IoU the project has been publishing. The image-weighted figure, which
+  is what that 0.8749 is comparable to, is 0.57-0.64.
+- **Transfer is bimodal**, not uniformly mediocre: six sessions score below 0.45 and six above
+  0.75. The model either transfers to a recording setting or largely fails on it.
+- **Seed noise on the grouped split is ~4x the documented floor.** The +/-0.0069 in
+  `reports/2026-08-14-checkpoint-noise-floor.md` was measured on the leaky split. Here the sd is
+  0.0273 on the three-seed mean and up to 0.0873 on one fold. `run_cv.py`'s docstring has been
+  corrected; treat single-fold differences below ~0.05 as noise.
 
 Then:
 
-- Repeat the sweep at two or three seeds. Cross-validation narrows sampling noise, not seed
-  noise, and the measured seed floor is +/-0.0069.
-- Compare size-balanced against natural sampling on the grouped split. The fold holding
-  `HQL080_sleep250625` out trains on only 2 tiny masks, so balanced sampling oversamples two
-  images to a third of the training mass there - a hazard the old split hid.
+- Diagnose the two sessions that fail under every configuration - `HQL090_sleep251012` (0.1865)
+  and `251016_5212_purple_Day10` (0.2952) - by comparing their brightness, contrast, and
+  pupil-size distributions against the pool. Pure analysis; it aims the augmentation work.
+- Test photometric augmentation. Cross-recording failure is mostly a rig-appearance problem, and
+  this is now measurable for the first time.
+- Designate a holdout session if promotion is wanted. `run_train.py --final` currently raises
+  because `splits.json` sets `n_holdout_sessions: 0`, so **no gated release candidate can be
+  built at all** right now.
+
+## Improving Cross-Recording Generalization
+
+Status: open; baseline is 0.6245 +/- 0.0322 mean per-session IoU and nothing has yet been tried
+against it
+
+Transfer is bimodal - six sessions below 0.45, six above 0.75 - so the question is not "why is the
+model mediocre everywhere" but "what makes a recording setting fall off the cliff". The queue is
+ordered by value per unit of compute. **Read
+[New labels arriving](#new-labels-and-experiment-sequencing) before starting any of the sweeps:
+most of these become non-comparable when the pool changes.**
+
+Two one-line changes first, both independent of any data change:
+
+- Widen the default `threshold_candidates` in `TrainingConfig` to about 0.05-0.95. The 0.30-0.80
+  grid censored the calibration in 5 of 12 balanced and 4 of 12 natural folds. Verified post-hoc:
+  re-calibrating the 24 saved checkpoints over the wider grid moved 7 thresholds and gained
+  +0.0082 / +0.0056 mean macro IoU. No retraining needed, because selection runs at a fixed 0.5.
+- Change `balance_training_sizes` to default `False` - see
+  [Training sampling default](#training-sampling-default).
+
+Then, in order:
+
+1. **Diagnose the transfer failures. No training required.** `HQL090_sleep251012` (0.1865) and
+   `251016_5212_purple_Day10` (0.2952) fail under every configuration tried. Fold 1, which holds
+   both, is also where calibrated thresholds collapse toward 0.05 - a model wanting a 0.05
+   threshold is emitting diffuse, low-confidence masks. Compare their brightness, contrast, focus,
+   and pupil-size distributions against the pool. This is the prerequisite for the next item:
+   without it, augmentation choices are guesses.
+2. **Test photometric augmentation.** Cross-recording failure is largely a rig-appearance problem -
+   illumination, contrast, focus. This is the lever most likely to actually move the baseline, and
+   it is measurable for the first time. Let item 1 aim it.
+3. **Revisit the loss function.** All runs so far use BCE alone. The BCE+Dice / focal / Tversky
+   ablation was parked until sampling, metric, and calibration were settled; those are now settled,
+   so it is unblocked. Dice optimises overlap directly, which is what is being measured.
+4. **Re-examine fixed-threshold selection on fold 3.** Fold 3 lost 0.056 against the old
+   calibrated-threshold selection - 5.7 sd of its own seed spread, and the one place the
+   2026-08-16 selector repair measurably hurt. Either accept it as the price of a stable selector
+   or make the selection threshold adaptive.
+5. **Add seeds 3-4** only if the sampling margin needs tightening. The sign is consistent across
+   every seed, but 0.0354 sits close to the three-seed sd of 0.0273.
+
+## New Labels And Experiment Sequencing
+
+Status: decision pending; new labelled images expected the week of 2026-08-17
+
+New sessions repack the folds and regenerate `splits.json`, so **every number measured on the
+current 222-image pool becomes non-comparable to anything measured after they land.** Configuration
+comparisons must live entirely within one pool version. That argues for holding items 2-5 above
+until the new labels are in, and doing only item 1 - which is analysis of existing sessions and
+needs no retraining - in the meantime.
+
+**Decide before the images are merged, because merging is irreversible in evaluation terms.**
+Nothing currently in the pool can judge the packaged checkpoint: it gradient-trained on 166 of the
+222 images, and its own validation set drew 54 of 56 images from recordings that also fed training,
+so at session granularity it has seen everything. Genuinely new sessions are the only clean test it
+will ever get, and the moment they enter a training fold that value is gone.
+
+They would also unblock the gate. `run_train.py --final` currently raises because `splits.json`
+sets `n_holdout_sessions: 0`, so **no gated release candidate can be built at all**. A holdout
+costs 15-27% of the current pool, which is why none was set - but new sessions could supply one
+without giving up any existing training data.
+
+Remaining work:
+
+- Decide whether some incoming sessions become the holdout gate rather than training data. Choose
+  by condition rather than by animal, per `training/data_splits.py --holdout`.
+- Record the session at intake for every new batch, per `training/data_collection.md`. Provenance
+  is recorded, never inferred - filenames are not parsed, and crop geometry, clustering, and file
+  mtime were all measured and rejected as fingerprints.
+- If item 1 above finds a signature that separates failing sessions, prioritise labelling
+  recordings that share it.
+
+## Training Sampling Default
+
+Status: measured; `balance_training_sizes` still defaults to `True`, which the evidence
+contradicts. See `reports/2026-08-16-selection-metric-repair.md` section 3a.
+
+Natural sampling beat size-balanced by **0.0354** mean per-session IoU, winning at all three
+seeds and in 8 of 12 matched (fold, seed) cells. The two arms differed only in
+`--natural-sampling`, so every cell is a matched pair; that pairing is what makes a 0.035 effect
+readable against fold difficulty spanning 0.35-0.73.
+
+**Settled: equal-mass size balancing does not do the job it was added for.** Its purpose was to
+protect small pupils. Across the four folds the tiny bin splits 2-2 between the arms, and the
+largest single tiny-bin gap (fold 0, 0.2835) favours *natural*. Meanwhile balancing costs
+large-pupil IoU 0.2001 on fold 1 and 0.2711 on fold 2. It pays a real price for a benefit it does
+not deliver.
+
+**The predicted failure mode was wrong.** Fold 3 holds out `HQL080_sleep250625`, leaving ~4 tiny
+masks that balancing inflates to a third of the training mass - the predicted worst case. It is
+instead the only fold where balancing consistently wins (~0.015, seed sd 0.0099). Balancing's cost
+shows up in folds with *ordinary* tiny counts, not in the starved one. Do not re-derive the
+oversampling-collapse story; it is not what the data shows.
+
+Remaining work:
+
+- Change the `balance_training_sizes` default to `False`. One line; the shipped checkpoint already
+  records `sampling: "natural"`, so the default has been diverging from practice.
 
 ## Model-Selection Metric Fragility
 
-Status: measured; no change made yet. See `reports/2026-08-14-checkpoint-noise-floor.md`.
+Status: **fixed** on 2026-08-16. See `reports/2026-08-16-selection-metric-repair.md`.
+
+The fragility was worse than "the metric is noisy." Under `balanced_iou`, three of four folds in
+the first grouped sweep selected a checkpoint at **epoch 4-6 of 400** on a one-off spike in a size
+bin holding one to three images. Because the same metric also drove `ReduceLROnPlateau` on
+`mode="max"`, that spike became a high-water mark no later epoch could clear, and the learning rate
+decayed to near its floor while the model was still improving. Folds were mis-selected *and*
+under-trained; fold 0 was one step off `min_lr` when early stopping fired.
+
+Repairing it moved the measured baseline from 0.5378 to 0.5891 (same sampling, same seed set), and
+folds 0 and 2 gained 0.38 and 0.14 macro IoU.
+
+Three changes, all in `training/run_train.py` and forwarded by `run_cv.py`:
+
+- `ReduceLROnPlateau` now runs on `val_loss` (`mode="min"`); `--scheduler-metric` overrides.
+- `--selection-metric {balanced_iou,macro_iou}` chooses what "best" means and also ranks threshold
+  candidates. Default left at `balanced_iou` so earlier runs stay reproducible.
+- `--selection-threshold` (default 0.5) compares epochs at one fixed threshold instead of each
+  epoch's maximum over 11 candidates. `calibrated` restores the old behaviour.
+
+**Known cost:** fold 3, whose old selection was sound, lost 0.056 under fixed-threshold selection -
+5.7 sd of its own seed spread. Fixed-threshold selection is not free where calibrated selection was
+already working.
+
+Background from `reports/2026-08-14-checkpoint-noise-floor.md`, retained because the reasoning
+still holds and the 2026-08-16 sweeps confirmed the first point empirically:
 
 - **Two images decide a third of the metric, and the tiny bin is really one session.**
   `balanced_iou` is the mean of the tiny, medium, and large bins; the old validation set held
@@ -165,21 +303,6 @@ Remaining work:
 
 - Review and integrate `chore/treaty` when the reorganized documentation layout is accepted.
 
-## Packaging And Distribution
-
-Status: complete; version 0.2.0 is published on PyPI and GitHub as `mouse-pupil-analysis`
-
-**Settled: this project ships no `pupil_tracking` module, and no compatibility shim.** The
-unrelated `pupil-tracking` distribution on PyPI installs its own `pupil_tracking/__init__.py`, so
-claiming that path here would give two distributions one import namespace. Measured, not assumed:
-installing both in either order silently overwrites one `__init__.py` with the other's. CI and the
-release workflow both fail if `pupil_tracking/` reappears in a built artifact. Do not re-litigate.
-
-Remaining work:
-
-- Tag the next version and publish its GitHub/PyPI release only when the maintainer resumes
-  release work. Do not tag or release as part of routine `dev`/`main` integration.
-
 ## Runtime Modularization
 
 Status: complete on `dev`; `api.py` owns orchestration, with focused `results`/`plotting`/
@@ -192,47 +315,31 @@ Remaining work:
   model-pixel column, now that both are exported. This changes the README demo, so it is
   deliberately deferred.
 
-## DOI Archival
+## Closed
 
-Status: complete for 0.2.0; concept DOI `10.5281/zenodo.21897795`, version DOI
-`10.5281/zenodo.21897796`
+Threads with no open work. Kept as one-liners because each carries a constraint that is easy to
+violate by accident; the history is in `work_log.md` and `work_log_archive/`.
 
-Citation generators emit the **first** doi-type entry under `identifiers` and only fall back to the
-top-level `doi` when that list is absent. Verified with `cffconvert`: with the concept DOI listed
-first, exported BibTeX cited the moving concept DOI rather than the archived code. The per-version
-entry must therefore stay first.
-
-Remaining work:
-
-- Each release: update the version DOI in `CITATION.cff` per `RELEASING.md` step 8. The concept
-  DOI, badge, and `[project.urls]` entry never change.
-
-## Sample Data And Fixtures
-
-Status: complete; `sample_data/` holds eight paired training crops, four paired validation crops,
-six uncropped frames at two resolutions, and 31 consecutive velocity frames at 97 Hz, with a
-provenance manifest
-
-`tests/test_real_images.py` runs the packaged checkpoint over the fixture. It is the only test that
-can detect a corrupted or swapped checkpoint, because synthetic input segments plausibly regardless
-of the weights. Two source resolutions are what make the input-pixel diameter conversion verifiable
-against real geometry.
-
-Remaining work:
-
-- Keep the fixture compact. Expand it only for a specific uncovered behavior; it is an exploration
-  and smoke-test resource, not a benchmark or a useful training dataset.
-
-## Training Workflow Documentation
-
-Status: complete; `training/README.md` covers data layout, Labelme conversion, augmentation review,
-fresh training, fine-tuning, threshold calibration, and promotion via `promote_checkpoint.py`
-
-Remaining work:
-
-- Add structured optimizer/scheduler checkpointing only if exact interrupted-run resume becomes
-  necessary. Fine-tuning deliberately restores weights only, starting fresh optimizer, scheduler,
-  early-stopping, and logging state.
+- **Packaging and distribution** - 0.2.0 published as `mouse-pupil-analysis`. *Settled: this
+  project ships no `pupil_tracking` module and no compatibility shim.* The unrelated
+  `pupil-tracking` distribution on PyPI installs its own `pupil_tracking/__init__.py`; installing
+  both in either order silently overwrites one with the other. CI and the release workflow both
+  fail if `pupil_tracking/` reappears in a built artifact. Do not re-litigate. Tag and release only
+  when the maintainer resumes release work, never as part of routine `dev`/`main` integration.
+- **DOI archival** - concept DOI `10.5281/zenodo.21897795`, version DOI `10.5281/zenodo.21897796`.
+  The per-version `identifiers` entry must stay **first**: citation generators emit the first
+  doi-type entry and only fall back to the top-level `doi` when the list is absent, so a
+  concept-first ordering makes exported BibTeX cite the moving concept DOI rather than the archived
+  code (verified with `cffconvert`). Per-release update is `RELEASING.md` step 8.
+- **Sample data and fixtures** - `sample_data/` is an exploration and smoke-test resource, not a
+  benchmark or a training set; keep it compact and expand only for a specific uncovered behaviour.
+  `tests/test_real_images.py` is the only test that can catch a corrupted or swapped checkpoint,
+  because synthetic input segments plausibly regardless of the weights. The two source resolutions
+  are what make the input-pixel diameter conversion verifiable against real geometry.
+- **Training workflow documentation** - `training/README.md` covers the workflow. Fine-tuning
+  deliberately restores weights only, starting fresh optimizer, scheduler, early-stopping, and
+  logging state; add structured optimizer/scheduler checkpointing only if exact interrupted-run
+  resume becomes necessary.
 
 ## Background / Paused
 

@@ -2,6 +2,58 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-16
+
+### Measure generalisation, and repair the selector that was corrupting it (Claude, Opus 5)
+
+- **Ran the first grouped cross-validation sweep.** It returned mean per-session IoU 0.5378, but
+  the number was contaminated: three of four folds selected a checkpoint at **epoch 4-6 of 400**.
+  Under `balanced_iou`, a size bin holding one to three validation images carries a third of the
+  metric, and the tiny bin spikes (fold 0: min 0.0233, max 0.6793, last-10-epoch mean 0.0707).
+- **The damage was not confined to selection.** The same metric drove `ReduceLROnPlateau` on
+  `mode="max"`, so the epoch-6 spike became a high-water mark that no later epoch cleared and the
+  learning rate decayed 1e-3 -> 6.25e-5 by epoch 43, against a `min_lr` of 3.125e-5. Folds were
+  mis-selected *and* under-trained. Validation loss over the same run fell cleanly to a minimum at
+  epoch 31 -- the smooth signal found the right region while the noisy one did not.
+- **Three fixes**, in `run_train.py`, forwarded by `run_cv.py`: the scheduler now runs on
+  `val_loss`; `--selection-metric` chooses what "best" means and also ranks threshold candidates;
+  `--selection-threshold` (default 0.5) compares epochs at a fixed threshold rather than each
+  epoch's maximum over 11. Selection default left at `balanced_iou` so earlier runs reproduce.
+- **Generalisation baseline: 0.6245 +/- 0.0322** mean per-session IoU (natural sampling, seeds
+  0/1/2), against the 0.8749 published from the leaky split. Transfer is bimodal -- six sessions
+  below 0.45, six above 0.75.
+- **Natural sampling beat size-balanced by 0.0354**, winning at every seed and in 8 of 12 matched
+  (fold, seed) cells. Equal-mass balancing does not deliver what it was added for: the tiny bin
+  splits 2-2 and its largest gap favours natural, while balancing costs large-pupil IoU 0.20 and
+  0.27 on folds 1 and 2. `balance_training_sizes` still defaults to `True`; changing a training
+  default was left to the maintainer.
+- **A predicted failure mode did not appear.** Fold 3, which holds out the session carrying 10 of
+  14 tiny masks and was the predicted worst case for balancing, is the only fold where balancing
+  consistently wins. The cost appears in folds with ordinary tiny counts instead.
+- **Seed noise on the grouped split is ~4x the documented floor** (sd 0.0273 on the three-seed
+  mean, up to 0.0873 on one fold, against +/-0.0069 measured on the leaky split). Corrected the
+  stale +/-0.02 guidance in `run_cv.py`'s docstring.
+- **Threshold calibration was censored** at the grid edge in 5 of 12 balanced and 4 of 12 natural
+  folds. Fixing it needed no retraining -- selection ran at a fixed 0.5, so the grid only affects
+  the threshold reported afterwards. Re-calibrating all 24 saved checkpoints over 0.05-0.95 took
+  ~2 minutes and moved 7 of 24 thresholds, for +0.0082 balanced and +0.0056 natural. No conclusion
+  changed.
+- **Corrected a factual error made during the session**, on the user's challenge: the packaged
+  checkpoint trained on **166** images, not all 222. The 222-image pool is the union of the old
+  166-image train and 56-image validation folders. The CV-leakage conclusion survives on the
+  stronger ground that its own validation set drew 54 of 56 images from recordings that also fed
+  training, so at session granularity it has seen every session.
+- **No release candidate was produced, and none could be.** These are fold models trained on three
+  quarters of the pool. The gated whole-pool path is blocked: `run_train.py --final` raises because
+  `splits.json` sets `n_holdout_sessions: 0`.
+- Verification:
+  - `ruff check .`, `black --check training/`, `pytest` (`40 passed` with the environment's `bin`
+    on `PATH`; `test_cli_help.py` fails without it for the pre-existing console-script reason,
+    confirmed by reproducing it on a stashed tree).
+  - Smoke-ran one fold at 2-3 epochs before each long sweep, and confirmed the new options are
+    recorded in `best.json` via `_jsonable_config`.
+  - Full detail and tables in `reports/2026-08-16-selection-metric-repair.md`.
+
 ## 2026-08-14
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
