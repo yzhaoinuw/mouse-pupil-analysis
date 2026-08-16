@@ -11,8 +11,9 @@ sample_data/
 |  |  |- images/          #   the frames, and their labelme JSON
 |  |  |- masks/           #   the matching hand-labeled masks
 |- splits.json            # the grouped, stratified fold assignment
-|- folds/                 # the same split as folders, generated from splits.json
-|  |- cv1/ cv2/ cv3/ cv4/ #   each with images/ and masks/
+|- unlabeled_frames/      # 6 frames from two recordings, no masks, never trained on
+|  |- recording_250530/
+|  |- recording_250616/
 |- velocity_frames/       # 31 consecutive prepared frames
 |- manifest.csv
 |- README.md
@@ -48,12 +49,14 @@ From the repository root, activate an environment where the package is installed
 
 ```powershell
 run-pupil-analysis `
-    --image_dir sample_data\labeled_data\HQL080_sleep250625\images `
-    --result_dir results\sample_HQL080_sleep250625 `
-    --output_mask_dir results\sample_HQL080_sleep250625\overlays
+    --image_dir sample_data\unlabeled_frames\recording_250530 `
+    --result_dir results\sample_unlabeled_250530 `
+    --output_mask_dir results\sample_unlabeled_250530\overlays
 ```
 
-Any session folder works. Each is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays.
+Repeat with `recording_250616` to try the second acquisition setup. Each folder is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays. All six inputs retain their original dimensions.
+
+These six frames carry no masks, and that is the point: they are the only frames here the packaged model has never trained on. `reports/scripts/hard_frame_check.py` defaults to `recording_250616`, which holds a small pupil that appears in no labelled image — the failure that three of five checkpoints in the 2026-08-14 seed study lost entirely while scoring the *highest* validation IoU.
 
 ## Try the velocity pipeline
 
@@ -108,17 +111,17 @@ overfit and must not be treated as a useful trained model.
 python training\data_splits.py --data-root sample_data --show
 ```
 
-prints the per-session census and the per-fold summary. `sample_data/splits.json` and
-`sample_data/folds/` are both committed, so a fresh clone can read the split without
-running anything. Both regenerate from the session folders alone — delete them and run
-the command below and the folds come back identical:
+prints the per-session census and the per-fold summary. `sample_data/splits.json` is
+committed, so a fresh clone can read the split without running anything. `folds/` is not:
+it is derived output, rebuilt deterministically from the session folders by
 
 ```powershell
 python training\data_splits.py --data-root sample_data --materialize
 ```
 
-`folds/` is derived output rebuilt from `splits.json` and never read back, so editing it
-changes nothing. Train one fold with:
+which writes `folds/cv1/` … `folds/cv4/`, each with `images/` and `masks/`. It is never
+read back, so editing it changes nothing and re-running overwrites it. Train one fold
+with:
 
 ```powershell
 python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
@@ -133,7 +136,7 @@ not to train anything.
 - The cropped image/mask pairs were copied unchanged from the project's hand-curated local labelled pool.
 - Their labelme JSON annotations were copied with `imageData` set to null. Labelme embeds a base64 copy of the whole image in that field, which duplicated every PNG and accounted for 1.5 MB of a 5.6 MB fixture; labelme reloads the image from `imagePath` when it is null, so the annotations still open. Nothing else in them was touched.
 - Each pair sits in the folder of the recording session it came from, which is what the split groups on. `splits.json` and `folds/` are generated from that layout by `training/data_splits.py`.
-- `raw_frames/` (6 unlabelled frames from two recordings) was removed on 2026-08-15; the labelled session folders serve the demos it covered.
+- The unlabelled frames were copied unchanged from two original recording frame directories. They were briefly named `raw_frames/`.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.
 

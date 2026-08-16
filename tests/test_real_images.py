@@ -15,19 +15,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from PIL import Image
 
 from mouse_pupil_analysis import analyze_frames
 from mouse_pupil_analysis.preprocessing import MODEL_IMAGE_SIZE, resize_scale
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_ROOT = PROJECT_ROOT / "sample_data"
-LABELLED_ROOT = SAMPLE_ROOT / "labeled_data"
+UNLABELLED_ROOT = SAMPLE_ROOT / "unlabeled_frames"
 VELOCITY_ROOT = SAMPLE_ROOT / "velocity_frames"
-
-# Two sessions whose frames are a single size well above the 148 model input, so the
-# expected rescale back to input pixels is unambiguous.
-SESSIONS = ["HQL080_sleep250625", "HQL090_sleep251012"]
 
 VELOCITY_FPS = 97.0
 VELOCITY_FRAMES = 31
@@ -38,31 +33,30 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.parametrize("session", SESSIONS)
-def test_real_frames_segment_to_plausible_diameters(session, tmp_path):
-    frames = LABELLED_ROOT / session / "images"
-    result = analyze_frames(frames, result_dir=tmp_path / session, num_workers=0)
+@pytest.mark.parametrize("recording", ["recording_250530", "recording_250616"])
+def test_unlabelled_frames_segment_to_plausible_diameters(recording, tmp_path):
+    result = analyze_frames(
+        UNLABELLED_ROOT / recording, result_dir=tmp_path / recording, num_workers=0
+    )
     table = result.analysis_table
 
-    assert len(table) == len(list(frames.glob("*.png")))
+    assert len(table) == 3
     model_diameters = table["estimated_pupil_diameter"].to_numpy(dtype=float)
     assert np.all(np.isfinite(model_diameters))
     # A real pupil occupies a meaningful part of the model image. Near-zero would mean
-    # the model found nothing; near 148 would mean it segmented the whole frame. These
-    # frames sit close around the eye, so a dilated pupil legitimately fills most of the
-    # width -- the pool's largest mask is 109.7 of 148.
+    # the model found nothing; near 148 would mean it segmented the whole frame.
     assert np.all(model_diameters > 5.0)
-    assert np.all(model_diameters < MODEL_IMAGE_SIZE * 0.95)
+    assert np.all(model_diameters < MODEL_IMAGE_SIZE / 2)
 
 
-@pytest.mark.parametrize("session", SESSIONS)
-def test_video_pixel_diameter_undoes_the_downscale(session, tmp_path):
-    frames = LABELLED_ROOT / session / "images"
-    sizes = {Image.open(path).size for path in frames.glob("*.png")}
-    assert len(sizes) == 1, f"{session} is not a single frame size: {sizes}"
-    (expected_size,) = sizes
-
-    result = analyze_frames(frames, result_dir=tmp_path / session, num_workers=0)
+@pytest.mark.parametrize(
+    ("recording", "expected_size"),
+    [("recording_250530", (284, 156)), ("recording_250616", (304, 176))],
+)
+def test_video_pixel_diameter_undoes_the_downscale(recording, expected_size, tmp_path):
+    result = analyze_frames(
+        UNLABELLED_ROOT / recording, result_dir=tmp_path / recording, num_workers=0
+    )
     table = result.analysis_table
 
     scale_x, scale_y, _, _ = resize_scale(*expected_size)

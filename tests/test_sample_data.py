@@ -1,6 +1,8 @@
 import csv
+import importlib.util
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -74,21 +76,48 @@ def test_fixture_split_mirrors_the_maintained_layout():
     assert all(e["source"] == "folder" for e in manifest["sessions"])
 
 
-def test_committed_folds_match_the_manifest():
+def test_folds_regenerate_from_the_fixture(tmp_path):
+    """folds/ is not committed, so what matters is that it rebuilds correctly.
+
+    The instructions in sample_data/README.md tell a reader to run --materialize; this
+    is that command's output checked against the committed manifest.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "data_splits_fixture", PROJECT_ROOT / "training" / "data_splits.py"
+    )
+    data_splits = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = data_splits
+    spec.loader.exec_module(data_splits)
+
     manifest = json.loads((SAMPLE_ROOT / "splits.json").read_text(encoding="utf-8"))
-    folds = SAMPLE_ROOT / "folds"
+    out = tmp_path / "folds"
+    data_splits.materialize(manifest, SAMPLE_ROOT, out)
 
     for entry in manifest["images"]:
         name = f"cv{entry['fold'] + 1}"
-        assert (folds / name / "images" / f"{entry['key']}.png").is_file()
-        assert (folds / name / "masks" / f"{entry['key']}.png").is_file()
+        assert (out / name / "images" / f"{entry['key']}.png").is_file()
+        assert (out / name / "masks" / f"{entry['key']}.png").is_file()
 
     # Folds partition the pool: nothing duplicated, nothing stale left behind.
-    written = list(folds.glob("cv*/images/**/*.png"))
-    assert len(written) == manifest["n_images"]
+    assert len(list(out.glob("cv*/images/**/*.png"))) == manifest["n_images"]
 
 
-def test_velocity_fixture_contract():
+def test_unlabeled_and_velocity_fixture_contracts():
+    unlabeled_root = SAMPLE_ROOT / "unlabeled_frames"
+    assert {
+        directory.name: len(list(directory.glob("*.png")))
+        for directory in unlabeled_root.iterdir()
+        if directory.is_dir()
+    } == {"recording_250530": 3, "recording_250616": 3}
+    unlabeled_paths = sorted(unlabeled_root.glob("*/*.png"))
+    assert len(unlabeled_paths) == 6
+    for path in unlabeled_paths:
+        with Image.open(path) as image:
+            assert image.width > 148 or image.height > 148
+        # These carry no mask on purpose: they are the only frames the model has
+        # never trained on, which is what makes the promotion gate meaningful.
+        assert not path.with_suffix(".json").exists()
+
     velocity_paths = sorted(
         (SAMPLE_ROOT / "velocity_frames").glob("*.png"),
         key=lambda path: int(FRAME_SUFFIX.search(path.name).group(1)),
@@ -105,8 +134,8 @@ def test_manifest_covers_every_logical_sample():
     with (SAMPLE_ROOT / "manifest.csv").open(newline="", encoding="utf-8") as manifest_file:
         rows = list(csv.DictReader(manifest_file))
 
-    assert len(rows) == 63
-    assert {row["category"] for row in rows} == {"cropped", "velocity"}
+    assert len(rows) == 69
+    assert {row["category"] for row in rows} == {"cropped", "unlabeled", "velocity"}
 
     # Every cropped sample carries the session it came from and the fold it landed in;
     # the old `split` column recorded a train/validation division that no longer exists.

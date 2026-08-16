@@ -43,8 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
   sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
   identical band coverage.
+- `sample_data/raw_frames/` is renamed `sample_data/unlabeled_frames/`. "Raw" said
+  nothing useful once `labeled_data/` held raw frames too; these six are distinguished by
+  having *no masks*, which is exactly what makes them usable as a promotion gate. Frames
+  from `labeled_data/` are training data, so `hard_frame_check.py` aimed there would pass
+  unconditionally.
 - `sample_data/` mirrors the maintained layout: `labeled_data/<session>/images|masks`,
-  `splits.json`, and a committed `folds/` with `cv1..cv4`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
+  `splits.json`, and a `folds/` rebuilt on demand with `--materialize`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
   fixture exercises the split rather than only containing images -- several sessions are
   5-6 images deep, so holding one out removes a block of related frames, and the mask
   diameter range now spans 8.8-109.7 px, matching the maintained pool and populating

@@ -58,8 +58,9 @@ checkpoints_exp/
 images_test*/
 images_test*_result/
 /labeled_data/
-/labeled_masks/
-/folds/
+# Materialized fold folders are regenerated from splits.json by
+# training/data_splits.py --materialize, at any data root.
+folds/
 /images_train/
 /images_validation/
 /masks_train/

@@ -158,15 +158,14 @@ mouse-pupil-analysis/
 |  |  |- <session>/
 |  |     |- images/
 |  |     |- masks/
-|  |- folds/
-|  |  |- cv1/ cv2/ cv3/ cv4/
+|  |- unlabeled_frames/
 |  |- velocity_frames/
 |- labeled_data/            (local, gitignored)
 |  |- <session>/
 |     |- images/
 |     |- masks/
 |- splits.json
-|- folds/                   (local, gitignored)
+|- folds/                   (generated, gitignored)
 |- .github/workflows/ci.yml
 |- pyproject.toml
 |- README.md

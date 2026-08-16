@@ -6,6 +6,16 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ### Record provenance at intake and stratify the folds (Claude, Opus 5)
 
+- **Restored those frames as `sample_data/unlabeled_frames/`, and untracked
+  `sample_data/folds/`.** The rename is the substantive part: "raw" distinguished nothing
+  once `labeled_data/` was also raw frames. What actually separates these six is that they
+  carry **no masks**, which is the whole reason the promotion gate can use them --
+  `hard_frame_check.py` aimed at `labeled_data/` would pass unconditionally, since those
+  are training frames. Default restored, gate works out of the box. `folds/` is derived
+  and deterministic, so committing it added 1.6 MB of duplicate bytes that can drift from
+  `splits.json`; its test now *regenerates* the folders and checks them against the
+  committed manifest, which tests the claim rather than the artefact. Tracked
+  `sample_data` is 2.5 MB.
 - **Removed `sample_data/raw_frames/` at the maintainer's direction.** Checked the two
   things they asked me to check first: there is **no cropping script anywhere in the
   codebase** (the only `.crop()` calls are inside `random_zoom_translate_pil` and
