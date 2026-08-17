@@ -56,6 +56,38 @@ DATA_ROOT = PROJECT_ROOT / "sample_data"
 
 See [`sample_data/README.md`](../sample_data/README.md) for the fixture's scope and quick-start commands. Its eight training and four validation pairs are suitable for checking data flow and checkpoint writing, not for training a useful model.
 
+## 0. Choose which frames to label
+
+Labelling is the bottleneck, so pick the frames that teach the model most rather than
+sampling at random.
+
+```powershell
+python training\recommend_frames.py --video D:\data\HQL091_sleep260820.avi --budget 20
+python training\recommend_frames.py --frames D:\data\already_extracted --budget 20
+```
+
+Given a video this writes two folders beside it: `<name>_frames/` with every extracted
+frame, and `<name>_to_label/` with the recommendations plus a `selection.csv` recording
+why each was chosen. Extraction samples at `--extraction-fps` (default 5) but never
+exceeds `--max-extracted` (default 2000), falling back to that many equally spaced
+frames across the recording.
+
+Frames are ranked by **disagreement** between checkpoints and by **geometric
+implausibility** of what they predict — never by model confidence, which is actively
+misleading here: the aperture-grabbing failure runs at p=0.99, so a confidence-based
+ranker would call those frames the least informative in the recording. Picks are also
+spread through the recording and de-duplicated by appearance, so a resting animal does
+not consume the whole budget on one posture.
+
+Measured on the labelled pool by `reports/scripts/validate_frame_selection.py`:
+recommended frames average IoU 0.31 against 0.51 for random picks, with an oracle floor
+of 0.29 — 89% of the achievable gap, beating random in 10 of 10 sessions. Re-run that
+harness after changing anything in `training/frame_selection.py`; two changes that read
+as improvements have already measured worse.
+
+The committee must be checkpoints that never trained on this recording. Any
+cross-validation fold qualifies for genuinely new footage.
+
 ## 1. Create masks with Labelme
 
 1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.

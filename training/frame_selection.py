@@ -113,6 +113,19 @@ def implausibility_score(mask: np.ndarray) -> float:
 
     Each component is a violation of a geometric prior that holds for any real pupil,
     so none of them needs a ground-truth mask to evaluate.
+
+    Combined with a **mean**, which is measurably right and theoretically wrong, so do
+    not "fix" it without re-running the harness. Treating the components as
+    disqualifiers and taking their ``max`` is the more defensible reading, and it drops
+    the ranker from 89.2% of the oracle gap to 80.8% -- no better than dropping this
+    signal entirely. The max saturates: enough frames reach 1.0 that the graded ordering
+    which actually carries the information is lost.
+
+    The known cost of the mean is dilution. An aperture-grab is a large but perfectly
+    round single blob, so it scores zero on every shape term and its one real violation
+    is divided by four: a disc covering 70% of the frame scores 0.25, not 1.0. What
+    rescues the ranking is that the dilution is uniform, so the *ordering* between
+    frames survives even though the magnitudes understate the problem.
     """
     area = float(mask.sum())
     if area == 0:
@@ -166,6 +179,40 @@ def temporal_score(diameters: list[float], window: int = 5) -> list[float]:
         local = np.median(neighbours) if neighbours.size else values[i]
         out.append(float(min(1.0, abs(values[i] - local) / scale)))
     return out
+
+
+def thumbnail(image_tensor: torch.Tensor, size: int = 16) -> np.ndarray:
+    """Downsample one preprocessed frame to a small vector for near-duplicate checks."""
+    small = torch.nn.functional.adaptive_avg_pool2d(image_tensor[None], size)
+    flat = small.flatten().cpu().numpy()
+    return flat - flat.mean()
+
+
+def duplicate_cutoff(thumbnails: list[np.ndarray], fraction: float = 0.2) -> float:
+    """Distance below which two frames count as near-duplicates, learned per recording.
+
+    A fixed threshold cannot work across recordings that differ in contrast and framing,
+    so the cutoff is read off this recording's own distance distribution: "much closer
+    than a typical pair" means a fraction of the median distance.
+
+    A low percentile was tried first and is wrong here. The case worth catching is a
+    resting animal producing many near-identical frames -- and once those exceed the
+    percentile, the cutoff lands on zero and deduplication silently switches itself off
+    exactly when it is needed. The median moves far less under that load.
+    """
+    if len(thumbnails) < 3:
+        return 0.0
+    stack = np.asarray(thumbnails)
+    # Sample pairs rather than forming the full matrix; thousands of frames is normal.
+    rng = np.random.default_rng(0)
+    count = min(4000, len(stack) * (len(stack) - 1) // 2)
+    i = rng.integers(0, len(stack), count)
+    j = rng.integers(0, len(stack), count)
+    keep = i != j
+    if not keep.any():
+        return 0.0
+    distances = np.linalg.norm(stack[i[keep]] - stack[j[keep]], axis=1)
+    return float(np.median(distances) * fraction)
 
 
 def predict_masks(
