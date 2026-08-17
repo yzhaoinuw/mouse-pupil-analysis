@@ -244,6 +244,68 @@ So the project cannot presently produce a gated release candidate at all. Choosi
 holdout session is the prerequisite for any future promotion, and it costs 15–27% of
 the pool, which is why none was set.
 
+## 4b. Why the failing sessions fail: the model segments the eye, not the pupil
+
+No summary statistic explains it. Brightness correlates with per-session IoU at rho
++0.02, boundary contrast at **-0.19** — and `251016_5212_purple_Day10` (0.295) has
+*better* boundary contrast than `251018_5213` (0.894), 0.85 against 0.71. Pupil size
+correlates most (rho +0.55) but that is a consequence, not a cause.
+
+Looking at a prediction answers it immediately. Predicted area divided by labelled area,
+fold 1 checkpoint at its calibrated threshold:
+
+| session | frames | label px | pred px | ratio | IoU |
+|---|---:|---:|---:|---:|---:|
+| HQL090_sleep251012 | 13 | 528 | 2143 | **7.8x** | 0.243 |
+| 251016_5212_purple_Day10 | 13 | 1289 | 4430 | **4.8x** | 0.288 |
+| 250616_5120_Purple_sleep_trial_1 | 32 | 3361 | 2475 | 0.72x | 0.684 |
+
+The model outputs **p = 0.99 on every frame** while predicting five to eight times too
+much area. It has learned "dark blob = pupil", which holds while the pupil is the only
+dark thing in frame and breaks on sessions where the whole eye aperture is dark.
+
+**This kills the photometric-augmentation plan.** Brightness and contrast jitter cannot
+teach the difference between a pupil and an eye aperture — that is a semantic
+distinction, not an appearance one — and `ColorJitter(brightness=0.2, contrast=0.2)`
+plus Gaussian blur are already in `augmentation.py`, so the change would have amounted
+to turning up a knob aimed at the wrong variable. Scale jitter is already present too,
+and plausibly works *against* this failure by eroding the size prior that would rule out
+a region five times too large.
+
+What the evidence supports instead: labels from sessions where the whole aperture is
+dark, and the two-stage eye-ROI model previously parked as speculative.
+
+## 4c. Sampling rate: size and position are different problems
+
+Measured on `sample_data/velocity_frames`, 31 consecutive frames at 97 Hz, packaged
+checkpoint: mean diameter 24.0 px, frame-to-frame size change median 0.97% and max
+8.92%, position step median 0.29 px and max 1.05 px.
+
+The 8.92% maximum is **not** physiology. On a 24 px pupil that is 2.1 px of diameter,
+and a one-pixel shift of the mask boundary on a disc of radius 12 changes the
+area-equivalent diameter by 8.3%. The whole maximum is single-pixel boundary jitter, so
+at 97 Hz the size signal measures segmentation noise.
+
+This inverts the usual intuition: **for the temporal signal, higher fps is worse.**
+Jitter is roughly constant per frame while real change shrinks with the interval. At
+97 Hz signal and noise are comparable; at 5 fps a physiological ~100%/s gives ~20% per
+interval against the same ~1% jitter.
+
+Published mouse work samples pupil size at 10-50 Hz, and one sleep-staging study
+classifies stages from diameter at 10 Hz, which bounds size bandwidth well under 5 Hz.
+No reliable mouse maximum constriction velocity was found; the mm/s figures in the
+literature are human and do not transfer across a 2-8 mm versus 0.5-2 mm range.
+
+Position is the fast quantity — 1.05 px/frame is 426% of a pupil diameter per second —
+and is what justifies the 97 Hz rig. For size alone the recording is oversampled about
+tenfold.
+
+**Consequence for frame selection.** A physiological ceiling turns the temporal signal
+into a plausibility bound: at interval dt, a diameter change beyond roughly
+`rate x dt` plus a jitter allowance is a model error, needing no labels. It therefore
+belongs inside `implausibility_score` rather than as a separately weighted term. That it
+*ranks* frames usefully still needs consecutive labelled frames to establish.
+
 ## 5. What this does not establish
 
 - **Nothing here judges the packaged checkpoint.** It gradient-trained on 166 of

@@ -4,6 +4,56 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-16
 
+### Diagnose the transfer failure and ship frame recommendation (Claude, Opus 5)
+
+- **Found why the failing sessions fail, and it is not what any summary statistic suggested.**
+  Brightness correlates with per-session IoU at rho +0.02 and boundary contrast at **-0.19**, with
+  the worst session holding *better* boundary contrast than its high-scoring near-twin. Looking at
+  a prediction settled it in one image: the model segments the whole dark eye aperture instead of
+  the pupil, predicting **4.8x and 7.8x** the labelled area at **p = 0.99 on every frame**, while
+  the session that works in the same fold predicts 0.72x.
+- **Withdrew the photometric-augmentation recommendation** made earlier the same day. Appearance
+  jitter cannot teach a pupil-versus-aperture distinction, and `ColorJitter(brightness=0.2,
+  contrast=0.2)` plus blur are already in the pipeline, so the proposal amounted to turning up the
+  wrong knob. Scale jitter is present too and plausibly works against this failure by eroding the
+  size prior. Recorded as settled so it is not re-opened.
+- **Corrected a committed code comment** claiming a low calibrated threshold means the model
+  under-segments. Fold 1 disproves it: the threshold sat on the floor because the 32-image session
+  under-predicts and outvotes the other two, while the sessions that actually fail were
+  over-predicting and needed the opposite. One global threshold cannot serve sessions whose errors
+  point in different directions.
+- **Shipped frame recommendation** (`training/recommend_frames.py`, `training/frame_selection.py`)
+  taking a video or a frame folder and returning the frames worth labelling. Built the validation
+  harness first: hide each session's labels, rank its frames, reveal them. Picks average IoU 0.31
+  against 0.51 random, oracle floor 0.29 - 89% of the achievable gap, beating random in 10 of 10
+  sessions. Frame extraction reuses `extract_selected_frames`, which already implemented the
+  "sample at a rate, capped at N equally spaced" rule.
+- **Ranking must not use model confidence.** The failure runs at p = 0.99, so entropy or margin
+  sampling would rank exactly the wrong frames as least informative. Disagreement alone is also
+  near-blind to it, because committee members share the bias and agree while all being wrong; the
+  geometric plausibility prior is what recovers those frames (rho 0.09 -> 0.84 on the worst
+  session).
+- **Three defects the harness and tests caught before release.** The near-duplicate cutoff, set
+  from a low percentile, collapses to zero and disables deduplication exactly when duplicates are
+  common - a resting animal. A rewritten spacing check accepted frames adjacent to a pick.
+  Combining geometric penalties by their maximum reads better than a mean and measures worse
+  (89.2% -> 80.8%), so it was reverted with the measurement recorded in the docstring.
+- **Established the sampling rate for size against position.** At 97 Hz the frame-to-frame size
+  signal is segmentation noise: the 8.92% maximum on a 24 px pupil is 2.1 px, and a one-pixel
+  boundary shift on a disc of radius 12 accounts for 8.3% alone. Size needs 10-30 Hz; position, at
+  426% of a diameter per second, is what justifies the 97 Hz rig. So higher fps makes the temporal
+  frame-selection signal *worse*, and that signal belongs inside the plausibility prior rather than
+  as a separate weighted term.
+- Verification:
+  - `ruff check .`, `black --check` (35 files), `pytest` (`139 passed` with the environment's `bin`
+    on `PATH`), including 13 new tests in `tests/test_frame_selection.py`.
+  - End-to-end run against a 600-frame video built from real frames: 100 extracted, scored with a
+    12-model committee, 8 promoted, output folders placed beside the video as specified. Confirmed
+    deduplication takes the picks from 4 distinct source images to 8 of 8.
+  - Both input modes, and the guards for a missing video, a single-checkpoint committee, and a
+    populated output folder. Moved the overwrite check ahead of scoring, which on a long recording
+    took minutes before refusing.
+
 ### Measure generalisation, and repair the selector that was corrupting it (Claude, Opus 5)
 
 - **Ran the first grouped cross-validation sweep.** It returned mean per-session IoU 0.5378, but

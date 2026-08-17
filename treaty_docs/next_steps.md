@@ -7,8 +7,10 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Recording-grouped data splits](#recording-grouped-data-splits) - measured; cross-recording IoU is 0.6245 +/- 0.0322, against the 0.8749 published from the leaky split.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; `balanced_iou` selection was corrupting runs outright, not merely reporting them optimistically.
 - [Training sampling default](#training-sampling-default) - natural sampling beats size-balanced by 0.0354; the code still defaults to balanced.
-- [Improving cross-recording generalization](#improving-cross-recording-generalization) - transfer is bimodal; diagnose the failing sessions before choosing an augmentation.
+- [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
 - [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - decide whether incoming sessions become the holdout gate *before* they are merged into the pool.
+- [Frame recommendation](#frame-recommendation) - shipped; re-run the harness after any scoring change, and note the committee depends on gitignored checkpoints.
+- [Sampling rate and pupil dynamics](#sampling-rate-and-pupil-dynamics) - size needs 10-30 Hz, position needs the 97 Hz rig; measure a real PLR constriction velocity to set the bound.
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
@@ -82,35 +84,40 @@ Then:
 
 ## Improving Cross-Recording Generalization
 
-Status: open; baseline is 0.6245 +/- 0.0322 mean per-session IoU and nothing has yet been tried
-against it
+Status: open; baseline 0.6245 +/- 0.0322 mean per-session IoU, and the failure mechanism is now
+diagnosed. See `reports/2026-08-16-selection-metric-repair.md` section 4b.
 
 Transfer is bimodal - six sessions below 0.45, six above 0.75 - so the question is not "why is the
-model mediocre everywhere" but "what makes a recording setting fall off the cliff". The queue is
-ordered by value per unit of compute. **Read
-[New labels arriving](#new-labels-and-experiment-sequencing) before starting any of the sweeps:
-most of these become non-comparable when the pool changes.**
+model mediocre everywhere" but "what makes a recording setting fall off the cliff". **Read
+[New labels arriving](#new-labels-and-experiment-sequencing) before starting any sweep: they become
+non-comparable the moment the pool changes.**
 
-Two one-line changes first, both independent of any data change:
+**Settled: the model segments the eye aperture, not the pupil.** Measured, not inferred. On the two
+failing sessions the fold-1 checkpoint predicts **4.8x and 7.8x** the labelled area, at **p = 0.99
+on every frame**, while the session that works in the same fold predicts 0.72x. It has learned
+"dark blob = pupil", which holds while the pupil is the only dark thing in frame and breaks where
+the whole eye aperture is dark. No appearance statistic explains it: brightness correlates with
+per-session IoU at rho +0.02, boundary contrast at **-0.19**, and the failing session has *better*
+boundary contrast than its high-scoring near-twin. Do not re-derive this from summary statistics;
+look at a prediction.
 
-- Widen the default `threshold_candidates` in `TrainingConfig` to about 0.05-0.95. The 0.30-0.80
-  grid censored the calibration in 5 of 12 balanced and 4 of 12 natural folds. Verified post-hoc:
-  re-calibrating the 24 saved checkpoints over the wider grid moved 7 thresholds and gained
-  +0.0082 / +0.0056 mean macro IoU. No retraining needed, because selection runs at a fixed 0.5.
-- Change `balance_training_sizes` to default `False` - see
-  [Training sampling default](#training-sampling-default).
+**Settled: augmentation is the wrong tool for it, and was withdrawn as a recommendation.**
+Brightness and contrast jitter cannot teach a pupil-versus-aperture distinction, which is semantic
+rather than photometric. `ColorJitter(brightness=0.2, contrast=0.2)` and Gaussian blur are already
+in `mouse_pupil_analysis/augmentation.py`, so the proposal amounted to turning up a knob pointed at
+the wrong variable. Scale jitter is present too and plausibly works *against* this failure by
+eroding the size prior that would rule out a region five times too large - if anything there is a
+case for reducing it. Do not re-open a photometric augmentation sweep without new evidence.
 
-Then, in order:
+What the diagnosis actually supports, in order:
 
-1. **Diagnose the transfer failures. No training required.** `HQL090_sleep251012` (0.1865) and
-   `251016_5212_purple_Day10` (0.2952) fail under every configuration tried. Fold 1, which holds
-   both, is also where calibrated thresholds collapse toward 0.05 - a model wanting a 0.05
-   threshold is emitting diffuse, low-confidence masks. Compare their brightness, contrast, focus,
-   and pupil-size distributions against the pool. This is the prerequisite for the next item:
-   without it, augmentation choices are guesses.
-2. **Test photometric augmentation.** Cross-recording failure is largely a rig-appearance problem -
-   illumination, contrast, focus. This is the lever most likely to actually move the baseline, and
-   it is measurable for the first time. Let item 1 aim it.
+1. **Labels from sessions where the whole eye aperture is dark.** This teaches the distinction
+   directly and is the one item that next week's batch can serve. See
+   [New labels](#new-labels-and-experiment-sequencing).
+2. **The two-stage eye-ROI then pupil model.** Parked under
+   [Segmentation fine-tuning](#segmentation-fine-tuning-and-visibility) as speculative; the
+   diagnosis makes it the best-motivated structural fix on the list, since finding the eye first
+   removes the ambiguity the model is currently resolving wrongly.
 3. **Revisit the loss function.** All runs so far use BCE alone. The BCE+Dice / focal / Tversky
    ablation was parked until sampling, metric, and calibration were settled; those are now settled,
    so it is unblocked. Dice optimises overlap directly, which is what is being measured.
@@ -120,6 +127,59 @@ Then, in order:
    or make the selection threshold adaptive.
 5. **Add seeds 3-4** only if the sampling margin needs tightening. The sign is consistent across
    every seed, but 0.0354 sits close to the three-seed sd of 0.0273.
+
+## Frame Recommendation
+
+Status: shipped and validated. `training/recommend_frames.py`, scoring in
+`training/frame_selection.py`, harness in `reports/scripts/validate_frame_selection.py`.
+
+Takes a video or a frame folder and returns the frames worth labelling by hand. Recommended frames
+average IoU 0.31 against 0.51 for random picks, with an oracle floor of 0.29 - 89% of the
+achievable gap, beating random in 10 of 10 sessions.
+
+**Settled: never rank by model confidence.** The failure worth catching runs at p = 0.99, so
+entropy or margin sampling ranks exactly the wrong frames as least informative. Ranking is by
+committee disagreement plus a geometric plausibility prior. Disagreement alone is near-blind to the
+aperture-grab, because members trained on different folds share the bias and agree while all being
+wrong; the geometric term is what recovers those frames (rho 0.09 -> 0.84 on
+`251016_5212_purple_Day10`).
+
+**Re-run the harness after any change to the scoring.** Two changes that read as improvements have
+already measured worse: combining the geometric penalties by their maximum rather than their mean
+(89.2% -> 80.8%), and setting the near-duplicate cutoff from a low percentile, which collapses to
+zero and silently disables deduplication exactly when duplicates are common.
+
+Remaining work:
+
+- Fold the temporal signal into `implausibility_score` as a physiological bound rather than a
+  separately weighted term - see [Sampling rate](#sampling-rate-and-pupil-dynamics). It currently
+  defaults to weight 0 because it could not be validated on a sparsely sampled pool.
+- The default committee globs `checkpoints_exp/cvnat/*/best.pth`, which is **gitignored**. It works
+  only on a machine that still holds those 24 checkpoints; a fresh clone cannot run the tool. Either
+  document the prerequisite or ship a smaller committee.
+
+## Sampling Rate And Pupil Dynamics
+
+Status: measured 2026-08-16 on `sample_data/velocity_frames`. Report section 4c.
+
+**Settled: pupil size and pupil position need different sampling rates.** At 97 Hz the
+frame-to-frame *size* signal is segmentation noise, not physiology: the maximum observed change of
+8.92% on a 24 px pupil is 2.1 px, and a one-pixel boundary shift on a disc of radius 12 accounts
+for 8.3% by itself. Published mouse work samples size at 10-50 Hz, and a sleep-staging study
+classifies from diameter at 10 Hz, bounding size bandwidth well under 5 Hz. Position is the fast
+quantity - 1.05 px/frame is 426% of a diameter per second - and is what justifies the 97 Hz rig.
+For size alone the recording is oversampled roughly tenfold.
+
+Consequence, which is counterintuitive: **for the temporal frame-selection signal, higher fps is
+worse.** Jitter is roughly constant per frame while real change shrinks with the interval, so at
+97 Hz signal and noise are comparable, whereas at 5 fps a physiological ~100%/s gives ~20% per
+interval against ~1% jitter. The 5 fps extraction default is in the right regime.
+
+Remaining work:
+
+- Measure a mouse maximum constriction velocity from a light-driven PLR on this rig. No reliable
+  published mouse figure was found; the mm/s values in the literature are human and do not transfer
+  across a 2-8 mm versus 0.5-2 mm range. That number sets the plausibility bound above.
 
 ## New Labels And Experiment Sequencing
 

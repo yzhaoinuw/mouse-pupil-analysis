@@ -168,10 +168,19 @@ def main(argv: list[str] | None = None) -> int:
 
     checkpoints = args.checkpoints or sorted(PROJECT_ROOT.glob(DEFAULT_COMMITTEE))
     if len(checkpoints) < 2:
+        # The default committee lives under the gitignored checkpoints_exp/, so a fresh
+        # clone finds nothing here and the reason needs saying out loud.
+        default_hint = (
+            f"The default committee is {DEFAULT_COMMITTEE} under {PROJECT_ROOT}, which is "
+            "gitignored -- it exists only on a machine that has run the cross-validation "
+            "sweeps. Produce one with training/run_cv.py, or pass --checkpoints."
+            if not args.checkpoints
+            else "Pass more paths to --checkpoints."
+        )
         parser.error(
             f"Need at least 2 checkpoints for a committee, found {len(checkpoints)}. "
-            "Disagreement between models is the main signal, so a single checkpoint "
-            "cannot rank frames. Pass --checkpoints explicitly."
+            f"Disagreement between models is the main ranking signal, so a single "
+            f"checkpoint cannot rank frames. {default_hint}"
         )
 
     frames_dir, promote_dir, name = resolve_output_dirs(args)
