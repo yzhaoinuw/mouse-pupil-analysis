@@ -11,8 +11,10 @@ the labelled pool.
     python training/run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp/cv
 
 Use this to compare *configurations* -- sampling, loss, augmentation, architecture.
-It is not how the shipped checkpoint is built: once a configuration wins, retrain it
-on the whole pool and gate the result with ``reports/scripts/hard_frame_check.py``.
+It is not how the shipped checkpoint is built: once a configuration wins, freeze the
+schedule and threshold, refit on the non-holdout development pool, and consume the outer
+holdout once with ``training/evaluate_holdout.py``. The hard-frame visual check remains a
+separate promotion gate.
 
 Cross-validation narrows sampling noise, not seed noise; repeat with ``--seed`` to
 separate the two. The +/-0.0069 floor in ``reports/2026-08-14-checkpoint-noise-floor.md``
@@ -123,9 +125,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--selection-metric",
         choices=("balanced_iou", "macro_iou"),
-        default="balanced_iou",
+        default="macro_iou",
         help="Validation metric deciding the best checkpoint and early stopping. Grouped folds "
-        "can leave a size bin holding one or two images, which makes 'balanced_iou' volatile.",
+        "can leave a size bin holding one or two images, which makes 'balanced_iou' volatile; "
+        "macro_iou is the default.",
     )
     parser.add_argument(
         "--scheduler-metric",
@@ -165,7 +168,8 @@ def main(argv: list[str] | None = None) -> int:
         held = sum(e["n_images"] for e in manifest["sessions"] if e.get("holdout"))
         print(
             f"Holdout excluded from every fold: {len(gate)} session(s), {held} image(s) "
-            f"({', '.join(sorted(gate))}). Score them with run_train.py --final."
+            f"({', '.join(sorted(gate))}). Refit with run_train.py --final, then score "
+            "once with training/evaluate_holdout.py."
         )
 
     started = time.perf_counter()

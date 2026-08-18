@@ -24,10 +24,15 @@ matplotlib.use("Agg")
 
 MEDIA_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = MEDIA_DIR.parent
-DEFAULT_RUN_DIR = PROJECT_ROOT / "videos" / "eye_unified_review"
-DEFAULT_CSV = DEFAULT_RUN_DIR / "results" / "eye_pupil_analysis.csv"
+DEFAULT_RUN_DIR = PROJECT_ROOT / "gif_videos" / "readme_demo"
+DEFAULT_CSV = DEFAULT_RUN_DIR / "pupil_analysis_for_gif.csv"
 DEFAULT_OVERLAY_DIR = DEFAULT_RUN_DIR / "overlays"
 DEFAULT_OUTPUT = MEDIA_DIR / "pupil_diameter_analysis_result_demo.gif"
+DEFAULT_START_FRAME = 7107
+DEFAULT_END_FRAME = 7375
+DEFAULT_SAMPLE_EVERY = 1
+DEFAULT_FPS = 5.0
+DEFAULT_PRED_THRESHOLD = 0.7
 REQUIRED_COLUMNS = {
     "image_name",
     "estimated_pupil_diameter",
@@ -121,11 +126,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--csv_path", type=Path, default=DEFAULT_CSV)
     parser.add_argument("--overlay_dir", type=Path, default=DEFAULT_OVERLAY_DIR)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--start_frame", type=int, default=200)
-    parser.add_argument("--end_frame", type=int, default=2100)
-    parser.add_argument("--sample_every", type=int, default=20)
-    parser.add_argument("--fps", type=float, default=10.0)
-    parser.add_argument("--pred_thresh", type=float, default=0.7)
+    parser.add_argument("--start_frame", type=int, default=DEFAULT_START_FRAME)
+    parser.add_argument("--end_frame", type=int, default=DEFAULT_END_FRAME)
+    parser.add_argument("--sample_every", type=int, default=DEFAULT_SAMPLE_EVERY)
+    parser.add_argument("--fps", type=float, default=DEFAULT_FPS)
+    parser.add_argument("--pred_thresh", type=float, default=DEFAULT_PRED_THRESHOLD)
     return parser.parse_args()
 
 

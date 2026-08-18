@@ -144,6 +144,7 @@ mouse-pupil-analysis/
 |  |- data_splits.py
 |  |- provenance.py
 |  |- data_collection.md
+|  |- import_labelme_batch.py
 |  |- labelme_json2png.py
 |  |- check_augmentation.py
 |- media/
@@ -164,6 +165,7 @@ mouse-pupil-analysis/
 |  |- <session>/
 |     |- images/
 |     |- masks/
+|     |- uncertain/          (optional; excluded from segmentation training)
 |- splits.json
 |- folds/                   (generated, gitignored)
 |- .github/workflows/ci.yml
@@ -202,6 +204,7 @@ Active, package-facing files:
 Active local/developer scripts:
 
 - `training/run_train.py`
+- `training/import_labelme_batch.py`
 - `training/labelme_json2png.py`
 - `training/check_augmentation.py`
 - `media/make_gif.py`
@@ -209,8 +212,17 @@ Active local/developer scripts:
 Local/generated surfaces to treat carefully:
 
 - `images_test_*`, `images_*_result`, `predicted_masks_*`, `predictions_test/`, and `results/` are local analysis outputs.
-- Root `labeled_frames/` holds the local labelled pool, one directory per recording session, each with `images/` and `masks/`. It is gitignored, as is the derived `folds/`. `splits.json` records the grouped, stratified fold assignment and *is* committed, so it is the only part of the split that survives a fresh clone. The `sample_data/` versions of both are intentionally tracked fixtures.
+- Root `labeled_frames/` holds the local labelled pool, one directory per recording session,
+  each with `images/` and `masks/`; an optional `uncertain/` archive is deliberately ignored
+  by segmentation training. It is gitignored, as is the derived `folds/`. `splits.json`
+  records the grouped, stratified fold assignment and *is* committed, so it is the only part
+  of the split that survives a fresh clone. The `sample_data/` versions of both are
+  intentionally tracked fixtures.
 - `checkpoints_exp/` holds experimental training checkpoints.
+- `movies/` holds local source recordings used for frame extraction; recommender outputs live
+  separately under `frame_recommendations/` so this folder remains source-only.
+- `gif_videos/readme_demo/` holds only the local CSV and 90 overlays that exactly reproduce the
+  tracked README GIF. Historical candidates and full-video review outputs are not maintained inputs.
 - `build/`, `dist/`, `*.egg-info`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` are generated.
 - `archive/` and `sketch*.py` style files are not the active package path.
 - `mouse_pupil_analysis/checkpoints/archive/` contains historical checkpoint files excluded from package data.

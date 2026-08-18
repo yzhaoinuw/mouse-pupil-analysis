@@ -280,6 +280,16 @@ def test_reassign_repacks_deliberately(pool: Path):
     assert "somewhere_else" in {entry["session"] for entry in after["sessions"]}
 
 
+def test_changing_fold_count_requires_explicit_reassignment(pool: Path):
+    before = data_splits.build_manifest(pool, n_folds=3)
+
+    with pytest.raises(ValueError, match="pass --reassign"):
+        data_splits.build_manifest(pool, n_folds=2, previous=before)
+
+    after = data_splits.build_manifest(pool, n_folds=2, previous=before, reassign=True)
+    assert after["n_folds"] == 2
+
+
 def test_more_folds_than_sessions_is_rejected(pool: Path):
     with pytest.raises(ValueError, match="every fold needs at least one whole session"):
         data_splits.build_manifest(pool, n_folds=99)
@@ -303,21 +313,26 @@ def test_two_intake_folders_may_reuse_the_same_filenames(tmp_path: Path):
     assert len({e["session"] for e in same_name}) == 2
 
 
-def test_the_same_key_in_two_pool_layouts_is_rejected(tmp_path: Path):
+def test_the_session_layout_takes_precedence_over_a_retained_legacy_backup(tmp_path: Path):
     _write_pair(tmp_path, "frame1", radius=8, session="rig1_day1")
     _write_pair(tmp_path, "frame2", radius=12, session="rig2_day2")
     # The legacy reader would produce the same key from a flat nested path.
-    legacy = tmp_path / "images_train" / "rig1_day1"
+    legacy = tmp_path / "images_train" / "legacy_backup"
     legacy.mkdir(parents=True)
-    (tmp_path / "masks_train" / "rig1_day1").mkdir(parents=True)
-    shutil.copy2(tmp_path / "labeled_frames/rig1_day1/images/frame1.png", legacy / "frame1.png")
+    (tmp_path / "masks_train" / "legacy_backup").mkdir(parents=True)
+    shutil.copy2(
+        tmp_path / "labeled_frames/rig1_day1/images/frame1.png",
+        legacy / "old_verbose_name.png",
+    )
     shutil.copy2(
         tmp_path / "labeled_frames/rig1_day1/masks/frame1.png",
-        tmp_path / "masks_train/rig1_day1/frame1.png",
+        tmp_path / "masks_train/legacy_backup/old_verbose_name.png",
     )
 
-    with pytest.raises(ValueError, match="appears in both"):
-        data_splits.build_manifest(tmp_path, n_folds=2)
+    manifest = data_splits.build_manifest(tmp_path, n_folds=2)
+
+    assert manifest["n_images"] == 2
+    assert all(entry["image"].startswith("labeled_frames/") for entry in manifest["images"])
 
 
 def test_masks_live_beside_their_images_in_the_session_folder(tmp_path: Path):
@@ -534,3 +549,33 @@ def test_materialize_is_regenerated_not_merged(pool: Path, tmp_path: Path):
 
     # These folders are derived output, so a rebuild must not preserve anything.
     assert not stale.exists()
+
+
+def test_materialize_refuses_to_replace_the_data_root(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+
+    with pytest.raises(ValueError, match="data root itself"):
+        data_splits.materialize(manifest, pool, pool)
+
+
+def test_materialize_can_write_a_new_directory_outside_the_data_root(pool: Path, tmp_path: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+    outside = tmp_path.parent / f"{tmp_path.name}_outside"
+
+    counts = data_splits.materialize(manifest, pool, outside)
+
+    assert sum(counts.values()) == manifest["n_images"]
+    assert (outside / data_splits.MATERIALIZED_MARKER).is_file()
+
+
+def test_materialize_refuses_to_replace_a_user_directory(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+    out = pool / "not-generated"
+    out.mkdir()
+    important = out / "keep-me.txt"
+    important.write_text("user data", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-generated"):
+        data_splits.materialize(manifest, pool, out)
+
+    assert important.read_text(encoding="utf-8") == "user data"

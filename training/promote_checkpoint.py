@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Promote an experimental training run to packaged checkpoint data.
 
-`run_train.py` writes every run to `checkpoints_exp/<run-name>/` as `best.pth`,
-`best.json`, and `train.log`. This script performs the single transformation
-that turns one such folder into the three files the package ships, so a
-promotion is reproducible rather than hand-assembled:
+Development runs contain `best.pth`, `best.json`, and `train.log`. A final refit
+contains `final.pth`, `final.json`, and `train.log`, and becomes promotable only after
+the one-shot evaluator adds `holdout.json`. This script performs the single
+transformation that turns either complete run folder into the three files the package
+ships, so a promotion is reproducible rather than hand-assembled:
 
 - renames all three to the concise `<count>pupils_thresh=<value>_iou=<macro>` pattern
   that `find_default_checkpoint(...)` and `resolve_prediction_threshold(...)` read,
@@ -25,6 +26,7 @@ Typical use, from the repository root:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -62,10 +64,16 @@ PACKAGED_TRAINING_KEYS = (
     "scheduler_patience",
     "tiny_max_diameter",
     "large_min_diameter",
+    "workflow",
+    "selection_metric",
+    "scheduler_metric",
+    "selection_threshold",
+    "threshold_candidates",
+    "split_manifest_sha256",
 )
 
 # Absolute local paths in a run folder describe one machine, not the model.
-_LOCAL_ONLY_CONFIG_KEYS = ("data_root", "checkpoint_dir")
+_LOCAL_ONLY_CONFIG_KEYS = ("data_root", "checkpoint_dir", "split_manifest")
 
 
 def _recorded_basename(path_text: str) -> str:
@@ -76,6 +84,14 @@ def _recorded_basename(path_text: str) -> str:
     on both separators keeps local paths out of package data either way.
     """
     return re.split(r"[\\/]", path_text)[-1]
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def packaged_basename(metadata: dict) -> str:
@@ -92,7 +108,7 @@ def packaged_basename(metadata: dict) -> str:
 
 
 def build_packaged_metadata(run_metadata: dict, validation_note: str = "") -> dict:
-    """Transform one run's `best.json` into packaged checkpoint metadata."""
+    """Transform complete development or final-run metadata into package metadata."""
     missing = {"prediction_threshold", "macro_iou", "training_examples", "config"} - set(
         run_metadata
     )
@@ -136,6 +152,16 @@ def build_packaged_metadata(run_metadata: dict, validation_note: str = "") -> di
             "scheduler_patience": int(config["scheduler_patience"]),
             "tiny_max_diameter": float(config["tiny_max_diameter"]),
             "large_min_diameter": float(config["large_min_diameter"]),
+            "workflow": run_metadata.get("workflow", "development_selection"),
+            "selection_metric": config.get("selection_metric", "balanced_iou"),
+            "scheduler_metric": config.get("scheduler_metric", "balanced_iou"),
+            "selection_threshold": (
+                "calibrated"
+                if config.get("selection_threshold") is None
+                else float(config["selection_threshold"])
+            ),
+            "threshold_candidates": list(config.get("threshold_candidates", [])),
+            "split_manifest_sha256": run_metadata.get("split_manifest_sha256"),
         },
     }
     return {key: packaged[key] for key in PACKAGED_KEYS}
@@ -158,6 +184,49 @@ def _redacted_log(log_path: Path) -> str:
     return "\n".join([redact_log_header(lines[0]), *lines[1:]]) + "\n"
 
 
+def _load_promotable_run(run_dir: Path) -> tuple[Path, dict, Path]:
+    """Load either a development run or an evaluated final refit."""
+    log_path = run_dir / "train.log"
+    final_metadata_path = run_dir / "final.json"
+    if final_metadata_path.is_file():
+        weights = run_dir / "final.pth"
+        holdout_path = run_dir / "holdout.json"
+        for required in (weights, holdout_path, log_path):
+            if not required.is_file():
+                raise FileNotFoundError(
+                    f"{run_dir} is not a promotable final run; missing {required.name}."
+                )
+        final_metadata = json.loads(final_metadata_path.read_text(encoding="utf-8"))
+        holdout = json.loads(holdout_path.read_text(encoding="utf-8"))
+        if _sha256(weights) != final_metadata.get("checkpoint_sha256"):
+            raise ValueError("final.pth no longer matches final.json.")
+        if final_metadata.get("checkpoint_sha256") != holdout.get("checkpoint_sha256"):
+            raise ValueError("final.json and holdout.json describe different checkpoints.")
+        if final_metadata.get("split_manifest_sha256") != holdout.get("split_manifest_sha256"):
+            raise ValueError("final.json and holdout.json describe different split manifests.")
+        if final_metadata.get("prediction_threshold") != holdout.get("prediction_threshold"):
+            raise ValueError("The holdout was not scored at the frozen final threshold.")
+        metric_keys = (
+            "balanced_iou",
+            "macro_iou",
+            "macro_dice",
+            "size_iou",
+            "low_circularity_iou",
+        )
+        combined = final_metadata | {key: holdout[key] for key in metric_keys}
+        combined["best_epoch"] = final_metadata["trained_epochs"]
+        return weights, combined, log_path
+
+    weights = run_dir / "best.pth"
+    metadata_path = run_dir / "best.json"
+    for required in (weights, metadata_path, log_path):
+        if not required.is_file():
+            raise FileNotFoundError(
+                f"{run_dir} is not a complete development run; missing {required.name}."
+            )
+    return weights, json.loads(metadata_path.read_text(encoding="utf-8")), log_path
+
+
 def promote(
     run_dir: Path,
     checkpoints_dir: Path = PACKAGED_CHECKPOINT_DIR,
@@ -168,19 +237,8 @@ def promote(
     """Copy one run folder into `checkpoints_dir` under the packaged naming pattern."""
     run_dir = Path(run_dir)
     checkpoints_dir = Path(checkpoints_dir)
-    weights = run_dir / "best.pth"
-    metadata_path = run_dir / "best.json"
-    log_path = run_dir / "train.log"
-    for required in (weights, metadata_path, log_path):
-        if not required.is_file():
-            raise FileNotFoundError(
-                f"{run_dir} is not a complete run folder; missing {required.name}."
-            )
-
-    packaged = build_packaged_metadata(
-        json.loads(metadata_path.read_text(encoding="utf-8")),
-        validation_note,
-    )
+    weights, run_metadata, log_path = _load_promotable_run(run_dir)
+    packaged = build_packaged_metadata(run_metadata, validation_note)
     basename = packaged_basename(packaged)
     targets = {
         "weights": checkpoints_dir / f"{basename}.pth",
@@ -229,7 +287,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--run-dir",
         type=Path,
         required=True,
-        help="Run folder containing best.pth, best.json, and train.log.",
+        help="Development run with best.* or evaluated final run with final.* and holdout.json.",
     )
     parser.add_argument(
         "--checkpoints-dir",

@@ -72,6 +72,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from dominating the headline number.
 - `training/data_collection.md`, documenting which incoming frames are worth labelling,
   how to record the session a batch came from, and how a labelled batch joins the split.
+- `training/import_labelme_batch.py`, a dry-run-first intake command that validates a complete
+  Labelme batch, creates compact pupil and explicit-negative image/mask pairs, archives
+  `uncertain` image/JSON records outside segmentation training, refuses to overwrite an
+  existing session, and can refresh the frozen manifest and materialized folds in the same run.
 - `reports/`, holding dated analyses and the scripts that regenerate their numbers.
   `reports/2026-08-14-checkpoint-noise-floor.md` measures the run-to-run spread of the
   model-selection metric, and `reports/scripts/` provides the seed study, the run summariser,

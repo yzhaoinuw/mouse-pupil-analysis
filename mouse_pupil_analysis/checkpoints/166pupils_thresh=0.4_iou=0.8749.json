@@ -24,6 +24,19 @@
     "early_stopping_patience": 40,
     "scheduler_patience": 8,
     "tiny_max_diameter": 15.0,
-    "large_min_diameter": 80.0
+    "large_min_diameter": 80.0,
+    "workflow": "development_selection",
+    "selection_metric": "balanced_iou",
+    "scheduler_metric": "balanced_iou",
+    "selection_threshold": "calibrated",
+    "threshold_candidates": [
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8
+    ],
+    "split_manifest_sha256": null
   }
 }

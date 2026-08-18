@@ -16,7 +16,9 @@ conda activate pupil_tracking
 python -m pip install -e .
 ```
 
-Label creation also requires [Labelme](https://github.com/wkentaro/labelme). Install it in the same environment if `labelme.exe` and `labelme_export_json` are not already available.
+Label creation also requires [Labelme](https://github.com/wkentaro/labelme). The conversion
+script rasterizes its saved polygons directly, so `labelme.exe` is needed for annotation but
+the separate `labelme_export_json` command is not required.
 
 ## Data layout
 
@@ -25,24 +27,43 @@ Create these local folders at the repository root:
 ```text
 labeled_frames/
   <session>/        # one recording session: one animal, one date, one condition
-    images/         # the frames, and their .json annotations
+    images/         # the frames; Labelme .json is optional after masks exist
     masks/          # the masks, same filenames
+    uncertain/      # optional image/JSON archive; excluded from segmentation training
 ```
 
 One directory per recording session. The session is the grouping unit for the split, so it is a directory: an image cannot enter the pool without one. There is no train/validation folder split — `splits.json` decides what trains and what validates, so a labelled pair never moves on disk when the split changes. The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/` are still read if a checkout still has them, so an older layout keeps working.
 
 Images and masks must be PNG files whose filenames correspond one-to-one by stem within a session. Filenames need not be unique *between* sessions — an image is identified by `<session>/<filename>`. Use the original camera frames for training. For example, if the camera produces 300 x 300 frames, place those 300 x 300 PNG files in the image folders and create matching 300 x 300 masks.
 
-For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
-
-Adding data is: drop `labeled_frames/<new session>/images/`, convert the annotations, refresh the split.
+After the frames are grouped correctly, their recording identity no longer needs to be
+repeated in every filename. Preview and then apply the collision-checked compact form
+`frame_<five-digit-source-index>` with:
 
 ```powershell
-python training\labelme_json2png.py --data-root . --session <new session>
-python training\data_splits.py --data-root . --materialize
+python training\compact_frame_names.py --data-root .
+python training\compact_frame_names.py --data-root . --apply
 ```
 
-Existing sessions keep their folds; only the new one is packed.
+The utility renames each image, matching mask, and optional Labelme JSON together and
+updates the JSON `imagePath`. It refuses missing masks and numeric-index collisions.
+Once masks have been verified, the JSON exports are not required for training; retain them
+only if you want to revise the original polygons later.
+
+For choosing which frames are worth labelling and how to record where they came from, see [`data_collection.md`](data_collection.md).
+
+For a new reviewed Labelme batch, preview the complete intake and then apply it:
+
+```powershell
+python training\import_labelme_batch.py --source <annotation folder> --session <new session>
+python training\import_labelme_batch.py --source <annotation folder> --session <new session> --apply --refresh-splits
+```
+
+The importer validates every JSON before writing, refuses an existing session, extracts the
+trailing frame index into `frame_<five-digit-index>.png`, writes pupil and explicit-negative
+masks, archives `uncertain` image/JSON pairs outside the training directories, and optionally
+refreshes `splits.json` plus `folds/`. It does not copy the redundant pupil/negative JSONs into
+the training pool. Existing sessions keep their folds; only the new one is packed.
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
 
@@ -65,6 +86,22 @@ sampling at random.
 python training\recommend_frames.py --video D:\data\HQL091_sleep260820.avi --budget 20
 python training\recommend_frames.py --frames D:\data\already_extracted --budget 20
 ```
+
+For the local repository workflow, keep source recordings and generated selections separate:
+
+```text
+movies/
+  <session>.avi
+frame_recommendations/
+  <session>/
+    extracted_frames/
+    to_label/             # 20 picks plus selection.csv
+```
+
+Pass `--frames-out` and `--out` to create that layout; `movies/` should contain only source
+recordings. If a movie belongs to a session already represented in `labeled_frames/`, every
+committee member used for that movie must come from a fold that held out that session. Train
+additional seeds of that fold when one checkpoint is not enough for disagreement ranking.
 
 Given a video this writes two folders beside it: `<name>_frames/` with every extracted
 frame, and `<name>_to_label/` with the recommendations plus a `selection.csv` recording
@@ -90,16 +127,30 @@ cross-validation fold qualifies for genuinely new footage.
 
 ## 1. Create masks with Labelme
 
-1. Start Labelme with `labelme.exe` and annotate the pupil in each source image.
-2. Save each JSON file beside its image in `labeled_frames/<session>/images/`.
-3. Run:
+1. Start Labelme with `labelme.exe` and use one of three labels:
+   - `pupil`: draw the visible pupil boundary.
+   - `no_visible_pupil`: place one small marker when the pupil is confidently absent or
+     fully occluded. Its geometry is ignored and the converter writes an all-black mask.
+   - `uncertain`: place one small marker when a pupil may be present but cannot be outlined
+     reliably. The converter reports it and creates no training mask.
+2. Save each JSON file beside its source image. This can be the recommender's
+   `extracted_frames/` directory when nearby contextual frames were labelled.
+3. Preview and apply the new-session import:
 
 ```powershell
-python training\labelme_json2png.py --data-root .
-python training\labelme_json2png.py --data-root . --session HQL091_sleep260820
+python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820
+python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820 --apply --refresh-splits
 ```
 
-The script walks every session folder (or just the ones named with `--session`), runs `labelme_export_json`, moves each generated `label.png` into that session's `masks/` under its image's filename, and removes Labelme's temporary export directory. Existing masks are skipped, so re-running only fills in what is missing.
+The importer validates that each annotation uses exactly one target. Ordinary pupil polygons
+are rasterized directly; `no_visible_pupil` writes an image-sized empty mask; and `uncertain`
+is copied to `labeled_frames/<session>/uncertain/` with no mask. The segmentation trainer only
+reads `images/` paired with `masks/`, so uncertain frames are preserved for a future abstention
+model but do not currently contribute any training loss.
+
+`labelme_json2png.py` remains the lower-level converter for a batch already staged under
+`labeled_frames/<session>/images/`. New batches should normally use the importer so uncertain
+frames cannot leave unmatched images in the training pool.
 
 Before training, compare the filenames and counts in each image/mask pair. A mask with the wrong image can train without an obvious file error while corrupting the model.
 
@@ -156,7 +207,9 @@ if the manifest sets one. `cvN` holds fold `N-1`. Folds partition the pool, so t
 tree is one copy of the dataset; pass `--symlink` for none.
 
 This is **derived output, one way**. The folders are rebuilt from the manifest and never
-read back, so editing them changes nothing and the next `--materialize` overwrites them.
+read back, so editing them changes nothing. A later `--materialize` replaces only a tree
+that contains the generated marker file; it refuses the data root, ordinary files, and
+nonempty unmarked user directories.
 The manifest stays the record because it is committed and the image folders are not — a
 fresh clone has `splits.json` and `provenance.csv` and no images at all.
 
@@ -167,13 +220,18 @@ the final model. Set one or more sessions aside to get one:
 
 ```powershell
 python training\data_splits.py --data-root . --holdout HQL090_sleep251012 --out splits.json
-python training\run_train.py --split-manifest splits.json --final
+python training\run_train.py --split-manifest splits.json --final `
+    --final-prediction-threshold 0.5 --epochs <frozen epoch count>
+python training\evaluate_holdout.py --run-dir checkpoints_exp\<final run> `
+    --split-manifest splits.json --confirm-frozen
 ```
 
-Holdout sessions appear in no fold — trained on never, validated on never — and
-`--final` trains on everything else and validates against them. Choose the holdout by
-condition rather than by animal, and note that at the current pool size two sessions is
-15–27% of the labelled data. None is set by default.
+Holdout sessions appear in no fold. `--final` trains on everything else for an epoch
+count, optional learning-rate milestones, and prediction threshold frozen from grouped
+development runs; it never loads the holdout. `evaluate_holdout.py` then scores that
+frozen checkpoint at that one threshold and refuses to overwrite `holdout.json`. Choose
+the holdout by condition rather than by animal. Once its score changes a training choice,
+it is development data and a new untouched holdout is needed for the next unbiased gate.
 
 ## 2. Inspect augmentation
 
@@ -190,8 +248,8 @@ The script draws repeated augmented versions of training samples with the mask o
 For an IDE run, edit the final `TrainingConfig(...)` block in `run_train.py`, especially:
 
 - `finetune_checkpoint`: leave as `None` for fresh training.
-- `early_stopping_patience` and `scheduler_patience`: how long to wait for a
-  size-balanced validation improvement and when to lower the learning rate.
+- `early_stopping_patience` and `scheduler_patience`: how long to wait for the selected
+  validation metric and when to lower the learning rate during development runs.
 - `n_epochs`: maximum training epochs.
 - `use_attention`: must match the desired UNet architecture.
 - `threshold_candidates`: pixel-confidence thresholds evaluated on validation data.
@@ -212,11 +270,12 @@ Use `--data-root C:\path\to\training-data` when the folders are elsewhere. Run
 `python training\run_train.py --help` for the fine-tuning checkpoint, output directory,
 learning rate, epoch, batch-size, patience, seed, sampling, and attention options.
 
-The script automatically uses CUDA when available. It oversamples training masks so the
-represented tiny, medium, and large bins receive equal total sampling probability. Validation
-IoU and Dice are calculated per image, and the early-stopping score gives each represented
-size bin equal weight. Low-circularity masks are reported separately as a practical proxy for
-partially occluded or irregular labels; that geometry alone does not prove occlusion.
+The script automatically uses CUDA when available. Natural sampling is the default;
+`--balance-sizes` opts into equal total sampling probability for represented tiny, medium,
+and large bins. Validation IoU and Dice are calculated per image, and macro IoU is the
+default checkpoint-selection metric because grouped folds can contain only one or two
+images in a size bin. Low-circularity masks are reported separately as a practical proxy
+for partially occluded or irregular labels; that geometry alone does not prove occlusion.
 
 Every run writes these local outputs under `checkpoints_exp/<run-name>/`, even if it stops
 early or does not meet the promotion target. Set `run_name` explicitly for a planned
@@ -290,8 +349,9 @@ pupils concentrate in very few sessions, so the fold holding them trains with al
 tiny masks — with size-balanced sampling on, that oversamples a handful of images
 heavily.
 
-This is not how the shipped checkpoint is built. Once a configuration wins, retrain it on
-the whole pool and promote that, then gate the result as below.
+This is not how the shipped checkpoint is built. Once a configuration wins, freeze its
+epoch count, schedule, and threshold; run the non-holdout final refit described above;
+then consume the holdout once. Only an evaluated final run should normally be promoted.
 
 ## 6. Review and promote a checkpoint
 
@@ -317,6 +377,10 @@ log into `mouse_pupil_analysis/checkpoints/`. The model is always a UNet, attent
 detected from its weights, and the 148 x 148 resize-and-pad step is universal, so `unet`,
 `atn`, and `resize` are intentionally omitted from the name. Seed, learning rate, sampling,
 best epoch, balanced IoU, and other details stay in the matching log and JSON metadata.
+An evaluated final run uses the same command: its folder must contain `final.pth`,
+`final.json`, `holdout.json`, and `train.log`. Promotion refuses a final refit before the
+one-shot holdout result exists, and records the selection settings and split-manifest hash
+in packaged metadata.
 
 Use `--validation-note` to state the honest scope of the reported numbers, especially when
 validation is not independent of training. It is stored in the packaged metadata so the

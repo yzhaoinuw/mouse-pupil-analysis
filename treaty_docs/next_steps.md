@@ -4,12 +4,12 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - measured; cross-recording IoU is 0.6245 +/- 0.0322, against the 0.8749 published from the leaky split.
-- [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; `balanced_iou` selection was corrupting runs outright, not merely reporting them optimistically.
-- [Training sampling default](#training-sampling-default) - natural sampling beats size-balanced by 0.0354; the code still defaults to balanced.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 316 images; establish the matched new-pool baseline before comparing configurations.
+- [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
+- [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
-- [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - decide whether incoming sessions become the holdout gate *before* they are merged into the pool.
-- [Frame recommendation](#frame-recommendation) - shipped; re-run the harness after any scoring change, and note the committee depends on gitignored checkpoints.
+- [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - HQL097 adds 47 pupils and 14 true negatives to development; the 4-frame holdout remains untouched.
+- [Frame recommendation](#frame-recommendation) - HQL097 is integrated; HQL103 is the highest-value remaining new session to label.
 - [Sampling rate and pupil dynamics](#sampling-rate-and-pupil-dynamics) - size needs 10-30 Hz, position needs the 97 Hz rig; measure a real PLR constriction velocity to set the bound.
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
@@ -45,13 +45,14 @@ an intake subfolder, a labelme `session` flag, or `provenance.csv`, and anything
 becomes one safe over-merged group. Do not re-litigate; add a provenance *source* to
 `training/provenance.py` if a new intake route appears.
 
-Two structural facts that constrain every future comparison:
+Two structural facts that constrained the original 222-image comparison:
 
 - The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible, so one
   fold is always at least that big. The pool uses **4 folds**, not 5: four puts a small pupil
-  in every fold and tightens the condition balance, because each fold holds more sessions and
-  the 62-image session is a smaller share of a larger target. Current sizes 76/58/44/44. A
-  single fixed holdout costs 15-27% of the pool, which is why none is set by default.
+  in every fold and tightens the condition balance. After the 2026-08-17 intake, development-fold
+  sizes are now 76/58/73/105 after the HQL097 intake, and a separate 4-image session is the
+  outer holdout. HQL097 alone supplies 61 images to fold 4, so keep an eye on session dominance
+  when reading the next baseline.
 - `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Stratification
   spread the rest so every fold now contains some tiny mask, up from 2 of 5, and cut the
   cross-fold median-diameter spread from 3.03x to 1.60x. Coverage is still thin: only four
@@ -73,24 +74,26 @@ Two structural facts that constrain every future comparison:
 
 Then:
 
-- Diagnose the two sessions that fail under every configuration - `HQL090_sleep251012` (0.1865)
-  and `251016_5212_purple_Day10` (0.2952) - by comparing their brightness, contrast, and
-  pupil-size distributions against the pool. Pure analysis; it aims the augmentation work.
-- Test photometric augmentation. Cross-recording failure is mostly a rig-appearance problem, and
-  this is now measurable for the first time.
-- Designate a holdout session if promotion is wanted. `run_train.py --final` currently raises
-  because `splits.json` sets `n_holdout_sessions: 0`, so **no gated release candidate can be
-  built at all** right now.
+- Treat the 2026-08-17 255-image seed-0 result only as the previous-pool baseline: fold macro IoUs
+  0.7754/0.4990/0.5400/0.6701, mean per-session IoU 0.6468. Do not compare a new configuration
+  on the 316-image pool against it as though the pools were matched.
+- Run the same seed-0 natural-sampling, macro-IoU configuration on all 312 development images
+  next. That establishes whether the HQL097 pupils and true negatives correct the aperture grab
+  before changing the loss, sampler, or architecture.
+- Freeze the final epoch schedule and threshold using development evidence only, refit on all
+  312 development images, then consume the four-image trial5 holdout exactly once with
+  `training/evaluate_holdout.py`.
 
 ## Improving Cross-Recording Generalization
 
-Status: open; baseline 0.6245 +/- 0.0322 mean per-session IoU, and the failure mechanism is now
-diagnosed. See `reports/2026-08-16-selection-metric-repair.md` section 4b.
+Status: open; the previous 255-image seed-0 baseline is 0.6468 mean per-session IoU, and the failure
+mechanism remains diagnosed. See `reports/2026-08-16-selection-metric-repair.md` section 4b for the
+older 222-image experiments.
 
 Transfer is bimodal - six sessions below 0.45, six above 0.75 - so the question is not "why is the
 model mediocre everywhere" but "what makes a recording setting fall off the cliff". **Read
-[New labels arriving](#new-labels-and-experiment-sequencing) before starting any sweep: they become
-non-comparable the moment the pool changes.**
+[New labels](#new-labels-and-experiment-sequencing) before starting a sweep and keep configuration
+comparisons on the same pool version.**
 
 **Settled: the model segments the eye aperture, not the pupil.** Measured, not inferred. On the two
 failing sessions the fold-1 checkpoint predicts **4.8x and 7.8x** the labelled area, at **p = 0.99
@@ -130,8 +133,13 @@ What the diagnosis actually supports, in order:
 
 ## Frame Recommendation
 
-Status: shipped and validated. `training/recommend_frames.py`, scoring in
+Status: shipped and validated; fresh four-member committee trained 2026-08-17 under
+`checkpoints_exp/cv255_nat_macro_20260817`. `training/recommend_frames.py`, scoring in
 `training/frame_selection.py`, harness in `reports/scripts/validate_frame_selection.py`.
+
+The first real recommendation batch is complete: 20 picks each from HQL090, HQL097, and HQL103,
+stored under `frame_recommendations/`. HQL090 reused an already-labeled session, so it used three
+fold-1 seeds that all excluded that session; the two new sessions used the four fold models.
 
 Takes a video or a frame folder and returns the frames worth labelling by hand. Recommended frames
 average IoU 0.31 against 0.51 for random picks, with an oracle floor of 0.29 - 89% of the
@@ -151,6 +159,10 @@ zero and silently disables deduplication exactly when duplicates are common.
 
 Remaining work:
 
+- HQL097 is complete: contextual review produced 47 pupil masks, 14 all-black true negatives,
+  and 6 uncertain frames excluded from segmentation training. Label HQL103 next because it is a
+  genuinely new session. HQL090 is lower priority because development already contains that
+  session.
 - Fold the temporal signal into `implausibility_score` as a physiological bound rather than a
   separately weighted term - see [Sampling rate](#sampling-rate-and-pupil-dynamics). It currently
   defaults to weight 0 because it could not be validated on a sparsely sampled pool.
@@ -183,13 +195,12 @@ Remaining work:
 
 ## New Labels And Experiment Sequencing
 
-Status: decision pending; new labelled images expected the week of 2026-08-17
+Status: HQL097 integrated and outer holdout still frozen (2026-08-18)
 
-New sessions repack the folds and regenerate `splits.json`, so **every number measured on the
-current 222-image pool becomes non-comparable to anything measured after they land.** Configuration
-comparisons must live entirely within one pool version. That argues for holding items 2-5 above
-until the new labels are in, and doing only item 1 - which is analysis of existing sessions and
-needs no retraining - in the meantime.
+The pool is now 316 pairs across 19 sessions: 312 development pairs and the same 4-image outer
+holdout. HQL097 contributed 61 development pairs (47 visible pupils and 14 explicit empty-mask
+negatives); its 6 uncertain annotations are preserved separately and carry no segmentation mask.
+**No score from the 222- or 255-image pools is a matched comparison against this pool.**
 
 **Decide before the images are merged, because merging is irreversible in evaluation terms.**
 Nothing currently in the pool can judge the packaged checkpoint: it gradient-trained on 166 of the
@@ -197,25 +208,27 @@ Nothing currently in the pool can judge the packaged checkpoint: it gradient-tra
 so at session granularity it has seen everything. Genuinely new sessions are the only clean test it
 will ever get, and the moment they enter a training fold that value is gone.
 
-They would also unblock the gate. `run_train.py --final` currently raises because `splits.json`
-sets `n_holdout_sessions: 0`, so **no gated release candidate can be built at all**. A holdout
-costs 15-27% of the current pool, which is why none was set - but new sessions could supply one
-without giving up any existing training data.
+`260807_3582_Purple_trial3` contributes 29 development pairs;
+`260812_3582_Purple_trial5` contributes 4 holdout pairs and is assigned to no fold. All training
+filenames use the compact `frame_<five-digit-source-index>` form. HQL097's generated-mask JSON
+copies were removed after verification; the source annotations and six uncertain records remain
+available outside the paired training directories.
+
+New Labelme batches now enter through `training/import_labelme_batch.py`: preview first, then
+apply with `--refresh-splits`. The importer keeps uncertainty as image-level metadata outside
+segmentation training rather than inventing an "uncertain mask."
 
 Remaining work:
 
-- Decide whether some incoming sessions become the holdout gate rather than training data. Choose
-  by condition rather than by animal, per `training/data_splits.py --holdout`.
-- Record the session at intake for every new batch, per `training/data_collection.md`. Provenance
-  is recorded, never inferred - filenames are not parsed, and crop geometry, clustering, and file
-  mtime were all measured and rejected as fingerprints.
-- If item 1 above finds a signature that separates failing sessions, prioritise labelling
-  recordings that share it.
+- Keep trial5 untouched until the final schedule and prediction threshold are frozen from CV.
+- Record the session at intake for every future batch, per `training/data_collection.md`.
+- Train the matched 316-image baseline before interpreting whether the new negatives helped.
+- Label HQL103 next and add it as another development session rather than modifying trial5.
 
 ## Training Sampling Default
 
-Status: measured; `balance_training_sizes` still defaults to `True`, which the evidence
-contradicts. See `reports/2026-08-16-selection-metric-repair.md` section 3a.
+Status: fixed on 2026-08-17; `balance_training_sizes` defaults to `False`. See
+`reports/2026-08-16-selection-metric-repair.md` section 3a.
 
 Natural sampling beat size-balanced by **0.0354** mean per-session IoU, winning at all three
 seeds and in 8 of 12 matched (fold, seed) cells. The two arms differed only in
@@ -234,10 +247,7 @@ instead the only fold where balancing consistently wins (~0.015, seed sd 0.0099)
 shows up in folds with *ordinary* tiny counts, not in the starved one. Do not re-derive the
 oversampling-collapse story; it is not what the data shows.
 
-Remaining work:
-
-- Change the `balance_training_sizes` default to `False`. One line; the shipped checkpoint already
-  records `sampling: "natural"`, so the default has been diverging from practice.
+No code follow-up remains; use `--balance-sizes` only for an intentional comparison.
 
 ## Model-Selection Metric Fragility
 
@@ -257,7 +267,7 @@ Three changes, all in `training/run_train.py` and forwarded by `run_cv.py`:
 
 - `ReduceLROnPlateau` now runs on `val_loss` (`mode="min"`); `--scheduler-metric` overrides.
 - `--selection-metric {balanced_iou,macro_iou}` chooses what "best" means and also ranks threshold
-  candidates. Default left at `balanced_iou` so earlier runs stay reproducible.
+  candidates. Macro IoU is now the default; pass `balanced_iou` only to reproduce an older run.
 - `--selection-threshold` (default 0.5) compares epochs at one fixed threshold instead of each
   epoch's maximum over 11 candidates. `calibrated` restores the old behaviour.
 

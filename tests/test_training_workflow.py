@@ -16,6 +16,46 @@ size_balanced_sample_weights = TRAINING["size_balanced_sample_weights"]
 default_run_name = TRAINING["default_run_name"]
 TrainingConfig = TRAINING["TrainingConfig"]
 training_main = TRAINING["main"]
+make_final_training_dataset = TRAINING["make_final_training_dataset"]
+
+
+def test_grouped_training_defaults_to_macro_iou_selection():
+    assert TrainingConfig().selection_metric == "macro_iou"
+
+
+def test_final_refit_requires_a_development_frozen_threshold(tmp_path):
+    with pytest.raises(ValueError, match="final_prediction_threshold"):
+        TrainingConfig(split_manifest=tmp_path / "splits.json", final=True)
+
+
+def test_final_training_dataset_never_constructs_a_dataset_from_holdout_paths(
+    monkeypatch, tmp_path
+):
+    development = ([tmp_path / "dev.png"], [tmp_path / "dev_mask.png"])
+    holdout = ([tmp_path / "gate.png"], [tmp_path / "gate_mask.png"])
+    constructed = []
+
+    class FakeDataset:
+        def __init__(self, images, masks, augment):
+            constructed.append((images, masks, augment))
+
+    data_splits = make_final_training_dataset.__globals__["data_splits"]
+    monkeypatch.setattr(data_splits, "load_manifest", lambda _: {})
+    monkeypatch.setattr(data_splits, "final_paths", lambda *_: (development, holdout))
+    monkeypatch.setitem(make_final_training_dataset.__globals__, "SegmentationDataset", FakeDataset)
+
+    dataset, holdout_count = make_final_training_dataset(
+        TrainingConfig(
+            data_root=tmp_path,
+            split_manifest=tmp_path / "splits.json",
+            final=True,
+            final_prediction_threshold=0.55,
+        )
+    )
+
+    assert isinstance(dataset, FakeDataset)
+    assert constructed == [(development[0], development[1], True)]
+    assert holdout_count == 1
 
 
 def test_per_image_iou_does_not_let_a_large_mask_hide_a_missed_small_mask():
@@ -124,4 +164,38 @@ def test_terminal_entry_point_maps_arguments_to_training_config(monkeypatch, tmp
     assert config.finetune_learning_rate == pytest.approx(5e-5)
     assert config.n_epochs == 3
     assert not config.balance_training_sizes
+    assert config.selection_metric == "macro_iou"
     assert config.seed == 7
+
+
+def test_terminal_final_refit_maps_only_frozen_choices(monkeypatch, tmp_path):
+    captured = []
+    manifest = tmp_path / "splits.json"
+    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
+
+    assert (
+        training_main(
+            [
+                "--data-root",
+                str(tmp_path),
+                "--split-manifest",
+                str(manifest),
+                "--final",
+                "--final-prediction-threshold",
+                "0.55",
+                "--final-lr-milestones",
+                "5",
+                "10",
+                "--epochs",
+                "20",
+            ]
+        )
+        == 0
+    )
+
+    config = captured[0]
+    assert config.final
+    assert config.fold is None
+    assert config.final_prediction_threshold == pytest.approx(0.55)
+    assert config.final_lr_milestones == (5, 10)
+    assert config.n_epochs == 20

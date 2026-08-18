@@ -6,6 +6,7 @@ tests pin both ends of `training/promote_checkpoint.py`: the transform it
 applies, and the shape of the package data it produces.
 """
 
+import hashlib
 import json
 import runpy
 from pathlib import Path
@@ -120,6 +121,8 @@ def test_promotion_reproduces_the_packaged_metadata_shape():
     assert packaged["training"]["mode"] == shipped["training"]["mode"]
     assert packaged["training"]["sampling"] == shipped["training"]["sampling"]
     assert packaged["prediction_threshold"] == shipped["prediction_threshold"]
+    assert packaged["training"]["selection_metric"] == "balanced_iou"
+    assert packaged["training"]["split_manifest_sha256"] is None
 
     # A from-scratch run produces the identical shape; only provenance values differ.
     assert tuple(build_packaged_metadata(_scratch_run_metadata())) == tuple(shipped)
@@ -201,6 +204,66 @@ def test_promote_writes_the_three_packaged_files_and_refuses_to_clobber(tmp_path
 
     with pytest.raises(FileExistsError, match="--force"):
         promote(run_dir, checkpoints_dir=packaged_dir)
+
+
+def test_evaluated_final_refit_is_promotable(tmp_path):
+    run_dir = tmp_path / "final_candidate"
+    run_dir.mkdir()
+    torch.save({"final": torch.ones(1)}, run_dir / "final.pth")
+    checkpoint_hash = hashlib.sha256((run_dir / "final.pth").read_bytes()).hexdigest()
+    metadata = _run_metadata()
+    for key in (
+        "best_epoch",
+        "balanced_iou",
+        "macro_iou",
+        "macro_dice",
+        "size_iou",
+        "low_circularity_iou",
+    ):
+        metadata.pop(key)
+    metadata |= {
+        "workflow": "final_refit",
+        "trained_epochs": 40,
+        "checkpoint_sha256": checkpoint_hash,
+        "split_manifest_sha256": "manifest-hash",
+    }
+    (run_dir / "final.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (run_dir / "holdout.json").write_text(
+        json.dumps(
+            {
+                "checkpoint_sha256": checkpoint_hash,
+                "split_manifest_sha256": "manifest-hash",
+                "prediction_threshold": 0.4,
+                "balanced_iou": 0.81,
+                "macro_iou": 0.82,
+                "macro_dice": 0.88,
+                "size_iou": {"tiny": 0.7, "medium": 0.8, "large": 0.9},
+                "low_circularity_iou": 0.75,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "train.log").write_text("{}\nEpoch 001 | ...\n", encoding="utf-8")
+
+    targets = promote(run_dir, checkpoints_dir=tmp_path / "packaged")
+    packaged = json.loads(targets["metadata"].read_text(encoding="utf-8"))
+
+    assert packaged["best_epoch"] == 40
+    assert packaged["macro_iou"] == pytest.approx(0.82)
+    assert packaged["training"]["workflow"] == "final_refit"
+    assert packaged["training"]["split_manifest_sha256"] == "manifest-hash"
+    assert torch.load(targets["weights"], weights_only=True)["final"].item() == 1
+
+
+def test_final_refit_cannot_be_promoted_before_holdout_evaluation(tmp_path):
+    run_dir = tmp_path / "final_candidate"
+    run_dir.mkdir()
+    (run_dir / "final.pth").write_bytes(b"weights")
+    (run_dir / "final.json").write_text("{}", encoding="utf-8")
+    (run_dir / "train.log").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(FileNotFoundError, match="holdout.json"):
+        promote(run_dir, checkpoints_dir=tmp_path / "packaged")
 
 
 def test_packaged_metadata_states_the_scope_of_its_numbers():

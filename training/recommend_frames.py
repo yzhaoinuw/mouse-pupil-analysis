@@ -107,6 +107,18 @@ def resolve_output_dirs(args) -> tuple[Path, Path, str]:
     return frames_dir, promote_dir, stem
 
 
+def clear_generated_png_outputs(directory: Path, include_manifest: bool = False) -> None:
+    """Remove only files this command generates, leaving unrelated files untouched."""
+    if not directory.is_dir():
+        return
+    for path in directory.glob("*.png"):
+        path.unlink()
+    if include_manifest:
+        manifest = directory / "selection.csv"
+        if manifest.is_file():
+            manifest.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     source = parser.add_mutually_exclusive_group(required=True)
@@ -184,18 +196,26 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     frames_dir, promote_dir, name = resolve_output_dirs(args)
+    if frames_dir.resolve() == promote_dir.resolve():
+        parser.error("The extracted/input frames folder and recommendation output must differ.")
+    if args.video is not None and not args.video.is_file():
+        parser.error(f"No such video: {args.video}")
+    if args.video is None and not frames_dir.is_dir():
+        parser.error(f"No such directory: {frames_dir}")
 
     # Check both destinations before extracting or scoring anything: on a long recording
     # the committee pass takes minutes, and refusing to overwrite only at the end wastes
     # all of it.
     if promote_dir.exists() and any(promote_dir.iterdir()) and not args.force:
         parser.error(f"{promote_dir} is not empty. Pass --force to overwrite.")
+    if args.force:
+        clear_generated_png_outputs(promote_dir, include_manifest=True)
 
     if args.video is not None:
-        if not args.video.exists():
-            parser.error(f"No such video: {args.video}")
         if frames_dir.exists() and any(frames_dir.iterdir()) and not args.force:
             parser.error(f"{frames_dir} is not empty. Pass --force to overwrite.")
+        if args.force:
+            clear_generated_png_outputs(frames_dir)
         print(f"Extracting from {args.video.name} -> {frames_dir}")
         extract_selected_frames(
             args.video,
@@ -204,8 +224,6 @@ def main(argv: list[str] | None = None) -> int:
             max_frames=args.max_extracted,
             show_progress=True,
         )
-    elif not frames_dir.is_dir():
-        parser.error(f"No such directory: {frames_dir}")
 
     extracted = frames_from_image_directory(frames_dir)
     if not extracted:
@@ -283,8 +301,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nScore of picks {np.mean([values[i] for i in picked]):.3f} vs {median:.3f} median.")
     print(f"Wrote {manifest}")
     print(
-        "\nLabel these in Labelme, then convert with training/labelme_json2png.py and "
-        "record the session at intake per training/data_collection.md."
+        "\nLabel source frames in Labelme, then preview and apply the batch with "
+        "training/import_labelme_batch.py per training/data_collection.md."
     )
     return 0
 

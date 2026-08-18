@@ -25,9 +25,20 @@ def make_gif():
 
 def test_media_defaults_follow_repository_layout(make_gif):
     assert make_gif["PROJECT_ROOT"] == PROJECT_ROOT
+    assert make_gif["DEFAULT_RUN_DIR"] == PROJECT_ROOT / "gif_videos" / "readme_demo"
+    assert make_gif["DEFAULT_CSV"] == (
+        PROJECT_ROOT / "gif_videos" / "readme_demo" / "pupil_analysis_for_gif.csv"
+    )
+    assert make_gif["DEFAULT_OVERLAY_DIR"] == (
+        PROJECT_ROOT / "gif_videos" / "readme_demo" / "overlays"
+    )
     assert make_gif["DEFAULT_OUTPUT"] == (
         PROJECT_ROOT / "media" / "pupil_diameter_analysis_result_demo.gif"
     )
+    assert make_gif["DEFAULT_START_FRAME"] == 7107
+    assert make_gif["DEFAULT_END_FRAME"] == 7375
+    assert make_gif["DEFAULT_SAMPLE_EVERY"] == 1
+    assert make_gif["DEFAULT_FPS"] == 5.0
 
 
 def test_diagnostic_segment_keeps_rejected_run_and_neighboring_endpoints(make_gif):

@@ -74,6 +74,17 @@ In priority order. Spend the budget top-down.
 Within a session, prefer frames that are far apart in time and different in pupil size
 over consecutive frames. Consecutive frames at 97 Hz are the same image.
 
+Closed or fully occluded eyes can be high-value negative examples: the current failure mode
+mistakes the dark eye aperture for a pupil. If no pupil boundary is actually visible, represent
+the target as an all-black mask rather than outlining the aperture. Keep these negatives in a
+mixed batch with visible pupils; do not spend the whole session budget on eye closures.
+
+In Labelme, mark that explicit negative with one small `no_visible_pupil` shape; its geometry is
+ignored by `labelme_json2png.py`. If a pupil may be present but low contrast or occlusion makes
+the boundary unreliable, use one `uncertain` shape instead. An uncertain annotation creates no
+segmentation mask and must remain outside the session's training `images/` directory. Do not turn
+annotation uncertainty into an all-black target: that would teach a confident false negative.
+
 **How many per session?** Roughly 8–15 is the useful range. Below about 5 the session
 contributes little and makes a noisy validation fold when it is held out; above about
 20 it starts to dominate whichever fold holds it. The 62-image `5003` session is 28% of
@@ -168,27 +179,27 @@ folder, so they can also correct one.
 
 ## Adding a labelled batch to the split
 
-1. Drop the batch in as `labeled_frames/<session>/images/`, one folder per recording.
-   Convert the annotations to masks:
+1. Keep each Labelme JSON beside its source image. Preview the intake before it writes:
 
    ```bash
-   python training/labelme_json2png.py --data-root . --session <session>
+   python training/import_labelme_batch.py --source <annotation-folder> --session <session>
    ```
 
-   which writes each mask into `labeled_frames/<session>/masks/` beside its image. There
-   are no train/validation folders: the manifest decides what trains and what validates,
-   so adding data never moves a file and re-splitting never moves one either.
-2. Regenerate the manifest:
+   It validates all labels, image references, frame indices, and destinations together and
+   refuses to overwrite an existing session.
+2. Apply the import and refresh the frozen split in one command:
 
    ```bash
-   python training/data_splits.py --data-root . --out splits.json
+   python training/import_labelme_batch.py --source <annotation-folder> --session <session> --apply --refresh-splits
    ```
 
-   Every image already in `splits.json` keeps the session and fold it had. Only
-   genuinely new sessions are packed. A new image belonging to an existing session
-   inherits that session's fold. This is what keeps a cross-validation number from six
-   months ago comparable to one from today.
-3. Read the census it prints before training. Check that the new sessions landed in
+   `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON
+   pairs are archived under the session's `uncertain/` directory, outside the segmentation
+   pool, and receive no mask or current training loss. Every image already in `splits.json`
+   keeps its fold; only the genuinely new session is packed. There are no train/validation
+   source folders: the manifest decides what trains and validates, so re-splitting moves no
+   labelled file.
+3. Read the census it prints before training. Check that the new session landed in
    sensible folds, that no batch-fallback `NOTE` appeared unexpectedly, and that fold
    sizes and strata are still roughly even.
 4. Re-run cross-validation ([`README.md`](README.md#5-cross-validate-a-configuration)).
@@ -283,12 +294,17 @@ validated on never.
 
 ```bash
 python training/data_splits.py --data-root . --holdout HQL090_sleep251012 --out splits.json
-python training/run_train.py --split-manifest splits.json --final
+python training/run_train.py --split-manifest splits.json --final \
+    --final-prediction-threshold 0.5 --epochs <frozen epoch count>
+python training/evaluate_holdout.py --run-dir checkpoints_exp/<final run> \
+    --split-manifest splits.json --confirm-frozen
 ```
 
-`--final` trains on every non-holdout image and validates on the gate sessions. It is
-the only number in the project measured against data the training procedure was never
-tuned on.
+`--final` trains on every non-holdout image without loading the gate. Freeze the epoch
+count, optional learning-rate milestones, and prediction threshold from grouped
+development runs first. `evaluate_holdout.py` then evaluates that frozen checkpoint once,
+at the frozen threshold, and writes a non-overwritable `holdout.json`. That is the only
+number in the project measured against data the training procedure was never tuned on.
 
 **Choose the holdout by condition, not by animal.** Holding out a mouse tests animal
 generalisation, which the measurements above say is not the axis that breaks this model.

@@ -9,6 +9,7 @@ the bottom. Importing the module is side-effect free.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import math
@@ -88,6 +89,8 @@ class TrainingConfig:
     split_manifest: Path | None = None
     fold: int | None = None
     final: bool = False
+    final_prediction_threshold: float | None = None
+    final_lr_milestones: tuple[int, ...] = ()
     use_attention: bool = True
     batch_size: int = 8
     scratch_learning_rate: float = 1e-3
@@ -127,14 +130,14 @@ class TrainingConfig:
     # can hold one or two images, so a single noisy image swings a third of the metric;
     # ``macro_iou`` averages over images instead and is what the first grouped sweep showed
     # to be the stabler selection signal. See reports/2026-08-16-selection-metric-repair.md.
-    selection_metric: str = "balanced_iou"
+    selection_metric: str = "macro_iou"
     # The learning-rate plateau signal. Driving it from a size-bin IoU let one spiking epoch
     # define the high-water mark and decay the rate to its floor while the model was still
     # improving; validation loss is the quantity the gradient actually descends.
     scheduler_metric: str = "val_loss"
     # Threshold used for the per-epoch selection comparison only. ``None`` restores the old
     # behaviour of selecting on the best of ``threshold_candidates``, which makes each epoch's
-    # score a maximum over 11 draws before the epoch maximum is taken on top of it. The
+    # score a maximum over several draws before the epoch maximum is taken on top of it. The
     # metadata written for the winning epoch is always fully calibrated either way.
     selection_threshold: float | None = 0.5
     console_interval: int = 10
@@ -151,6 +154,15 @@ class TrainingConfig:
             )
         if self.final and self.split_manifest is None:
             raise ValueError("final needs split_manifest: the holdout is recorded there.")
+        if self.final and self.final_prediction_threshold is None:
+            raise ValueError(
+                "final needs final_prediction_threshold, frozen from development data before "
+                "the holdout is evaluated."
+            )
+        if not self.final and self.final_prediction_threshold is not None:
+            raise ValueError("final_prediction_threshold is only valid for a final refit.")
+        if not self.final and self.final_lr_milestones:
+            raise ValueError("final_lr_milestones is only valid for a final refit.")
         if not self.final and (self.split_manifest is None) != (self.fold is None):
             raise ValueError(
                 "split_manifest and fold must be given together: a manifest selects the "
@@ -176,6 +188,15 @@ class TrainingConfig:
             raise ValueError(f"scheduler_metric must be one of {', '.join(SCHEDULER_METRICS)}.")
         if self.selection_threshold is not None and not 0 < self.selection_threshold < 1:
             raise ValueError("selection_threshold must be a probability between 0 and 1.")
+        if (
+            self.final_prediction_threshold is not None
+            and not 0 < self.final_prediction_threshold < 1
+        ):
+            raise ValueError("final_prediction_threshold must be a probability between 0 and 1.")
+        if any(epoch <= 0 or epoch >= self.n_epochs for epoch in self.final_lr_milestones):
+            raise ValueError("final_lr_milestones must fall strictly between 0 and n_epochs.")
+        if tuple(sorted(set(self.final_lr_milestones))) != self.final_lr_milestones:
+            raise ValueError("final_lr_milestones must be sorted and unique.")
         if self.tiny_max_diameter >= self.large_min_diameter:
             raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
         if not 0 <= self.promotion_target_iou <= 1:
@@ -223,8 +244,10 @@ def make_split_datasets(
     in one flat ``labeled_frames`` / ``labeled_masks`` pool, so that path now applies only
     to a dataset still laid out the old way -- ``sample_data`` among them.
 
-    Under ``final``, training takes every image the folds were allowed to see and
-    validation is the recorded holdout, which no fold ever trained or validated on.
+    Final refits deliberately use :func:`make_final_training_dataset` instead. The
+    outer holdout must never become this function's validation dataset, because doing
+    so would let it control the scheduler, early stopping, checkpoint selection, and
+    threshold calibration.
     """
     if config.split_manifest is None:
         if not (config.data_root / "images_train").is_dir():
@@ -246,15 +269,30 @@ def make_split_datasets(
             ),
         )
 
-    manifest = data_splits.load_manifest(config.split_manifest)
     if config.final:
-        train, validation = data_splits.final_paths(manifest, config.data_root)
-    else:
-        train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
+        raise ValueError(
+            "A final refit has no validation dataset; use make_final_training_dataset()."
+        )
+    manifest = data_splits.load_manifest(config.split_manifest)
+    train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
     return (
         SegmentationDataset(train[0], train[1], augment=True),
         SegmentationDataset(validation[0], validation[1], augment=False),
     )
+
+
+def make_final_training_dataset(config: TrainingConfig) -> tuple[SegmentationDataset, int]:
+    """Return all non-holdout pairs and the untouched holdout size.
+
+    The holdout paths are counted for the run record but are never put in a Dataset or
+    DataLoader here. ``training/evaluate_holdout.py`` is the only workflow that reads
+    those labels, after the refit's weights and prediction threshold are frozen.
+    """
+    if not config.final or config.split_manifest is None:
+        raise ValueError("make_final_training_dataset requires a final configuration.")
+    manifest = data_splits.load_manifest(config.split_manifest)
+    train, holdout = data_splits.final_paths(manifest, config.data_root)
+    return SegmentationDataset(train[0], train[1], augment=True), len(holdout[0])
 
 
 def split_description(config: TrainingConfig) -> str:
@@ -266,8 +304,8 @@ def split_description(config: TrainingConfig) -> str:
     if config.final:
         gate = data_splits.holdout_sessions(manifest)
         return (
-            f"{name} final run: trained on every non-holdout image, validated on the "
-            f"{len(gate)} gate session(s): {', '.join(sorted(gate))}"
+            f"{name} final refit: trained on every non-holdout image for a fixed schedule; "
+            f"{len(gate)} untouched holdout session(s) are not loaded: {', '.join(sorted(gate))}"
         )
     held_out = data_splits.fold_sessions(manifest, config.fold)
     gate = data_splits.holdout_sessions(manifest)
@@ -375,7 +413,7 @@ def evaluate_thresholds(
     tiny_max_diameter: float,
     large_min_diameter: float,
     low_circularity_cutoff: float,
-    metric: str = "balanced_iou",
+    metric: str = "macro_iou",
 ) -> ValidationReport:
     """Score every candidate threshold and return the one maximising ``metric``.
 
@@ -437,6 +475,15 @@ def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
         value = values[key]
         values[key] = None if value is None else str(value)
     return values
+
+
+def file_sha256(path: Path) -> str:
+    """Return a stable fingerprint for a manifest, checkpoint, or other run input."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def training_mode(config: TrainingConfig) -> str:
@@ -511,7 +558,9 @@ def _write_metadata(
         "size_iou": report.size_iou,
         "low_circularity_iou": report.low_circularity_iou,
         "learning_rate": learning_rate,
-        "meets_promotion_target": report.balanced_iou >= config.promotion_target_iou,
+        "meets_promotion_target": (
+            getattr(report, config.selection_metric) >= config.promotion_target_iou
+        ),
         "config": _jsonable_config(config),
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -571,12 +620,135 @@ def evaluate_checkpoint(
         config.tiny_max_diameter,
         config.large_min_diameter,
         config.low_circularity_cutoff,
+        config.selection_metric,
     )
     return val_loss, report
 
 
+def run_final_training(config: TrainingConfig) -> Path:
+    """Refit on all development sessions without loading the outer holdout.
+
+    Cross-validation must freeze ``n_epochs``, the optional deterministic learning-rate
+    milestones, and ``final_prediction_threshold`` before this function is called. The
+    refit therefore has no validation loop, scheduler driven by labels, early stopping,
+    or checkpoint selection. Its output can be scored exactly once with
+    ``training/evaluate_holdout.py``.
+    """
+    if not config.final:
+        raise ValueError("run_final_training requires final=True.")
+
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
+
+    train_dataset, holdout_examples = make_final_training_dataset(config)
+    split = split_description(config)
+    print(f"Split: {split}")
+    print(f"Holdout labels not loaded ({holdout_examples} image(s)).")
+
+    sampler = None
+    if config.balance_training_sizes:
+        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
+        print(f"Training target counts by size: {dict(size_counts)}")
+
+    device = resolve_device(config.device)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.batch_size,
+        shuffle=sampler is None,
+        sampler=sampler,
+        pin_memory=device.type == "cuda",
+    )
+    learning_rate = initial_learning_rate(config)
+    if config.finetune_checkpoint is None:
+        model = UNet(use_attention=config.use_attention).to(device)
+    else:
+        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
+
+    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    run_name = config.run_name or default_run_name(config)
+    run_dir = config.checkpoint_dir / run_name
+    if run_dir.exists() and any(run_dir.iterdir()):
+        raise FileExistsError(
+            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
+            "remove the old experimental run deliberately."
+        )
+    run_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = run_dir / "final.pth"
+    metadata_path = run_dir / "final.json"
+    log_path = run_dir / "train.log"
+    print(f"Run directory: {run_dir}")
+    print(f"Device: {device.type}")
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = (
+        optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=list(config.final_lr_milestones),
+            gamma=0.5,
+        )
+        if config.final_lr_milestones
+        else None
+    )
+
+    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
+        header = run_header(config, len(train_dataset), device) | {
+            "workflow": "final_refit",
+            "holdout_examples": holdout_examples,
+            "holdout_loaded": False,
+        }
+        log_file.write(json.dumps(header, sort_keys=True) + "\n")
+        for epoch in range(1, config.n_epochs + 1):
+            model.train()
+            total_loss = 0.0
+            total_images = 0
+            for images, masks in train_loader:
+                images, masks = images.to(device), masks.to(device)
+                optimizer.zero_grad(set_to_none=True)
+                loss = criterion(model(images), masks)
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item() * len(images)
+                total_images += len(images)
+            if scheduler is not None:
+                scheduler.step()
+            train_loss = total_loss / total_images
+            current_lr = optimizer.param_groups[0]["lr"]
+            log_line = f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | LR: {current_lr:g}"
+            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.n_epochs:
+                print(log_line)
+            log_file.write(log_line + "\n")
+
+    torch.save(model.state_dict(), checkpoint_path)
+    manifest_path = Path(config.split_manifest)
+    manifest = data_splits.load_manifest(manifest_path)
+    payload = {
+        "run_name": run_dir.name,
+        "workflow": "final_refit",
+        "training_mode": training_mode(config),
+        "training_examples": len(train_dataset),
+        "trained_epochs": config.n_epochs,
+        "prediction_threshold": config.final_prediction_threshold,
+        "split": split,
+        "split_manifest_sha256": file_sha256(manifest_path),
+        "holdout_sessions": sorted(data_splits.holdout_sessions(manifest)),
+        "holdout_examples": holdout_examples,
+        "checkpoint_sha256": file_sha256(checkpoint_path),
+        "config": _jsonable_config(config),
+    }
+    metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"Final refit weights: {checkpoint_path}")
+    print(f"Frozen run metadata: {metadata_path}")
+    print("Holdout remains untouched; evaluate it once with training/evaluate_holdout.py.")
+    return checkpoint_path
+
+
 def run_training(config: TrainingConfig) -> Path:
     """Run training and return the stable path holding the best model weights."""
+    if config.final:
+        return run_final_training(config)
+
     random.seed(config.seed)
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
@@ -677,7 +849,7 @@ def run_training(config: TrainingConfig) -> Path:
                 config.selection_metric,
             )
             # The reported threshold is calibrated over every candidate, but selecting on that
-            # maximum makes each epoch's score a max over 11 draws, and the epoch maximum is
+            # maximum makes each epoch's score a max over several draws, and the epoch maximum is
             # then taken on top of it. Compare epochs at one fixed threshold instead.
             selection_report = (
                 report
@@ -807,8 +979,23 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--final",
         action="store_true",
-        help="Release-candidate run: train on every non-holdout image and validate on the "
-        "manifest's gate sessions. Requires --split-manifest, excludes --fold.",
+        help="Final refit: train on every non-holdout image for a fixed schedule without "
+        "loading the holdout. Requires --split-manifest and "
+        "--final-prediction-threshold; excludes --fold.",
+    )
+    parser.add_argument(
+        "--final-prediction-threshold",
+        type=float,
+        help="Prediction threshold frozen from development/CV before a --final refit. The "
+        "outer holdout never calibrates it.",
+    )
+    parser.add_argument(
+        "--final-lr-milestones",
+        type=int,
+        nargs="*",
+        default=(),
+        help="Optional sorted epochs at which a --final refit's learning rate is halved. "
+        "Freeze these from development runs before evaluating the holdout.",
     )
     parser.add_argument(
         "--learning-rate",
@@ -829,10 +1016,10 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--selection-metric",
         choices=SELECTION_METRICS,
-        default="balanced_iou",
+        default="macro_iou",
         help="Validation metric that decides the best checkpoint and early stopping. "
         "'balanced_iou' weights the size bins equally, so a bin holding one or two images "
-        "swings a third of it; 'macro_iou' averages over images instead.",
+        "swings a third of it; 'macro_iou' averages over images instead (default).",
     )
     parser.add_argument(
         "--scheduler-metric",
@@ -919,6 +1106,8 @@ def main(argv: list[str] | None = None) -> int:
             ),
             fold=args.fold,
             final=args.final,
+            final_prediction_threshold=args.final_prediction_threshold,
+            final_lr_milestones=tuple(args.final_lr_milestones),
             use_attention=not args.no_attention,
             batch_size=args.batch_size,
             n_epochs=args.epochs,

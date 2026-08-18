@@ -115,3 +115,15 @@ def test_spread_picks_honours_minimum_spacing():
 def test_spread_picks_fills_the_budget_when_constraints_cannot_be_met():
     """Returning fewer frames than asked for would silently shrink the labelling batch."""
     assert len(recommend.spread_picks([0, 1, 2, 3], budget=3, min_gap=99)) == 3
+
+
+def test_force_cleanup_removes_only_generated_files(tmp_path):
+    (tmp_path / "old.png").write_bytes(b"old")
+    (tmp_path / "selection.csv").write_text("old", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("keep", encoding="utf-8")
+
+    recommend.clear_generated_png_outputs(tmp_path, include_manifest=True)
+
+    assert not (tmp_path / "old.png").exists()
+    assert not (tmp_path / "selection.csv").exists()
+    assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "keep"

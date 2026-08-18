@@ -2,6 +2,143 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-18
+
+### Integrate HQL097 pupil, closed-eye, and uncertain annotations (Codex, GPT-5)
+
+- Audited all 67 Labelme annotations beside their 307 x 198 source frames. The batch contains
+  exactly one supported label per frame: 47 `pupil`, 14 `no_visible_pupil`, and 6 `uncertain`.
+  Contact-sheet review confirmed the pupil polygons follow the visible boundary, the negatives
+  are fully closed or occluded, and the uncertain squints should not receive segmentation loss.
+- Made `labelme_json2png.py` validate the three-label contract. Pupil polygons are rasterized
+  directly, explicit negatives become exact image-sized all-black masks, uncertain annotations
+  produce no mask, and unknown or contradictory labels fail before writing output. Direct
+  rasterization removes the unavailable `labelme_export_json` console-command dependency.
+- Added `training/import_labelme_batch.py` as the reproducible intake boundary that was missing
+  from the documentation. It previews by default, validates the whole source batch before any
+  write, refuses an existing session, creates compact image/mask pairs without redundant JSON
+  copies, archives uncertain image/JSON pairs outside training, and can refresh the manifest and
+  materialized folds. A real-batch smoke reproduced all 61 HQL097 image and mask hashes exactly.
+- Added 61 compactly named HQL097 image/mask pairs to development: 47 nonempty pupil masks and
+  14 empty negatives. Preserved the 6 uncertain image/JSON pairs under the session's
+  `uncertain/` folder, outside `images/`, and removed the 61 generated-mask JSON copies after
+  verification; the original 67 source annotations remain in `frame_recommendations/`.
+- Refreshed the frozen grouped manifest and materialized folds. The pool now has 316 pairs across
+  19 sessions: 312 development pairs and the unchanged 4-image trial5 holdout. HQL097 entered
+  fold 4; all 255 earlier assignments were carried over unchanged. Fold sizes are 76/58/73/105,
+  so the next action is a matched 316-image baseline before changing any training configuration.
+- Verification: the focused converter/importer tests pass; Ruff and Black pass repository-wide;
+  `git diff --check` is clean; and the full test suite passes when the Conda Scripts path is
+  injected inside the pytest process. The initial plain-shell pytest attempt hit only the known
+  desktop PATH isolation for `run-pupil-analysis`; rerunning through the documented environment
+  workaround passed. Wheel and source-distribution builds also pass: the wheel retains the
+  packaged checkpoint/metadata and excludes training sources, while the source distribution
+  contains the importer and `sample_data/splits.json`.
+
+## 2026-08-17
+
+### Intake two new sessions and train the active-learning committee (Codex, GPT-5)
+
+- Audited the two Desktop batches before intake. All 29 `260807_3582_Purple_trial3`
+  image/mask pairs and all 4 `260812_3582_Purple_trial5` pairs had exact session prefixes,
+  one-to-one stems, unique trailing frame indices, matching dimensions, binary nonempty masks,
+  and no orphans. Visual review confirmed trial5's very small masks align with genuinely
+  constricted pupils rather than a grouping error.
+- Added trial3 to development and froze trial5 as the outer holdout. The manifest now records
+  255 pairs across 18 sessions: 251 development images in 17 sessions and 4 untouched holdout
+  images. Trial5 belongs to no CV fold and was neither loaded nor scored during this session.
+- Added `training/compact_frame_names.py` and renamed all 255 local pairs to
+  `frame_<five-digit-source-index>.png` within their session. Hash checks confirmed the existing
+  222 image/mask contents were unchanged; the 33 Desktop source/destination PNG hashes also match.
+  Removed the 222 obsolete Labelme JSON files after masks were verified; no JSON remains under
+  `labeled_frames/`.
+- Made legacy-copy suppression compare image/mask content rather than basenames, so the retained
+  verbose-name legacy backups do not re-enter the census after compact renaming.
+- Trained a four-model scratch committee with natural sampling and macro-IoU selection in
+  `checkpoints_exp/cv255_nat_macro_20260817`. Fold macro IoUs were 0.7754, 0.4990, 0.5400, and
+  0.6701; mean per-session IoU was 0.6468 and image-weighted IoU was 0.6246. Trial3 scored 0.6318
+  when held out in fold 2. The two known aperture-grab sessions remain the worst (0.2605 and
+  0.1678), with predicted-to-labelled area ratios of 3.82x and 6.37x.
+- Frame recommendation is ready to use with the four saved `best.pth` files. No new unlabeled
+  pupil video is currently visible on Desktop or in the repository; `videos/eye.avi` is an older
+  July demo recording with existing review outputs, so it was intentionally not treated as the
+  incoming batch.
+- Verification:
+  - Focused split/intake/rename checks passed (58 tests); every manifest path exists, the holdout
+    is in no fold, all 255 pairs are accounted for, and no Labelme JSON remains.
+  - CUDA training completed all four folds on the RTX 3070 Laptop GPU and wrote four checkpoints,
+    metadata files, logs, and the CV summary in 25 minutes.
+  - Ruff, Black, `git diff --check`, and the full test suite passed. Pytest required a repository-
+    local temporary directory and injecting the Conda Scripts path inside Python because the
+    desktop sandbox cannot access its default temp root and strips that path at startup.
+  - An end-to-end smoke loaded all four checkpoints on CUDA, scored one three-frame unlabeled
+    fixture recording, and wrote two recommendations plus `selection.csv`; smoke output was removed.
+
+### Clean local media layout and recommend the next label batch (Codex, GPT-5)
+
+- Separated local media by purpose. `movies/` now contains only the three new source AVIs;
+  `gif_videos/readme_demo/` contains one 90-row analysis CSV and the exact 90 overlays needed by
+  the promoted README GIF; `frame_recommendations/` contains extracted candidates and label picks.
+  Added all three local-data roots to `.gitignore` and updated the GIF generator's defaults.
+- Proved the GIF cleanup boundary before moving anything: rebuilding from the retained CSV and
+  overlays produced SHA-256 `FDB94655...E9449A`, byte-identical to both the tracked README GIF and
+  its formerly selected local candidate. Updated the no-argument defaults to the actual 7,107-
+  7,375 frame window at 5 fps and reproduced the same hash again after the move. The retained
+  source is about 2.3 MB.
+- The safety guard refused permanent deletion of the remaining historical `videos/` tree because
+  it includes the old 430 MB `eye.avi` and full analysis runs, not only disposable GIF candidates.
+  Its exact unused remainder is preserved pending explicit deletion confirmation: 10,152 files,
+  0.844 GiB across `eye.avi`, two full eye-review runs, old candidates, two reconstructed demo
+  workspaces, and the two duplicate result files left in `main_demo_warning`.
+- Detected session leakage before scoring `HQL090_sleep251012_010_eye.avi`: fold models 0, 2, and
+  3 trained on labeled frames from that session. Trained fold-1 seeds 1 and 2 and combined them
+  with seed 0, giving HQL090 a three-member committee that excluded the session and outer holdout.
+  HQL097 and HQL103 are new sessions and used the original four-fold seed-0 committee.
+- Sampled 2,000 evenly spaced frames across each approximately 30-minute movie and selected 20
+  unique frames per recording. Selected-score mean versus recording median was 0.786 vs 0.443 for
+  HQL090, 0.783 vs 0.490 for HQL097, and 0.873 vs 0.563 for HQL103. Each set spans at least 92% of
+  its recording. Visual spot checks found both strongly occluded/closed-eye negatives and visible
+  pupil examples; the occlusions explain the top-ranked near-maximal disagreement.
+- Verification: Ruff, Black, `git diff --check`, and the full test suite passed. Each recommendation
+  folder has exactly 2,000 extracted PNGs, 20 unique picks, and 20 matching `selection.csv` rows.
+
+### Harden grouped training and make the outer holdout genuinely one-shot (Codex, GPT-5)
+
+- Replaced the leaking `--final` workflow. A final refit now trains every non-holdout pair for
+  an epoch count and optional learning-rate milestones frozen from development runs, at a frozen
+  prediction threshold. It creates no holdout Dataset or DataLoader and has no validation-driven
+  scheduler, early stopping, threshold calibration, or best-checkpoint selection.
+- Added `training/evaluate_holdout.py` as the separate one-shot gate. It verifies the checkpoint
+  and manifest hashes, scores exactly the frozen threshold, records per-session and worst-session
+  IoU, and refuses to overwrite `holdout.json`. Promotion accepts a final run only after that file
+  exists and rejects mismatched or modified final artifacts.
+- Changed checkpoint selection to macro IoU by default and kept validation loss as the scheduler
+  signal. Promotion metadata now records the workflow, selector, scheduler, selection threshold,
+  calibration grid, and split-manifest hash; the installed checkpoint metadata was backfilled
+  honestly as an older development-selected run with no grouped-manifest hash.
+- Hardened split and output handling. Changing the recorded fold count now requires `--reassign`;
+  materialization never replaces the data root, a file, or a nonempty unmarked directory; forced
+  frame recommendation removes stale generated PNGs/CSV while preserving unrelated files; and
+  exact legacy copies retained after migration are not counted twice.
+- Changed natural sampling and macro-IoU selection from measured recommendations into actual
+  defaults. Updated the training/data-collection guides to distinguish development, final refit,
+  and one-shot holdout evaluation. Added `sample_data/splits.json` to source distributions.
+- Audited the local data before starting a real run. The visible legacy folders contain 166 + 56
+  pairs, exactly matching all 222 entries already recorded in `splits.json`; no additional labelled
+  pair is visible and the manifest has no holdout. Copied those pairs and their Labelme JSON files
+  into the ignored 16-session `labeled_frames/` layout without moving the originals; all source and
+  destination hashes match. A fresh census remains 222 images because retained exact legacy copies
+  are ignored.
+- Verification:
+  - Ruff, Black, `git diff --check`, and the full 152-test suite passed. The console launcher test
+    required adding the Conda Scripts directory inside the Python process because this desktop
+    sandbox strips it at interpreter startup; the launcher itself and both `--help` checks pass.
+  - A one-epoch sample-data smoke completed the final refit, one-shot holdout evaluation, and final
+    promotion dry run. The smoke's metric is intentionally meaningless and was not treated as a
+    model result.
+  - Wheel and source-distribution builds passed. Both retain the packaged checkpoint, JSON, and
+    training log; the sdist also contains `sample_data/splits.json` and the holdout evaluator.
+
 ## 2026-08-16
 
 ### Diagnose the transfer failure and ship frame recommendation (Claude, Opus 5)
@@ -580,161 +717,3 @@ Prepend new session notes to the top of this file. The live log holds at most th
   - The full local Pytest suite passed (`65 passed`), including a direct `pytest` console-entry run of the namespace regressions.
   - A clean wheel and sdist passed the shared verifier, contained no `pupil_tracking/` members, and retained the packaged checkpoint and both unchanged console commands. A clean wheel installation exposed only `mouse_pupil_analysis`.
   - Both GitHub Actions runs passed across lint, wheel smoke, Ubuntu Python 3.10-3.13, Windows 3.12, and macOS 3.12.
-
-## 2026-08-11
-
-### Drop the legacy namespace instead of hardening it (Claude Code, Opus 5)
-
-- Reviewed the rename commit and found that the compatibility wrappers re-exported with `import *`, which honors `__all__`. Because the rename added `__all__` to `mouse_pupil_analysis/run_pupil_analysis.py`, `from pupil_tracking.run_pupil_analysis import run_analysis` raised `ImportError` even though the commit's stated goal was preserving legacy imports. Opened #3 fixing that by forwarding through a module-level `__getattr__`.
-- **Superseded that fix in favor of removing the shim, per review.** The reviewer's objection was decisive and correct: the unrelated PyPI distribution `pupil-tracking==1.0.1` installs the exact path `pupil_tracking/__init__.py`, so shipping the shim would give two distributions ownership of one import namespace. Verified against the published wheel rather than assuming, and measured the consequence in clean virtual environments:
-  - Installing `pupil-tracking` then `mouse-pupil-analysis` silently overwrote the unrelated project's `__init__.py` with our shim, leaving `pip list` reporting `pupil-tracking 1.0.1` as installed.
-  - Uninstalling `mouse-pupil-analysis` then deleted the shared file, leaving `pupil-tracking 1.0.1` still listed while `import pupil_tracking` raised `ModuleNotFoundError`. An unrelated third-party package was destroyed by our uninstall.
-  - The reverse order broke our own shim instead: `pupil_tracking.analyze_video` raised `AttributeError`. Both orders fail, and pip reports success throughout.
-- Removed `pupil_tracking/`, dropped `pupil_tracking*` from the setuptools include list, and removed the shim tests, CI/release shim smoke checks, and deprecation wording from `README.md`, `RELEASING.md`, `CHANGELOG.md`, `../AGENTS.md`, and `../project_overview.md`.
-- Added regressions so the namespace cannot return: `tests/test_metadata.py` asserts the packaging config and working tree never reintroduce it and that both console scripts still target `mouse_pupil_analysis`, and CI plus the release workflow fail on any `pupil_tracking/` member in a built wheel or sdist. The release check runs before publication, since a PyPI version can never be reused.
-- Reverted the `media/` and `training/` Conda environment names to `mouse_pupil_analysis` at the maintainer's direction. Those examples target contributors following `README.md`, whereas the `pupil_tracking` name in `../AGENTS.md` and `.copier-answers.yml` describes this checkout's existing local environment; the two intentionally do not match.
-- Left commit `23cab15`'s literal `\n` characters alone, per the maintainer's decision not to rewrite the already-pushed shared `dev` branch.
-- Verification:
-  - `ruff check .`, `black --check .`, and the full Pytest suite passed (`62 passed`).
-  - A clean wheel and sdist build contained no `pupil_tracking/` members, kept the checkpoint and training log under `mouse_pupil_analysis/checkpoints/`, and retained both console entry points targeting `mouse_pupil_analysis`.
-  - Installed the wheel into a clean environment alongside `pupil-tracking==1.0.1` in both orders and confirmed the two distributions no longer share any file.
-
-### Adopt the permanent mouse-pupil-analysis identity (Codex, GPT-5)
-
-- Renamed the primary Python package from `pupil_tracking` to `mouse_pupil_analysis`, matching the already-selected `mouse-pupil-analysis` distribution and the forthcoming GitHub repository name. Kept `run-pupil-analysis` and `extract-frames` unchanged so existing command-line habits continue to work.
-- Retained `pupil_tracking` as a deprecated forwarding package, including the former module paths and direct `python -m` entry points. New code, tests, training utilities, CI, release automation, package data, documentation, and citation metadata use `mouse_pupil_analysis`.
-- Updated release guidance for the repository rename. The remaining account work is to register the pending PyPI publisher with repository `mouse-pupil-analysis` and, after the rename, confirm that Zenodo still has the renamed repository enabled.
-- Verification:
-  - `ruff check .`, `black --check .` (45 files unchanged), and `git diff --check` passed.
-  - Full Pytest suite passed (`61 passed`); the expected `mouse_pupil_analysis.dataset` deprecation warning remains.
-  - A clean wheel and source distribution build each contained the checkpoint and matching training log only under `mouse_pupil_analysis/checkpoints/`. The source distribution also retained all 71 sample-data entries and four training entries.
-  - The wheel entry points remain `run-pupil-analysis` and `extract-frames`, both targeting `mouse_pupil_analysis`; both `--help` invocations passed from a clean wheel installation.
-  - Clean-install checks confirmed the primary import, the deprecated `pupil_tracking` forwarding import and warning, and version `0.2.0`.
-
-### Make the demo GIF script headless-safe (Claude Code, Opus 5)
-
-- `media/make_gif.py` still created figures through `pyplot`, so it carried the same interactive-backend dependency that was removed from the package. It writes a GIF and never calls `plt.show()`, so it was requesting a GUI backend it never used and would fail on any machine without a display.
-- Pinned the backend with `matplotlib.use("Agg")`. Placed after the import block rather than between imports, because this repository's Ruff configuration enables `E402`; verified that backend resolution is lazy enough for that to still take effect before the first figure is created.
-- Chose the one-line backend pin over converting the script to direct `Figure` construction, as the user selected. It is a maintainer script rather than library code, and the script never displays anything, so nothing observable changes.
-- Verification:
-  - Loaded the script through `runpy` with `tkinter` and `_tkinter` imports blocked and `MPLBACKEND=TkAgg` forced, then rendered a figure at the same call site that previously failed. Backend resolved to `Agg`.
-  - `ruff check .`, `black --check .`, `pytest` (`60 passed`), and `make_gif.py --help` unchanged.
-
-### Align center and speed unit wording with the diameter contract (Claude Code, Opus 5)
-
-- Applied the same input-image qualification to pupil-center coordinates and speed that the diameter column already carried. `model_to_original_coordinates` maps through `original_size`, which is the supplied image, so centers are source-video pixels only for video input; with `--image_dir` they follow whatever the caller prepared. Updated the README output table and units section, the tracking plot's center axis label, the `DiameterRow` and `resize_scale` docstrings, `sample_data/README.md`, `next_steps.md`, and three test comments. The calculation is unchanged; only the claims about it were wrong.
-- **Correcting the previous entry's dismissal of the `git diff --check` warning.** That entry reported `git diff --check` clean, which was true but answered the wrong question: `git diff --check` compares the worktree to the index, whereas the pull-request diff is `git diff origin/dev...refactor`. Against the base there was a genuine `new blank line at EOF` warning on `work_log.md`, now removed. The earlier reasoning about the `\\ No newline at end of file` markers appearing on removed lines remains correct and is a separate matter.
-- Tightened the release ancestry gate to `origin/main` only, per the user's decision. A PyPI version number can never be reused, so a published release must correspond to code that reached the default branch. `RELEASING.md` now shows the `dev` to `main` merge as an explicit step before tagging.
-- Verification:
-  - `ruff check .`, `black --check .`, `pytest` (`60 passed`).
-  - `git diff origin/dev...HEAD --check` clean after committing.
-  - Confirmed no `video pixel` or `original-video` wording remains outside `work_log.md`, which is retained as an append-only historical record.
-
-### Address the pull-request review on #2 (Claude Code, Opus 5)
-
-- Renamed `pupil_diameter_video_pixels` to `pupil_diameter_input_pixels`. The reviewer was right that the value derives from the supplied PNG's dimensions, not the source video; with `--image_dir` and already-preprocessed 148 x 148 frames it equals the model-pixel column, which one of this branch's own tests asserts. Narrowed the README claim: removing the model rescaling does not make recordings comparable unless their optics match.
-- Rebuilt the changelog against actual tag contents. The previous backfill credited the velocity feature, unified outputs, overlays, and the module split to `v0.1.4`, but that tag was cut 2026-06-12 and all of that work landed in August. Everything post-tag now sits under 0.2.0. Confirmed from `pyproject.toml` history that the version went 0.1.2 straight to 0.1.4, so 0.1.3 was never released and is noted as such rather than invented.
-- Extracted `paired_image_mask_paths(...)` into `pupil_tracking/augmentation.py` and used it from both `training/run_train.py` and `training/check_augmentation.py`. The earlier fix covered only `run_train.py`; the augmentation viewer still sorted the two directories independently, which is the same silent-mispairing bug. Orphan masks are now rejected by default with an `allow_orphan_masks` escape hatch, and the helper lives in the package so it is importable and testable without executing a training script.
-- Restored the deprecated `PupilDataset` shim's original positional signature. As written it accepted only `(image_paths, mask_paths, **kwargs)`, so `PupilDataset(images, masks, True)` raised `TypeError`. Documented that it is now a factory function, so `isinstance` and subclassing no longer work, rather than implying full compatibility.
-- Added `show_progress`, defaulting to off, to inference and frame extraction. Converting `print` to logging had left `tqdm` writing to stderr unconditionally, so the claim that library callers get no output was false. Verified a library call now emits zero bytes on both streams while the CLI is unchanged.
-- Corrected the CUDA install instructions. The `cu124` index stops at PyTorch 2.6.0, below this package's `torch>=2.8` floor, so that command could not have worked; `cu126`, `cu128`, and `cu129` carry 2.8 or newer. Removed the hardcoded wheel-size figures, which drift between releases.
-- Hardened the release workflow: it now resolves the single packaged checkpoint and requires that exact file plus its matching training log in both artifacts, rejects stray checkpoints, and refuses to publish from a commit that is not an ancestor of `origin/main` or `origin/dev`. Checkout uses full history so the ancestry check can resolve merge bases.
-- Smaller documentation corrections: default result directory for video input is `<stem>_result`, not `<stem>_frames_result`; the `analyze_frames` velocity example was missing `calculate_velocity=True`, without which `acquisition_fps` does nothing; recommended citation updated to 0.2.0; the Zenodo claim is now conditional because archiving is not yet enabled; removed the settled 0.2.0 version decision from `next_steps.md`.
-- Did not change anything for the reported `git diff --check` warning. `git diff --check` is clean on this branch. The `\\ No newline at end of file` markers in the pull-request diff appear on removed lines, from the old `.pre-commit-config.yaml` and the deleted `requirements.txt`; both are already fixed by this branch. The only tracked file still lacking a trailing newline is the packaged training log, which this branch does not modify.
-- Verification:
-  - `ruff check .`, `black --check .` (31 files unchanged), `pytest` (`57 passed`), `git diff --check` clean.
-  - New `tests/test_training_pairing.py` covers stem pairing, missing masks, orphan masks in both policies, the empty-directory case, the committed fixture, and both deprecated-shim call shapes.
-  - Confirmed empirically that `https://download.pytorch.org/whl/cu124` serves at most torch 2.6.0 while `cu126` and `cu129` serve 2.13.0.
-  - Ran the hardened release checkpoint verification locally against freshly built artifacts; both the wheel and the source distribution carry the expected checkpoint and training log.
-
-### Merge the sample fixture and add real-image regression coverage (Claude Code, Opus 5)
-
-- Merged `origin/dev` into `refactor` ahead of a pull request. `training/run_train.py` and `training/check_augmentation.py` auto-merged cleanly: dev's editable `DATA_ROOT` and this branch's stem-based image/mask pairing and seeding compose without conflict. Both branches had independently performed the same five-date work-log rotation and produced byte-identical archive files, so that did not conflict either. The three documentation conflicts were additive and resolved by keeping both sides.
-- Added `tests/test_real_images.py`, which runs the packaged checkpoint over `sample_data/`. This is the coverage that `test_end_to_end.py` cannot provide: a synthetic blob segments plausibly regardless of which weights are loaded, so only real frames detect a corrupted or swapped checkpoint or a `resize_with_pad` regression. Landmarks are asserted as ranges rather than exact values so the tests survive platform floating-point differences.
-- The two uncropped fixture recordings have different source resolutions, 284 x 156 and 304 x 176, which is what makes the video-pixel diameter conversion verifiable against real geometry rather than a synthetic frame.
-- **Corrected an inaccurate changelog claim.** The 0.1.4 entry stated that deriving the equivalent-circle constant from `4 / pi` instead of the rounded literal `1.27` left results unchanged. It does not: reported diameters are a factor of `sqrt(4 / pi / 1.27)` = 1.001275 larger, or +0.1275%. The discrepancy surfaced because the fixture's documented diameter range of 18.38 to 25.38 model pixels reproduced as 18.40 to 25.41, which is exactly that factor. The changelog now states the change and warns against pooling diameters across the version boundary; `sample_data/README.md` records the updated range and why it moved.
-- Verification:
-  - `ruff check .`, `black --check .` (30 files unchanged), `pytest` (`49 passed`).
-  - Reproduced every other documented velocity landmark after the refactor: 31 rows, 27 `valid` and 4 `warning`, all warnings `abrupt_area_change`, 30 of 30 possible speeds published, and timestamp spacing of exactly 1/97 s.
-  - `python -m build`; the source distribution carries the checkpoint and all 61 sample PNGs at 3.09 MB, while the wheel carries the checkpoint and no sample data at 1.78 MB.
-
-### Add a portable real-data fixture (Codex, GPT-5)
-
-- Added `sample_data/` with eight curated training image/mask pairs, four validation pairs, six uncropped frames grouped by recording, and 31 consecutive velocity frames from source frames `07212`-`07242` at 97 Hz.
-- Kept the uncropped examples unchanged. Prepared the velocity inputs with the package's grayscale 148 x 148 resize-and-pad convention, preserving consecutive source suffixes so all frame-to-frame velocities remain eligible.
-- Added clone-and-run segmentation, overlay, velocity, augmentation, and training guidance plus a provenance/transformation manifest. The images and masks are published with permission and are explicitly scoped as workflow fixtures rather than benchmark or useful training data.
-- Added an editable `DATA_ROOT` to the three training utilities and capped augmentation inspection at the available dataset size, so the public fixture can be used directly without disturbing the full local training collection.
-- Added fixture integrity coverage for image/mask pairing, nonzero-foreground label semantics, raw-frame grouping, consecutive velocity suffixes, prepared-image dimensions, acquisition rate, and manifest paths.
-- Included the fixture and training utilities in source distributions so their bundled guide and sample-data test are self-contained, while keeping them outside the installed wheel.
-- Rotated the prior five work-log dates into `work_log_archive/work_log_2026-08-01_to_2026-08-10.md` according to the repository logging policy.
-- Verification:
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m pytest -q tests\test_sample_data.py` (`3 passed`).
-  - Packaged-checkpoint runs on both three-frame raw recording groups produced six overlays and separate compact diameter outputs.
-  - Packaged-checkpoint velocity run produced 31 overlays, 27 valid rows, four warning rows, and all 30 possible speeds; the rendered plot and representative opening, peak-speed, and closing overlays were inspected.
-  - One augmented four-image training step and one four-image validation batch completed on CUDA using the included paired fixture.
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m ruff check .`.
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m black --check .` (`19 files` unchanged; Black reported an inaccessible user-cache warning but completed successfully).
-  - The direct-environment full Pytest run passed 25 tests and failed only because its subprocess could not resolve the installed `run-pupil-analysis` launcher. The established Conda invocation supplied the console-script environment and passed all `26` tests.
-  - `C:\Users\yzhao\miniconda3\envs\pupil_tracking\python.exe -m build --wheel --sdist`; inspection confirmed the wheel retains the packaged checkpoint/log and excludes sample/training extras, while the source distribution retains the checkpoint/log, all 61 sample PNGs, their documentation/manifest, and all four training files.
-  - `C:\Users\yzhao\python_projects\agent_collab_treaty\.venv\Scripts\treaty.exe validate .`.
-  - `git diff --check`.
-### Broaden CI coverage and guard release metadata (Claude Code, Opus 5)
-
-- Added Windows and macOS jobs to CI and extended the Python range to 3.13. Windows is the primary development platform and had never been covered by CI.
-- Aligned the pre-commit black and ruff pins with the dev extra (they had drifted to 24.10.0 and v0.12.9 against 25.1.0 and 0.14.14) and added a pre-commit job so the hooks and CI can no longer disagree about formatting.
-- Added `tests/test_metadata.py` asserting that `__version__`, `pyproject.toml`, `CITATION.cff`, and `CHANGELOG.md` agree, and that `__all__` matches the lazy export map. A DOI is only useful if the recorded version is real.
-- Caught while adding that test: it used `tomllib`, which is Python 3.11+, while `requires-python` allows 3.10 and CI tests it. The import is now guarded and the module skips on 3.10. Verified by executing the module header with `tomllib` blocked.
-- Moved the `media/make_gif.py` load into a fixture so a missing script skips instead of breaking collection.
-- Deleted `requirements.txt`, which duplicated `[project].dependencies` with no declared ownership.
-- Documented the macOS environment paths in `../AGENTS.md` alongside the existing Windows ones, and recorded the console-script removal hazard when uninstalling the superseded distribution.
-- Verification:
-  - `ruff check .`, `black --check .` (28 files unchanged), `pytest` (`40 passed`).
-  - `pre-commit run --all-files` with the synced pins (`black Passed`, `ruff Passed`).
-  - Confirmed the previous push's CI run succeeded before layering these changes.
-
-### Report pupil diameter in video pixels and harden model loading (Claude Code, Opus 5)
-
-- Added a `pupil_diameter_video_pixels` output column. `estimated_pupil_diameter` measures the 148 x 148 model image, so it is not comparable between recordings with different resolution or cropping; the new column inverts the resize-and-pad geometry. The existing column is unchanged, per the additive approach the user chose.
-- Centralized the resize geometry in `preprocessing.resize_scale`, which `model_to_original_coordinates` now also uses, removing a duplicated derivation. Area-derived lengths convert by the geometric mean of the two axis scales, since areas scale by their product.
-- Replaced the assumption that every checkpoint uses spatial attention with inference from the checkpoint's own state-dict keys, so a non-attention `--checkpoint` loads and a genuinely incompatible file reports what failed. Chose this over the planned JSON sidecar manifest because it needs no new files and works for checkpoints that have none.
-- Fixed a silent correctness bug in `training/run_train.py`: images and masks were paired by sorting two directories independently, which trains against misaligned labels whenever the folders diverge. Pairing is now by filename stem, which `labelme_json2png.py` guarantees, with a loud error on mismatch. Added seeding for `random`, `numpy`, and `torch`.
-- Deliberately did not wrap `run_train.py` in a `main()` function, despite the original plan. The user runs these scripts cell by cell in an IDE, and moving module-level state into a function breaks that workflow. The pairing bug and the missing seed were the substantive issues.
-- Vectorized the frame-to-frame kinematics and moved per-frame image-size reads into the single inference pass.
-- Verification:
-  - `ruff check .`, `black --check .`, `pytest` (`35 passed`), `python -m build`.
-  - Differential test of the vectorized kinematics against the original row loop over 300 randomized cases covering source-index gaps, invalid segmentations, and acquisition rates of 10, 33.3333, and 100 fps: zero mismatches.
-  - Verified the diameter conversion on a real pipeline run: for a 200 x 160 frame the observed ratio was 1.35364 against an expected `1 / sqrt(0.7400 * 0.7375)` of 1.35364.
-  - Verified checkpoint loading for the packaged attention checkpoint, a freshly saved non-attention checkpoint, and a deliberately incompatible file.
-  - Verified the stem pairing and its error path against temporary directories with deliberately mismatched creation order.
-
-### Add a public Python API and split the pipeline into focused modules (Claude Code, Opus 5)
-
-- Extracted orchestration out of the CLI into `api.py`. `AnalysisConfig` holds and validates every input; `run_analysis` returns an `AnalysisResult` carrying the analysis table, both output paths, frame metadata, and the internal tracking DataFrame. `analyze_video` and `analyze_frames` are the keyword front door.
-- Made the package's public names resolve through PEP 562 module `__getattr__`, so `import pupil_tracking` no longer imports PyTorch. Kept `__all__` literal because Ruff cannot match a computed `__all__` against `TYPE_CHECKING` imports.
-- Split `dataset.py` into `preprocessing.py` (inference) and `augmentation.py` (training). `InferenceDataset` and `SegmentationDataset` replace `PupilDataset`, whose return type depended on whether `mask_paths` was supplied. `dataset.py` remains a deprecating shim.
-- Moved table assembly into `results.py` and figures into `plotting.py`; plot functions return figures rather than saving them.
-- Replaced every library `print` with module loggers and added `logging_utils.configure_cli_logging()`, which the console scripts call so terminal output is unchanged. Verified the CLI transcript line for line against the previous behavior.
-- Invalid CLI argument combinations now route through `parser.error(...)` instead of raising `ValueError`.
-- Pulled three planned correctness items forward because they touched the same lines: checkpoint lookup is lazy and no longer returns a path from an exited `resources.as_file` block; the diameter factor is derived from `4 / pi` instead of the literal `1.27`; `num_workers` is configurable rather than hardcoded to 4.
-- Deprecated `generate_pupil_mask_prediction` in favor of `analyze_frames`.
-- Two self-inflicted defects caught during verification and fixed: replacing `run_pupil_analysis.py`'s `__main__` guard with an experiment block would have broken direct script invocation; and module `__getattr__` does not fire for bare global lookups inside its own module, so the in-module `DEFAULT_CHECKPOINT` references would have raised `NameError`.
-- Verification:
-  - `ruff check .`, `black --check .` (25 files unchanged).
-  - `pytest -q` (`26 passed`), including the new `tests/test_end_to_end.py`, which builds a synthetic video with `cv2.VideoWriter` and runs the packaged checkpoint through extraction, inference, velocity mode, overlays, and a video-versus-image-directory equivalence check.
-  - Manual CLI run against a synthetic video, plus the missing-argument path, confirming usage text instead of a traceback.
-  - `python -m build`, then installed the wheel into a clean venv and confirmed the public API resolves and PyTorch stays unimported.
-
-### Publish as mouse-pupil-analysis with release automation (Claude Code, Opus 5)
-
-- Renamed the distribution to `mouse-pupil-analysis`. The PyPI name `pupil-tracking` is already held by an unrelated project (v1.0.1, a different author), so the original name was unpublishable. The import name `pupil_tracking` is unchanged.
-- Added `pupil_tracking.__version__` from installed distribution metadata, so the package, `pyproject.toml`, and `CITATION.cff` cannot silently disagree.
-- Added `.github/workflows/release.yml`: tag-triggered, verifies the tag against the project version, the citation version against the project version, and the presence of the packaged checkpoint with no archived-checkpoint leak in both artifacts, then publishes through PyPI Trusted Publishing.
-- Added `CHANGELOG.md` backfilled from Git history and `RELEASING.md` covering the one-time PyPI publisher registration and Zenodo webhook, both of which are account actions the repository cannot perform.
-- Documented CPU and CUDA PyTorch install paths. Confirmed from the PyPI wheel index that Windows and macOS wheels are already CPU-only; only Linux defaults to a CUDA-bundled wheel.
-- Recorded the blocked sample-data request in `next_steps.md` and folded the superseded portable-fixture thread into it.
-- Environment note: this session ran on macOS with a newly created `pupil_tracking` conda environment on Python 3.12. The resolved stack was torch 2.13, OpenCV 5.0, pandas 3.0.5 — all major versions above the declared floors — and the suite passed, which is useful evidence the version pins are not too loose.
-- Uninstalling the stale `pupil-tracking` distribution metadata also removes the shared `run-pupil-analysis` and `extract-frames` console scripts, because both distributions declare the same script names. Reinstalling restores them; anyone pulling this branch into an existing environment must uninstall then reinstall, in that order.
-- Verification:
-  - `ruff check .`, `black --check .`, `pytest -q` (`23 passed`) before and after the rename.
-  - `python -m build`, then verified the checkpoint ships in both wheel and sdist with no `checkpoints/archive/` contents.
-  - Installed the wheel into a clean venv; `pupil_tracking.__version__` resolved to `0.1.4` and `run-pupil-analysis --help` succeeded.

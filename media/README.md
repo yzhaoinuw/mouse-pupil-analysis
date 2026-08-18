@@ -5,6 +5,18 @@ This folder owns the animated pupil-analysis demo shown in the repository README
 - `pupil_diameter_analysis_result_demo.gif` is the promoted, tracked asset.
 - `make_gif.py` builds the animation from a completed velocity analysis and its overlay images.
 
+The local default source is deliberately minimal and gitignored:
+
+```text
+gif_videos/readme_demo/
+  pupil_analysis_for_gif.csv
+  overlays/                    # the 90 PNGs used by the promoted animation
+```
+
+Running `python media\make_gif.py` with no arguments rebuilds the promoted GIF from this
+source. Large source recordings belong in `movies/`; alternate candidates and full analysis
+runs are not part of the maintained demo workspace.
+
 Run the commands below from the repository root. The script also works when run directly from an IDE because its default paths are resolved relative to the repository rather than the current working directory.
 
 Activate the project environment first:
@@ -59,10 +71,10 @@ The selected range and sampling interval must produce at least two frames. The m
 
 | Option | Meaning | Default |
 | --- | --- | ---: |
-| `--start_frame` | First source-frame number eligible for the GIF | `200` |
-| `--end_frame` | Last source-frame number eligible for the GIF | `2100` |
-| `--sample_every` | Keep every Nth eligible analysis row | `20` |
-| `--fps` | GIF playback rate | `10` |
+| `--start_frame` | First source-frame number eligible for the GIF | `7107` |
+| `--end_frame` | Last source-frame number eligible for the GIF | `7375` |
+| `--sample_every` | Keep every Nth eligible analysis row | `1` |
+| `--fps` | GIF playback rate | `5` |
 | `--pred_thresh` | Lower bound shown on the confidence legend | `0.7` |
 
 Run `python media\make_gif.py --help` for the full interface.
