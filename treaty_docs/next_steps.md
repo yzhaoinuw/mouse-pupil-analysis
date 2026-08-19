@@ -215,8 +215,8 @@ copies were removed after verification; the source annotations and six uncertain
 available outside the paired training directories.
 
 New Labelme batches now enter through `training/import_labelme_batch.py`: preview first, then
-apply with `--refresh-splits`. The importer keeps uncertainty as image-level metadata outside
-segmentation training rather than inventing an "uncertain mask."
+apply with `--apply`, which also refreshes the split. The importer keeps uncertainty as metadata
+outside segmentation training rather than inventing an "uncertain mask."
 
 Remaining work:
 

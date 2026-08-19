@@ -56,13 +56,13 @@ For a new reviewed Labelme batch, preview the complete intake and then apply it:
 
 ```powershell
 python training\import_labelme_batch.py --source <annotation folder> --session <new session>
-python training\import_labelme_batch.py --source <annotation folder> --session <new session> --apply --refresh-splits
+python training\import_labelme_batch.py --source <annotation folder> --session <new session> --apply
 ```
 
 The importer validates every JSON before writing, refuses an existing session, extracts the
 trailing frame index into `frame_<five-digit-index>.png`, writes pupil and explicit-negative
-masks, archives `uncertain` image/JSON pairs outside the training directories, and optionally
-refreshes `splits.json` plus `folds/`. It does not copy the redundant pupil/negative JSONs into
+masks, archives `uncertain` image/JSON pairs outside the training directories, and refreshes
+`splits.json` plus `folds/`. It does not copy the redundant pupil/negative JSONs into
 the training pool. Existing sessions keep their folds; only the new one is packed.
 
 When `run_train.py` loads an image and its mask, it automatically resizes both to the model's 148 x 148 input, so do not crop, resize, or pad them yourself. Resizing keeps the complete frame but makes it smaller; it does not cut away any part of the frame. For a non-square frame, the loader preserves the aspect ratio and adds black padding to produce a 148 x 148 square. The same operation is applied to the image and mask so they remain aligned.
@@ -139,7 +139,7 @@ cross-validation fold qualifies for genuinely new footage.
 
 ```powershell
 python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820
-python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820 --apply --refresh-splits
+python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820 --apply
 ```
 
 The importer validates that each annotation uses exactly one target. Ordinary pupil polygons

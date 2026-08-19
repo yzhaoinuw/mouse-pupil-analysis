@@ -190,7 +190,7 @@ folder, so they can also correct one.
 2. Apply the import and refresh the frozen split in one command:
 
    ```bash
-   python training/import_labelme_batch.py --source <annotation-folder> --session <session> --apply --refresh-splits
+   python training/import_labelme_batch.py --source <annotation-folder> --session <session> --apply
    ```
 
    `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON

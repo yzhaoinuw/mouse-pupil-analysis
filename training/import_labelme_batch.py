@@ -10,7 +10,7 @@ Preview, then apply and refresh the frozen split::
 
     python training/import_labelme_batch.py --source path/to/annotations --session SESSION
     python training/import_labelme_batch.py --source path/to/annotations --session SESSION \
-        --apply --refresh-splits
+        --apply
 """
 
 from __future__ import annotations
@@ -195,15 +195,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", type=Path, required=True, help="Folder holding Labelme JSONs.")
     parser.add_argument("--session", required=True, help="New recording-session folder name.")
     parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT)
-    parser.add_argument("--apply", action="store_true", help="Apply the validated import.")
     parser.add_argument(
-        "--refresh-splits",
+        "--apply",
         action="store_true",
-        help="After import, refresh splits.json and materialize folds.",
+        help="Import the session, refresh splits.json, and materialize folds.",
     )
     args = parser.parse_args(argv)
-    if args.refresh_splits and not args.apply:
-        parser.error("--refresh-splits requires --apply.")
 
     plan = build_import_plan(args.source, args.data_root, args.session)
     counts = Counter(entry.kind for entry in plan)
@@ -226,10 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"Archived {counts[UNCERTAIN_LABEL]} uncertain annotation(s) in {target / 'uncertain'}."
         )
-    if args.refresh_splits:
-        return refresh_split_manifest(args.data_root)
-    print("Now refresh the split: python training/data_splits.py --data-root . --materialize")
-    return 0
+    return refresh_split_manifest(args.data_root)
 
 
 if __name__ == "__main__":

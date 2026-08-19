@@ -17,8 +17,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - Added `training/import_labelme_batch.py` as the reproducible intake boundary that was missing
   from the documentation. It previews by default, validates the whole source batch before any
   write, refuses an existing session, creates compact image/mask pairs without redundant JSON
-  copies, archives uncertain image/JSON pairs outside training, and can refresh the manifest and
-  materialized folds. A real-batch smoke reproduced all 61 HQL097 image and mask hashes exactly.
+  copies, archives uncertain image/JSON pairs outside training, and refreshes the manifest and
+  materialized folds whenever `--apply` is passed. A real-batch smoke reproduced all 61 HQL097
+  image and mask hashes exactly.
 - Added 61 compactly named HQL097 image/mask pairs to development: 47 nonempty pupil masks and
   14 empty negatives. Preserved the 6 uncertain image/JSON pairs under the session's
   `uncertain/` folder, outside `images/`, and removed the 61 generated-mask JSON copies after

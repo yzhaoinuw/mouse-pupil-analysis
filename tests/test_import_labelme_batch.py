@@ -90,7 +90,7 @@ def test_all_uncertain_batch_stays_outside_labelled_pool(tmp_path):
         import_labelme_batch.build_import_plan(source, tmp_path, "session_a")
 
 
-def test_refresh_splits_runs_after_successful_import(tmp_path, monkeypatch):
+def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
     source = tmp_path / "annotations"
     _mixed_batch(source)
     refreshed = []
@@ -110,7 +110,6 @@ def test_refresh_splits_runs_after_successful_import(tmp_path, monkeypatch):
                 "--data-root",
                 str(tmp_path),
                 "--apply",
-                "--refresh-splits",
             ]
         )
         == 0
