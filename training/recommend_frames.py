@@ -7,11 +7,14 @@ copies the highest-scoring ones into a folder ready for Labelme.
     python training/recommend_frames.py --video /data/HQL091_sleep251103.avi --budget 20
     python training/recommend_frames.py --frames /data/some_frames --budget 20
 
-From a video it writes two folders beside the ``.avi``::
+From a video it writes a session folder under ``frames_to_label/``::
 
-    HQL091_sleep251103.avi
-    HQL091_sleep251103_frames/     every extracted frame
-    HQL091_sleep251103_to_label/   the recommended ones, plus selection.csv
+    frames_to_label/
+        HQL091_sleep251103/
+            extracted_frames/     every extracted frame
+            recommended/          the recommended ones, plus selection.csv
+
+Pass ``--output_dir`` to replace the ``frames_to_label/`` root.
 
 Extraction samples at ``--extraction-fps`` but never exceeds ``--max-extracted``,
 falling back to that many equally spaced frames across the whole recording. The
@@ -41,6 +44,7 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMMITTEE = "checkpoints_exp/cvnat/*/best.pth"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "frames_to_label"
 
 
 def _load(name: str):
@@ -96,14 +100,16 @@ def spread_picks(
 
 def resolve_output_dirs(args) -> tuple[Path, Path, str]:
     """Return (frames_dir, promote_dir, name) for either input mode."""
+    output_root = args.output_dir or DEFAULT_OUTPUT_DIR
     if args.video is not None:
         stem = args.video.stem
-        base = args.video.parent
-        frames_dir = args.frames_out or base / f"{stem}_frames"
+        frames_dir = output_root / stem / "extracted_frames"
     else:
-        stem = args.frames.name
         frames_dir = args.frames
-    promote_dir = args.out or frames_dir.parent / f"{stem}_to_label"
+        stem = (
+            args.frames.parent.name if args.frames.name == "extracted_frames" else args.frames.name
+        )
+    promote_dir = output_root / stem / "recommended"
     return frames_dir, promote_dir, stem
 
 
@@ -157,8 +163,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Weight for the frame-to-frame consistency signal. Off by default: it needs "
         "consecutive frames, so it could not be validated on the sparsely sampled pool.",
     )
-    parser.add_argument("--frames-out", type=Path, help="Override the extracted-frames folder.")
-    parser.add_argument("--out", type=Path, help="Override the recommended-frames folder.")
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        help="Root for <session>/extracted_frames and <session>/recommended. "
+        "Default: frames_to_label under the project root.",
+    )
     parser.add_argument("--device", default="auto")
     parser.add_argument(
         "--no-dedup",

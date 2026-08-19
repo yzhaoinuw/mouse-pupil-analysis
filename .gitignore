@@ -59,9 +59,8 @@ checkpoints_exp/
 images_test*/
 images_test*_result/
 /labeled_frames/
-/movies/
-/gif_videos/
-/frame_recommendations/
+/media/readme_demo/
+/frames_to_label/
 /videos/
 # Materialized fold folders are regenerated from splits.json by
 # training/data_splits.py --materialize, at any data root.

@@ -79,11 +79,24 @@ mistakes the dark eye aperture for a pupil. If no pupil boundary is actually vis
 the target as an all-black mask rather than outlining the aperture. Keep these negatives in a
 mixed batch with visible pupils; do not spend the whole session budget on eye closures.
 
+Use nearby frames to decide what is visible in the target frame. If the sequence establishes that
+the pupil has fully disappeared from view, label that frame `no_visible_pupil` even when the
+isolated dark eye aperture could be mistaken for one very large pupil. Sequence context improves
+the annotation; it does not make the aperture a pupil target. Conversely, outline a genuinely
+large pupil only when its boundary is visible in the target frame. Never fill the whole dark eye
+aperture merely because it could represent maximal dilation.
+
 In Labelme, mark that explicit negative with one small `no_visible_pupil` shape; its geometry is
 ignored by `labelme_json2png.py`. If a pupil may be present but low contrast or occlusion makes
 the boundary unreliable, use one `uncertain` shape instead. An uncertain annotation creates no
 segmentation mask and must remain outside the session's training `images/` directory. Do not turn
 annotation uncertainty into an all-black target: that would teach a confident false negative.
+This includes transition frames where even the sequence cannot establish the exact point of
+disappearance. Because the current model sees one frame at a time, retain representative examples
+of both confirmed no-visible-pupil frames and genuinely large visible pupils; if only temporal
+context can separate two otherwise indistinguishable appearances, that is a model limitation, not
+a reason to change either correct label. Avoid flooding the batch with consecutive near-duplicate
+negatives.
 
 **How many per session?** Roughly 8–15 is the useful range. Below about 5 the session
 contributes little and makes a noisy validation fold when it is held out; above about

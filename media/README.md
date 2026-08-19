@@ -8,13 +8,13 @@ This folder owns the animated pupil-analysis demo shown in the repository README
 The local default source is deliberately minimal and gitignored:
 
 ```text
-gif_videos/readme_demo/
+media/readme_demo/
   pupil_analysis_for_gif.csv
   overlays/                    # the 90 PNGs used by the promoted animation
 ```
 
 Running `python media\make_gif.py` with no arguments rebuilds the promoted GIF from this
-source. Large source recordings belong in `movies/`; alternate candidates and full analysis
+source. Large source recordings belong in `videos/`; alternate candidates and full analysis
 runs are not part of the maintained demo workspace.
 
 Run the commands below from the repository root. The script also works when run directly from an IDE because its default paths are resolved relative to the repository rather than the current working directory.

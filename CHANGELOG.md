@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Frame recommendations now default to
+  `frames_to_label/<session>/{extracted_frames,recommended}` instead of writing beside the source
+  video. Use `--output_dir` to replace the output root.
 - Recording-grouped, condition-stratified data splits. `training/data_splits.py` groups the
   labelled pool into *sessions* — one animal, one date, one condition — and packs whole
   sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.

@@ -90,24 +90,27 @@ python training\recommend_frames.py --frames D:\data\already_extracted --budget 
 For the local repository workflow, keep source recordings and generated selections separate:
 
 ```text
-movies/
+videos/
   <session>.avi
-frame_recommendations/
+frames_to_label/
   <session>/
     extracted_frames/
-    to_label/             # 20 picks plus selection.csv
+    recommended/          # 20 picks plus selection.csv
 ```
 
-Pass `--frames-out` and `--out` to create that layout; `movies/` should contain only source
-recordings. If a movie belongs to a session already represented in `labeled_frames/`, every
-committee member used for that movie must come from a fold that held out that session. Train
-additional seeds of that fold when one checkpoint is not enough for disagreement ranking.
+This is the default layout. Pass `--output_dir D:\labeling_queue` to replace the
+`frames_to_label/` root while keeping the same per-session folders. `videos/` should
+contain only source recordings. If a movie belongs to a session already represented in
+`labeled_frames/`, every committee member used for that movie must come from a fold that held
+out that session. Train additional seeds of that fold when one checkpoint is not enough for
+disagreement ranking.
 
-Given a video this writes two folders beside it: `<name>_frames/` with every extracted
-frame, and `<name>_to_label/` with the recommendations plus a `selection.csv` recording
-why each was chosen. Extraction samples at `--extraction-fps` (default 5) but never
-exceeds `--max-extracted` (default 2000), falling back to that many equally spaced
-frames across the recording.
+Given a video this writes `<session>/extracted_frames/` with every extracted frame and
+`<session>/recommended/` with the recommendations plus a `selection.csv` recording why each
+was chosen. Given `--frames`, the existing input directory stays in place and only the
+`recommended/` output is written under the output root. Extraction samples at
+`--extraction-fps` (default 5) but never exceeds `--max-extracted` (default 2000), falling back
+to that many equally spaced frames across the recording.
 
 Frames are ranked by **disagreement** between checkpoints and by **geometric
 implausibility** of what they predict — never by model confidence, which is actively
@@ -133,13 +136,17 @@ cross-validation fold qualifies for genuinely new footage.
      fully occluded. Its geometry is ignored and the converter writes an all-black mask.
    - `uncertain`: place one small marker when a pupil may be present but cannot be outlined
      reliably. The converter reports it and creates no training mask.
+   Review nearby frames when visibility is ambiguous. If the sequence confirms that the pupil has
+   disappeared from view, use `no_visible_pupil` even when that isolated frame resembles one huge
+   pupil. If the exact transition remains unresolved, use `uncertain`. Outline a genuinely large
+   pupil only when its boundary is visible; never substitute the whole dark eye aperture.
 2. Save each JSON file beside its source image. This can be the recommender's
    `extracted_frames/` directory when nearby contextual frames were labelled.
 3. Preview and apply the new-session import:
 
 ```powershell
-python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820
-python training\import_labelme_batch.py --source frame_recommendations\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820 --apply
+python training\import_labelme_batch.py --source frames_to_label\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820
+python training\import_labelme_batch.py --source frames_to_label\HQL091_sleep260820\extracted_frames --session HQL091_sleep260820 --apply
 ```
 
 The importer validates that each annotation uses exactly one target. Ordinary pupil polygons

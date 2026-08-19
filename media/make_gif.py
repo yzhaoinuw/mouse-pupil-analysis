@@ -24,7 +24,7 @@ matplotlib.use("Agg")
 
 MEDIA_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = MEDIA_DIR.parent
-DEFAULT_RUN_DIR = PROJECT_ROOT / "gif_videos" / "readme_demo"
+DEFAULT_RUN_DIR = MEDIA_DIR / "readme_demo"
 DEFAULT_CSV = DEFAULT_RUN_DIR / "pupil_analysis_for_gif.csv"
 DEFAULT_OVERLAY_DIR = DEFAULT_RUN_DIR / "overlays"
 DEFAULT_OUTPUT = MEDIA_DIR / "pupil_diameter_analysis_result_demo.gif"

@@ -25,13 +25,11 @@ def make_gif():
 
 def test_media_defaults_follow_repository_layout(make_gif):
     assert make_gif["PROJECT_ROOT"] == PROJECT_ROOT
-    assert make_gif["DEFAULT_RUN_DIR"] == PROJECT_ROOT / "gif_videos" / "readme_demo"
+    assert make_gif["DEFAULT_RUN_DIR"] == PROJECT_ROOT / "media" / "readme_demo"
     assert make_gif["DEFAULT_CSV"] == (
-        PROJECT_ROOT / "gif_videos" / "readme_demo" / "pupil_analysis_for_gif.csv"
+        PROJECT_ROOT / "media" / "readme_demo" / "pupil_analysis_for_gif.csv"
     )
-    assert make_gif["DEFAULT_OVERLAY_DIR"] == (
-        PROJECT_ROOT / "gif_videos" / "readme_demo" / "overlays"
-    )
+    assert make_gif["DEFAULT_OVERLAY_DIR"] == (PROJECT_ROOT / "media" / "readme_demo" / "overlays")
     assert make_gif["DEFAULT_OUTPUT"] == (
         PROJECT_ROOT / "media" / "pupil_diameter_analysis_result_demo.gif"
     )

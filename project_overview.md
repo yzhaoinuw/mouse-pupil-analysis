@@ -219,9 +219,10 @@ Local/generated surfaces to treat carefully:
   of the split that survives a fresh clone. The `sample_data/` versions of both are
   intentionally tracked fixtures.
 - `checkpoints_exp/` holds experimental training checkpoints.
-- `movies/` holds local source recordings used for frame extraction; recommender outputs live
-  separately under `frame_recommendations/` so this folder remains source-only.
-- `gif_videos/readme_demo/` holds only the local CSV and 90 overlays that exactly reproduce the
+- `videos/` holds local source recordings used for frame extraction, so this folder remains
+  source-only. Recommender outputs and retained labeling queues live under `frames_to_label/`,
+  with `extracted_frames/` and `recommended/` inside each session.
+- `media/readme_demo/` holds only the local CSV and 90 overlays that exactly reproduce the
   tracked README GIF. Historical candidates and full-video review outputs are not maintained inputs.
 - `build/`, `dist/`, `*.egg-info`, `__pycache__/`, `.pytest_cache/`, and `.ruff_cache/` are generated.
 - `archive/` and `sketch*.py` style files are not the active package path.
