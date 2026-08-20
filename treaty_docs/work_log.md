@@ -2,7 +2,64 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-20
+
+### Make the analysis entry point directly executable (Codex, GPT-5)
+
+- Added the same no-argument direct-run pattern used by `training/run_train.py` to
+  `mouse_pupil_analysis/run_pupil_analysis.py`. Direct runs use its editable configuration block;
+  supplying terminal arguments still uses the existing parser and console-script workflow.
+- Removed editor-specific wording from scripts, comments, public documentation, changelog, and
+  archived work logs. Direct-run configuration remains available without presenting an editor as
+  part of the project workflow.
+- Verification: repository text scan found no editor-specific mentions; focused training workflow
+  tests passed (11 tests), Ruff and Black passed on the changed Python modules, and
+  `python training/run_train.py --help` passed.
+
 ## 2026-08-19
+
+### Train and exercise the 512-image all-in model (Codex, GPT-5)
+
+- Froze the development choices before final refit: attention U-Net, BCE loss, natural sampling,
+  seed 0, batch size 8, initial LR `1e-3`, threshold 0.5, 115 epochs, and deterministic LR
+  reductions at epochs 25/51/62/71/82. Trained `final_516_nat_macro_s0` from scratch on all 512
+  non-holdout pairs; the four `260812_3582_Purple_trial5` labels were not loaded.
+- The final training loss fell from 0.4311 to 0.0200. Saved `final.pth` plus frozen metadata and
+  manifest/checkpoint hashes under `checkpoints_exp/final_516_nat_macro_s0`; the outer holdout
+  remains unconsumed.
+- Ran the final checkpoint at threshold 0.5 on 200 newly extracted, unlabeled frames spread across
+  `HQL088_sleep250929_009_eye.avi`. Inference took about four seconds at batch size 32. Visual
+  review confirmed the model followed the boundary of a genuinely large pupil rather than filling
+  the eye aperture and tracked its later constriction. QC accepted 196/200 frames; the four
+  rejected overlays were a nearly closed eye or irregular fragmented masks, matching their
+  low-confidence/low-circularity reasons.
+
+### Integrate HQL095/HQL096 and train the 516-image CV committee (Codex, GPT-5)
+
+- Audited all 145 new Labelme records against their source frames. HQL095 contributes 38 pupil
+  masks. HQL096 contributes 84 pupil masks, 18 sequence-confirmed no-visible-pupil masks, and 5
+  uncertain transition frames outside segmentation training; one accidentally empty transition
+  annotation was conservatively made explicit as `uncertain` rather than assigned an invented
+  target.
+- Imported 140 trainable pairs and refreshed the frozen grouped split. The pool now contains 516
+  pairs across 22 sessions: 512 development pairs and the unchanged 4-image outer holdout. HQL095
+  entered zero-based fold 0 and HQL096 fold 1; all 376 previous assignments stayed unchanged.
+- Trained a matched seed-0, natural-sampling, macro-IoU four-fold committee under
+  `checkpoints_exp/cv516_nat_macro_20260819`. Fold macro IoUs are 0.6985/0.4832/0.5313/0.6845;
+  mean per-session IoU is 0.6701 and image-weighted IoU is 0.5846. On the 17 sessions shared with
+  the previous 255-image run, mean session IoU improved from 0.6468 to 0.6923 (+0.0455), with 11
+  of 17 sessions improving. New-session out-of-fold IoUs are 0.6207 (HQL095), 0.5070 (HQL096),
+  0.4883 (HQL097), and 0.6866 (HQL103).
+- The result is not promotion-ready without follow-up. The prior aperture-confusion sessions
+  improved strongly, but `250616_5120_Purple_sleep_trial_1` regressed from 0.7304 to 0.2585 and
+  predicts only 0.218x the labelled area. When HQL096 is entirely held out, its fold model clears
+  only 2 of 18 explicit empty masks, confirming that absence does not transfer reliably without
+  examples from this appearance regime.
+- Verification: all 70 focused split/import/converter/pairing/training tests and the full 168-test
+  suite pass using fresh repo-local pytest temp directories; the full run needs the documented
+  in-process Conda Scripts `PATH` injection. Ruff and Black pass repository-wide, and
+  `git diff --check` is clean. The four-fold CUDA run completed normally on the RTX 3070 and wrote
+  its summary after 142 minutes; the outer holdout was excluded from every fold.
 
 ### Clarify sequence-aware visibility labeling (Codex, GPT-5)
 

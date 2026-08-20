@@ -25,7 +25,7 @@ unrelated PyPI distribution and must not be claimed here.
 - Owns packaged-checkpoint selection, calibrated-threshold resolution, PNG frame discovery, UNet inference, pupil-diameter calculation, and confidence-heatmap overlays; it has no acquisition-time dependency.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
-- Includes an editable `if __name__ == "__main__":` block for direct IDE runs with hardcoded local paths and inference settings.
+- Includes an editable `if __name__ == "__main__":` block for direct runs with hardcoded local paths and inference settings.
 
 ### 3. `mouse_pupil_analysis/api.py`
 
@@ -38,7 +38,7 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 4. `mouse_pupil_analysis/run_pupil_analysis.py`
 
-- Implements the `run-pupil-analysis` CLI only: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback.
+- Implements the `run-pupil-analysis` CLI: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback. Running the source file with no arguments instead uses its editable direct-run configuration block.
 - Accepts either `--video_path` or `--image_dir`.
 - Enables console logging so terminal output matches the historical `print`-based behavior.
 
@@ -60,7 +60,7 @@ unrelated PyPI distribution and must not be claimed here.
 - `SegmentationAccumulator` consumes every transient prediction and exposes visibility/QC without requiring velocity mode. `TrackingAccumulator` extends it with temporal processing when velocity is enabled.
 - Selects and measures pupil components, maps centers back to original-image pixels, applies explainable quality flags, and calculates frame-to-frame displacement and velocity.
 - Leaves published centers and velocities missing across rejected or non-consecutive frames rather than interpolating.
-- Includes an editable `if __name__ == "__main__":` block for direct IDE inspection of the detailed tracking DataFrame.
+- Includes an editable `if __name__ == "__main__":` block for direct inspection of the detailed tracking DataFrame.
 
 ### 8. `mouse_pupil_analysis/preprocessing.py` and `mouse_pupil_analysis/augmentation.py`
 
@@ -78,16 +78,16 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 11. `training/`
 
-- Contains the Spyder-friendly training launcher, Labelme JSON conversion, and augmentation inspection.
+- Contains the training launcher, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional model promotion.
 - `training/run_train.py` owns the training implementation. Arguments enable terminal use;
-  running it without arguments preserves the editable direct-IDE block.
+  running it without arguments preserves the editable direct-run block.
 - The trainer supports fresh training or lower-rate weight fine-tuning, balances training across mask-size bins, calibrates the prediction threshold on per-image size-stratified validation metrics, and always retains the best checkpoint, JSON metadata, and complete log in a collision-safe, descriptive run folder under `checkpoints_exp/`.
 
 ### 12. `media/`
 
 - Contains the tracked README animation and `media/make_gif.py`, the utility that regenerates it from local analysis results and overlays.
-- `media/README.md` documents the required analysis outputs, animation controls, IDE workflow, and promotion review.
+- `media/README.md` documents the required analysis outputs, animation controls, and promotion review.
 - The GIF is a deliberately promoted documentation asset; other generated videos and candidate media remain local.
 
 ### 10. `sample_data/`

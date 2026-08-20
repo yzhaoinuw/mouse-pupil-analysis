@@ -1,14 +1,14 @@
 {
   "schema": 2,
-  "generated": "2026-08-18",
+  "generated": "2026-08-19",
   "grouping": "session recorded at intake (one animal, one date, one condition)",
   "stratified_by": [
     "median_diameter",
     "median_brightness"
   ],
   "n_folds": 4,
-  "n_images": 376,
-  "n_sessions": 20,
+  "n_images": 516,
+  "n_sessions": 22,
   "n_holdout_sessions": 1,
   "pool": [
     [
@@ -24,11 +24,11 @@
   "stratum_cutpoints": {
     "diameter": [
       18.09,
-      62.45
+      53.05
     ],
     "brightness": [
-      99.21,
-      115.4
+      101.6,
+      118.43
     ]
   },
   "sessions": [
@@ -48,7 +48,7 @@
       "fold": 0,
       "holdout": false,
       "source": "folder",
-      "stratum": "d1b1",
+      "stratum": "d2b1",
       "n_images": 62,
       "n_tiny": 0,
       "median_diameter": 53.05,
@@ -75,6 +75,17 @@
       "n_tiny": 0,
       "median_diameter": 77.74,
       "median_brightness": 102.58
+    },
+    {
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "source": "folder",
+      "stratum": "d1b2",
+      "n_images": 38,
+      "n_tiny": 9,
+      "median_diameter": 18.32,
+      "median_brightness": 118.78
     },
     {
       "session": "250616_5120_Purple_sleep_trial_1",
@@ -110,11 +121,22 @@
       "median_brightness": 118.43
     },
     {
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "source": "folder",
+      "stratum": "d0b2",
+      "n_images": 102,
+      "n_tiny": 64,
+      "median_diameter": 12.77,
+      "median_brightness": 119.7
+    },
+    {
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
       "source": "folder",
-      "stratum": "d1b2",
+      "stratum": "d1b1",
       "n_images": 29,
       "n_tiny": 11,
       "median_diameter": 18.09,
@@ -224,7 +246,7 @@
       "fold": 3,
       "holdout": false,
       "source": "folder",
-      "stratum": "d2b1",
+      "stratum": "d2b0",
       "n_images": 1,
       "n_tiny": 0,
       "median_diameter": 107.33,
@@ -2803,6 +2825,1406 @@
       "holdout": false,
       "diameter": 88.68,
       "brightness": 111.25
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_04245",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_04245.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_04245.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 33.07,
+      "brightness": 108.38
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_06974",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_06974.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_06974.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 32.13,
+      "brightness": 109.01
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_08157",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_08157.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_08157.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 18.3,
+      "brightness": 109.5
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_08490",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_08490.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_08490.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 18.58,
+      "brightness": 118.33
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_08520",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_08520.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_08520.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 18.33,
+      "brightness": 118.74
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_08884",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_08884.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_08884.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 15.84,
+      "brightness": 116.82
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_10006",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_10006.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_10006.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 21.23,
+      "brightness": 121.49
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_10067",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_10067.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_10067.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 21.59,
+      "brightness": 122.15
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_10127",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_10127.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_10127.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 23.21,
+      "brightness": 119.54
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_10825",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_10825.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_10825.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 68.41,
+      "brightness": 121.12
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_14948",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_14948.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_14948.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 26.34,
+      "brightness": 111.87
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_16464",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_16464.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_16464.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 25.46,
+      "brightness": 115.94
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_18162",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_18162.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_18162.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 37.39,
+      "brightness": 118.11
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_19284",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_19284.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_19284.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 17.66,
+      "brightness": 119.98
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_19345",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_19345.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_19345.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 16.51,
+      "brightness": 119.42
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_19709",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_19709.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_19709.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 17.0,
+      "brightness": 117.83
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_20072",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_20072.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_20072.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 17.15,
+      "brightness": 120.33
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_20194",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_20194.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_20194.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.71,
+      "brightness": 120.2
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_20376",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_20376.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_20376.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 20.31,
+      "brightness": 116.28
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_23468",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_23468.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_23468.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 25.71,
+      "brightness": 113.83
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_25106",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_25106.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_25106.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 20.19,
+      "brightness": 113.26
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_28350",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_28350.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_28350.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 20.65,
+      "brightness": 116.07
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_30199",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_30199.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_30199.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 17.63,
+      "brightness": 115.13
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_30927",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_30927.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_30927.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 15.31,
+      "brightness": 116.71
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_31291",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_31291.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_31291.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.93,
+      "brightness": 117.59
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_34384",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_34384.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_34384.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 24.33,
+      "brightness": 118.82
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_35142",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_35142.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_35142.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 18.71,
+      "brightness": 121.46
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_35202",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_35202.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_35202.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.23,
+      "brightness": 119.38
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_35354",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_35354.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_35354.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.49,
+      "brightness": 120.75
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_35566",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_35566.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_35566.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 15.88,
+      "brightness": 120.92
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_35657",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_35657.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_35657.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.67,
+      "brightness": 122.09
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_36051",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_36051.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_36051.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.88,
+      "brightness": 121.51
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_36324",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_36324.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_36324.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.67,
+      "brightness": 122.56
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_36354",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_36354.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_36354.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 13.63,
+      "brightness": 123.1
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_36476",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_36476.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_36476.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 14.27,
+      "brightness": 122.97
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_36536",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_36536.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_36536.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 15.8,
+      "brightness": 123.76
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_44723",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_44723.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_44723.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 30.13,
+      "brightness": 111.47
+    },
+    {
+      "key": "HQL095_sleep260324_010/frame_59519",
+      "image": "labeled_frames/HQL095_sleep260324_010/images/frame_59519.png",
+      "mask": "labeled_frames/HQL095_sleep260324_010/masks/frame_59519.png",
+      "session": "HQL095_sleep260324_010",
+      "fold": 0,
+      "holdout": false,
+      "diameter": 23.64,
+      "brightness": 109.21
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_01577",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_01577.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_01577.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 24.62,
+      "brightness": 117.23
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_06428",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_06428.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_06428.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 20.12,
+      "brightness": 108.4
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_12128",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_12128.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_12128.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 15.55,
+      "brightness": 110.59
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_14493",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_14493.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_14493.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.67,
+      "brightness": 112.01
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_14614",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_14614.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_14614.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.45,
+      "brightness": 112.22
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_14796",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_14796.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_14796.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.17,
+      "brightness": 112.31
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_15008",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_15008.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_15008.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 10.7,
+      "brightness": 113.08
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_15099",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_15099.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_15099.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.26,
+      "brightness": 112.34
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_15190",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_15190.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_15190.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.18,
+      "brightness": 111.62
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_17403",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_17403.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_17403.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.0,
+      "brightness": 114.23
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_17433",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_17433.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_17433.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 10.22,
+      "brightness": 114.22
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_17949",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_17949.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_17949.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 8.74,
+      "brightness": 117.18
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_18009",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_18009.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_18009.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.27,
+      "brightness": 116.35
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_18040",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_18040.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_18040.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 17.0,
+      "brightness": 116.46
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_20829",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_20829.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_20829.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.97,
+      "brightness": 115.23
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_21072",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_21072.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_21072.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 29.1,
+      "brightness": 115.01
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_21526",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_21526.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_21526.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 17.04,
+      "brightness": 116.17
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_25074",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_25074.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_25074.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.71,
+      "brightness": 118.04
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_25165",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_25165.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_25165.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.87,
+      "brightness": 117.99
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_25225",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_25225.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_25225.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.63,
+      "brightness": 117.75
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_25346",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_25346.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_25346.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.67,
+      "brightness": 118.79
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_25498",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_25498.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_25498.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.44,
+      "brightness": 119.88
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_27742",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_27742.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_27742.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.51,
+      "brightness": 118.98
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_27772",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_27772.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_27772.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 19.41,
+      "brightness": 116.07
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_28318",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_28318.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_28318.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 30.92,
+      "brightness": 122.91
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_28348",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_28348.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_28348.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 33.03,
+      "brightness": 124.13
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_29015",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_29015.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_29015.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 31.19,
+      "brightness": 124.01
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_29379",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_29379.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_29379.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 38.63,
+      "brightness": 121.69
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_29925",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_29925.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_29925.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 26.15,
+      "brightness": 118.96
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_30106",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_30106.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_30106.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 23.1,
+      "brightness": 116.3
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_30864",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_30864.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_30864.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 15.51,
+      "brightness": 117.15
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_31046",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_31046.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_31046.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.44,
+      "brightness": 116.69
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_31804",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_31804.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_31804.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.96,
+      "brightness": 115.3
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_31865",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_31865.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_31865.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 21.56,
+      "brightness": 115.57
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33108",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33108.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33108.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 22.79,
+      "brightness": 118.46
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33441",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33441.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33441.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 8.37,
+      "brightness": 117.24
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33714",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33714.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33714.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.64,
+      "brightness": 117.79
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33775",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33775.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33775.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 20.56,
+      "brightness": 116.54
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33836",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33836.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33836.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 29.51,
+      "brightness": 117.65
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33866",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33866.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33866.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 22.82,
+      "brightness": 123.04
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_33927",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_33927.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_33927.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 33.38,
+      "brightness": 118.96
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_34654",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_34654.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_34654.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 133.76
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_34775",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_34775.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_34775.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 16.39,
+      "brightness": 119.99
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_34897",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_34897.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_34897.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.94,
+      "brightness": 120.1
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_35018",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_35018.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_35018.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 24.1,
+      "brightness": 119.57
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_35291",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_35291.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_35291.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.26,
+      "brightness": 119.47
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36109",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36109.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36109.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 10.16,
+      "brightness": 120.12
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36170",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36170.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36170.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 13.82,
+      "brightness": 120.7
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36413",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36413.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36413.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.05,
+      "brightness": 121.47
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36443",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36443.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36443.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.99,
+      "brightness": 121.3
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36473",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36473.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36473.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.94,
+      "brightness": 121.38
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_36534",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_36534.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_36534.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.15,
+      "brightness": 121.16
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_37868",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_37868.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_37868.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.77,
+      "brightness": 120.31
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_37929",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_37929.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_37929.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.93,
+      "brightness": 120.92
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_37959",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_37959.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_37959.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 16.77,
+      "brightness": 121.27
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_38747",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_38747.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_38747.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.34,
+      "brightness": 120.46
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_38777",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_38777.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_38777.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 10.94,
+      "brightness": 120.95
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_41051",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_41051.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_41051.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 41.69,
+      "brightness": 122.47
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_41233",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_41233.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_41233.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 24.38,
+      "brightness": 119.83
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_41506",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_41506.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_41506.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.0,
+      "brightness": 119.87
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_42203",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_42203.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_42203.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.87,
+      "brightness": 119.08
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_42234",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_42234.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_42234.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.83,
+      "brightness": 119.79
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_42294",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_42294.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_42294.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 17.11,
+      "brightness": 119.52
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_43537",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_43537.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_43537.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.49,
+      "brightness": 119.03
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_43628",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_43628.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_43628.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.64,
+      "brightness": 119.52
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_46478",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_46478.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_46478.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.49,
+      "brightness": 119.36
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_46600",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_46600.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_46600.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 36.93,
+      "brightness": 117.82
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_47236",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_47236.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_47236.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 42.89,
+      "brightness": 122.49
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_48419",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_48419.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_48419.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 18.02,
+      "brightness": 120.38
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_48449",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_48449.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_48449.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 15.39,
+      "brightness": 120.31
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_48479",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_48479.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_48479.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 12.26,
+      "brightness": 120.01
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_48601",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_48601.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_48601.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.57,
+      "brightness": 120.07
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_49692",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_49692.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_49692.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 15.96,
+      "brightness": 118.46
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_49722",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_49722.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_49722.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 25.51,
+      "brightness": 118.04
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_50965",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_50965.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_50965.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 7.98,
+      "brightness": 119.24
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_51147",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_51147.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_51147.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 119.0
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_51329",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_51329.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_51329.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 118.89
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_51602",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_51602.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_51602.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 119.11
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_51693",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_51693.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_51693.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 119.58
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_51784",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_51784.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_51784.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 119.62
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_53482",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_53482.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_53482.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 17.3,
+      "brightness": 121.88
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55483",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55483.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55483.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 120.96
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55513",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55513.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55513.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 120.92
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55574",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55574.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55574.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 120.96
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55695",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55695.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55695.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.04
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55725",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55725.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55725.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.13
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_55786",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_55786.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_55786.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.18
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_56089",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_56089.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_56089.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.66
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_56119",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_56119.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_56119.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 7.57,
+      "brightness": 120.04
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_56150",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_56150.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_56150.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 11.99,
+      "brightness": 119.97
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_57666",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_57666.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_57666.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 120.5
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_57787",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_57787.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_57787.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 120.62
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_57908",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_57908.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_57908.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.42
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_58029",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_58029.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_58029.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 121.33
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_58272",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_58272.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_58272.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 0.0,
+      "brightness": 136.09
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_58393",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_58393.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_58393.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 35.47,
+      "brightness": 121.55
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_58969",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_58969.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_58969.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 34.56,
+      "brightness": 123.02
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_60091",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_60091.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_60091.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 9.64,
+      "brightness": 124.24
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_60152",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_60152.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_60152.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 16.35,
+      "brightness": 124.41
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_60243",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_60243.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_60243.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 14.93,
+      "brightness": 124.57
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_60273",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_60273.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_60273.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 21.7,
+      "brightness": 123.13
+    },
+    {
+      "key": "HQL096_sleep260320_007/frame_60516",
+      "image": "labeled_frames/HQL096_sleep260320_007/images/frame_60516.png",
+      "mask": "labeled_frames/HQL096_sleep260320_007/masks/frame_60516.png",
+      "session": "HQL096_sleep260320_007",
+      "fold": 1,
+      "holdout": false,
+      "diameter": 27.34,
+      "brightness": 124.82
     },
     {
       "key": "HQL097_sleep260321_010/frame_02776",

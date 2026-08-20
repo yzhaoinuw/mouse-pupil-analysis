@@ -2,8 +2,8 @@
 """Train or fine-tune the pupil-segmentation UNet.
 
 Run this script with terminal arguments for a command-line workflow, or run it
-without arguments from Spyder/an IDE to use the editable configuration block at
-the bottom. Importing the module is side-effect free.
+without arguments to use the editable configuration block at the bottom.
+Importing the module is side-effect free.
 """
 
 from __future__ import annotations
@@ -1126,8 +1126,8 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _run_ide_configuration() -> None:
-    """Run the editable no-argument configuration used by Spyder and IDEs."""
+def _run_direct_configuration() -> None:
+    """Run the editable no-argument configuration at the bottom of this file."""
     # Set this to a compatible .pth file to fine-tune its weights. Leave it as None
     # for fresh training. Fine-tuning automatically uses the lower learning rate.
     finetune_checkpoint = None
@@ -1150,4 +1150,4 @@ def _run_ide_configuration() -> None:
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         raise SystemExit(main())
-    _run_ide_configuration()
+    _run_direct_configuration()

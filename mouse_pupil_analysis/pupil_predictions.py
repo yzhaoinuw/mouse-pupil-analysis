@@ -2,7 +2,7 @@
 """Generate pupil-segmentation predictions from PNG images.
 
 The public functions in this module can be imported by another workflow or run
-directly from an IDE using the editable configuration at the bottom of the file.
+directly using the editable configuration at the bottom of the file.
 """
 
 import json
@@ -508,7 +508,7 @@ def generate_pupil_mask_prediction(
 
 
 if __name__ == "__main__":
-    # Edit these values, then run this file directly from an IDE.
+    # Edit these values, then run this file directly.
     project_root = Path(__file__).resolve().parents[1]
     image_dir = project_root / "images_test_1"
     checkpoint_path = find_default_checkpoint()

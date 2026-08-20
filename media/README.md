@@ -17,7 +17,8 @@ Running `python media\make_gif.py` with no arguments rebuilds the promoted GIF f
 source. Large source recordings belong in `videos/`; alternate candidates and full analysis
 runs are not part of the maintained demo workspace.
 
-Run the commands below from the repository root. The script also works when run directly from an IDE because its default paths are resolved relative to the repository rather than the current working directory.
+Run the commands below from the repository root. The script resolves its default paths relative
+to the repository rather than the current working directory.
 
 Activate the project environment first:
 
@@ -79,9 +80,11 @@ The selected range and sampling interval must produce at least two frames. The m
 
 Run `python media\make_gif.py --help` for the full interface.
 
-## IDE workflow
+## Use editable defaults
 
-Open `make_gif.py`, change `DEFAULT_CSV`, `DEFAULT_OVERLAY_DIR`, and `DEFAULT_OUTPUT` near the top, then use **Run file**. The `if __name__ == "__main__":` block invokes the same command-line workflow, so the generated animation behaves identically.
+To use the local defaults, edit `DEFAULT_CSV`, `DEFAULT_OVERLAY_DIR`, and `DEFAULT_OUTPUT` near
+the top of `make_gif.py`, then run the file directly. Its `if __name__ == "__main__":` block
+invokes the same command-line workflow, so the generated animation behaves identically.
 
 ## 3. Review and promote
 

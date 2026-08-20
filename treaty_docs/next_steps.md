@@ -4,12 +4,12 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 376 images; establish the matched new-pool baseline before comparing configurations.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 516 images; CV and the 512-image all-in refit are trained, with one CV legacy-session regression to resolve.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
-- [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - HQL097 and HQL103 add 98 pupils and 23 true negatives; the 4-frame holdout remains untouched.
-- [Frame recommendation](#frame-recommendation) - HQL097 and HQL103 are integrated; HQL095 and HQL096 remain in the labeling queue.
+- [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - HQL095/HQL096 are integrated and the 4-frame holdout remains untouched.
+- [Frame recommendation](#frame-recommendation) - all four recommended sessions are integrated; refresh the local default committee only after the expanded-pool regression is resolved.
 - [Sampling rate and pupil dynamics](#sampling-rate-and-pupil-dynamics) - size needs 10-30 Hz, position needs the 97 Hz rig; measure a real PLR constriction velocity to set the bound.
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
@@ -49,10 +49,9 @@ Two structural facts that constrained the original 222-image comparison:
 
 - The `5003` dim-light session is 62 images, **28% of the pool**, and is indivisible, so one
   fold is always at least that big. The pool uses **4 folds**, not 5: four puts a small pupil
-  in every fold and tightens the condition balance. After the 2026-08-17 intake, development-fold
-  sizes are now 76/58/134/104 after the HQL103 intake, and a separate 4-image session is the
-  outer holdout. HQL097 and HQL103 supply 61 and 60 images, so keep an eye on session dominance
-  when reading the next baseline.
+  in every fold and tightens the condition balance. After the 2026-08-19 intake, development-fold
+  sizes are 114/160/134/104, and a separate 4-image session is the outer holdout. HQL096 alone
+  supplies 102 fold-1 images, so report mean per-session and image-weighted results together.
 - `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Stratification
   spread the rest so every fold now contains some tiny mask, up from 2 of 5, and cut the
   cross-fold median-diameter spread from 3.03x to 1.60x. Coverage is still thin: only four
@@ -72,17 +71,22 @@ Two structural facts that constrained the original 222-image comparison:
   0.0273 on the three-seed mean and up to 0.0873 on one fold. `run_cv.py`'s docstring has been
   corrected; treat single-fold differences below ~0.05 as noise.
 
+**Measured on the 2026-08-19 expanded pool.** The matched seed-0 natural-sampling,
+macro-IoU run over all 512 development images produced fold IoUs
+0.6985/0.4832/0.5313/0.6845, mean per-session IoU 0.6701, and image-weighted IoU 0.5846.
+On the 17 sessions shared with the 255-image run, the mean improved 0.6468 -> 0.6923 and 11/17
+sessions improved. This is encouraging, but not a clean two-session ablation: HQL097 and HQL103
+also entered since the previous trained baseline.
+
 Then:
 
-- Treat the 2026-08-17 255-image seed-0 result only as the previous-pool baseline: fold macro IoUs
-  0.7754/0.4990/0.5400/0.6701, mean per-session IoU 0.6468. Do not compare a new configuration
-  on the 376-image pool against it as though the pools were matched.
-- Run the same seed-0 natural-sampling, macro-IoU configuration on all 372 development images
-  next. That establishes whether the HQL097 pupils and true negatives correct the aperture grab
-  before changing the loss, sampler, or architecture.
-- Freeze the final epoch schedule and threshold using development evidence only, refit on all
-  372 development images, then consume the four-image trial5 holdout exactly once with
-  `training/evaluate_holdout.py`.
+- Diagnose or repeat fold 1 before promotion. `250616_5120_Purple_sleep_trial_1` regressed
+  0.7304 -> 0.2585 and predicts 0.218x the labelled area, despite large gains on the two old
+  aperture-confusion sessions.
+- The 512-image final refit is trained under `checkpoints_exp/final_516_nat_macro_s0` with a frozen
+  115-epoch schedule and threshold 0.5. Do not consume trial5 yet; first inspect this checkpoint on
+  more unlabeled recordings and resolve whether the fold-1 regression appears in practice, then
+  score trial5 exactly once with `training/evaluate_holdout.py` if it is still a useful gate.
 
 ## Improving Cross-Recording Generalization
 
@@ -159,11 +163,10 @@ zero and silently disables deduplication exactly when duplicates are common.
 
 Remaining work:
 
-- HQL097 and HQL103 are complete. Together they contributed 98 pupil masks and 23 all-black true
-  negatives; 11 uncertain frames remain outside segmentation training. Continue HQL095 and HQL096
-  as separate sessions, using nearby frames to distinguish confirmed disappearance from an
-  unresolved low-contrast transition. HQL090 is lower priority because development already
-  contains that session.
+- HQL095 and HQL096 are complete and integrated as separate sessions. Together they contributed
+  122 pupil masks and 18 all-black true negatives; 5 uncertain HQL096 transitions remain outside
+  segmentation training. HQL090 is lower priority because development already contains that
+  session.
 - Fold the temporal signal into `implausibility_score` as a physiological bound rather than a
   separately weighted term - see [Sampling rate](#sampling-rate-and-pupil-dynamics). It currently
   defaults to weight 0 because it could not be validated on a sparsely sampled pool.
@@ -196,13 +199,13 @@ Remaining work:
 
 ## New Labels And Experiment Sequencing
 
-Status: HQL097 and HQL103 integrated; outer holdout still frozen (2026-08-19)
+Status: HQL095, HQL096, HQL097, and HQL103 integrated; outer holdout still frozen (2026-08-19)
 
-The pool is now 376 pairs across 20 sessions: 372 development pairs and the same 4-image outer
-holdout. HQL097 contributed 61 development pairs (47 visible pupils and 14 explicit empty-mask
-negatives); HQL103 contributed 60 (51 visible pupils and 9 explicit negatives). Their 11 uncertain
-annotations are preserved separately and carry no segmentation mask.
-**No score from the 222- or 255-image pools is a matched comparison against this pool.**
+The pool is now 516 pairs across 22 sessions: 512 development pairs and the same 4-image outer
+holdout. HQL095 contributed 38 visible-pupil pairs. HQL096 contributed 102 trainable pairs (84
+visible pupils and 18 explicit empty-mask negatives); its 5 uncertain annotations are preserved
+separately and carry no segmentation mask. All 376 earlier assignments remained frozen.
+**No score from the 222-, 255-, or 376-image pools is a matched comparison against this pool.**
 
 **Decide before the images are merged, because merging is irreversible in evaluation terms.**
 Nothing currently in the pool can judge the packaged checkpoint: it gradient-trained on 166 of the
@@ -224,8 +227,7 @@ Remaining work:
 
 - Keep trial5 untouched until the final schedule and prediction threshold are frozen from CV.
 - Record the session at intake for every future batch, per `training/data_collection.md`.
-- Train the matched 376-image baseline before interpreting whether the new negatives helped.
-- Finish HQL095 and HQL096 as separate development sessions rather than modifying trial5.
+- Resolve the expanded-pool fold-1 regression before refitting or promoting a checkpoint.
 
 ## Training Sampling Default
 

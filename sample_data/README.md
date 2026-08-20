@@ -56,6 +56,9 @@ run-pupil-analysis `
 
 Repeat with `recording_250616` to try the second acquisition setup. Each folder is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays. All six inputs retain their original dimensions.
 
+To run without command-line arguments, edit the paths and options near the bottom of
+`mouse_pupil_analysis/run_pupil_analysis.py`, then run the file directly.
+
 These six frames carry no masks, and that is the point: they are the only frames here the packaged model has never trained on. `reports/scripts/hard_frame_check.py` defaults to `recording_250616`, which holds a small pupil that appears in no labelled image — the failure that three of five checkpoints in the 2026-08-14 seed study lost entirely while scoring the *highest* validation IoU.
 
 ## Try the velocity pipeline
@@ -99,7 +102,7 @@ Or run the training script with terminal arguments:
 python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
 ```
 
-For an IDE plumbing check, set `DATA_ROOT = PROJECT_ROOT / "sample_data"` and `n_epochs=1` in
+For a direct-run plumbing check, set `DATA_ROOT = PROJECT_ROOT / "sample_data"` and `n_epochs=1` in
 the final `TrainingConfig(...)` block of `training/run_train.py`. The
 best checkpoint, JSON metadata, and log are written to one descriptive run folder under
 `checkpoints_exp/` regardless of score. A model trained on eight images is expected to

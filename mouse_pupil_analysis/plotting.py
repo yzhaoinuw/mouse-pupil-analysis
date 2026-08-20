@@ -42,9 +42,9 @@ def plot_diameter(analysis_table: pd.DataFrame, frame_numbers: np.ndarray) -> Fi
                 zorder=3,
             )
         axis.legend(loc="best", ncol=3)
-    axis.set_ylabel("Estimated pupil diameter\n(model pixels)")
+    axis.set_ylabel("Estimated pupil diameter\n(resized pixels)")
     axis.set_title("Pupil Analysis")
-    axis.set_xlabel("Frame (1-based)")
+    axis.set_xlabel("Frame")
     figure.tight_layout()
     return figure
 

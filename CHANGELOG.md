@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Running `mouse_pupil_analysis/run_pupil_analysis.py` with no arguments now uses an editable
+  direct-run configuration block, while the `run-pupil-analysis` command keeps its existing
+  terminal-argument workflow.
 - Frame recommendations now default to
   `frames_to_label/<session>/{extracted_frames,recommended}` instead of writing beside the source
   video. Use `--output_dir` to replace the output root.
@@ -95,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of assembled by hand. `run_train.py` now records `training_examples` and
   `training_mode` in `best.json` and the log header to make that transform possible.
 - Terminal arguments for `training/run_train.py`, while running the script without arguments
-  retains its editable Spyder/IDE configuration.
+  retains its editable direct-run configuration.
 - Fine-tuning support in `training/run_train.py`, with a lower default fine-tuning learning
   rate, size-balanced sampling, per-image and size-stratified validation, calibrated
   prediction thresholds, and best-checkpoint/metadata/log retention even when early stopping

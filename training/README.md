@@ -2,7 +2,7 @@
 
 This folder contains the editable workflow for preparing masks, reviewing augmentation,
 training the UNet, and promoting a selected checkpoint. `run_train.py` accepts terminal
-arguments when they are supplied and otherwise uses its editable Spyder/IDE configuration.
+arguments when they are supplied and otherwise uses its editable direct-run configuration.
 
 Run repository scripts from the repository root. The training script treats the current
 directory as its default data root unless `--data-root` is supplied.
@@ -242,7 +242,7 @@ it is development data and a new untouched holdout is needed for the next unbias
 
 ## 2. Inspect augmentation
 
-Open `check_augmentation.py` in your IDE or run:
+Run `check_augmentation.py`:
 
 ```powershell
 python training\check_augmentation.py
@@ -252,7 +252,7 @@ The script draws repeated augmented versions of training samples with the mask o
 
 ## 3. Train a model from scratch
 
-For an IDE run, edit the final `TrainingConfig(...)` block in `run_train.py`, especially:
+For a direct run, edit the final `TrainingConfig(...)` block in `run_train.py`, especially:
 
 - `finetune_checkpoint`: leave as `None` for fresh training.
 - `early_stopping_patience` and `scheduler_patience`: how long to wait for the selected
@@ -264,7 +264,7 @@ For an IDE run, edit the final `TrainingConfig(...)` block in `run_train.py`, es
   reporting and balanced sampling.
 - DataLoader batch size and fresh-training Adam learning rate, currently `8` and `1e-3`.
 
-Then run the file directly in your IDE. The editable block deliberately remains separate from
+Then run the file directly. The editable block deliberately remains separate from
 terminal argument parsing.
 
 For a terminal run from a directory containing the four data folders, use:

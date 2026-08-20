@@ -379,7 +379,7 @@ def build_tracking_dataframe(
 
 
 if __name__ == "__main__":
-    # Edit these values, then run this file directly from an IDE.
+    # Edit these values, then run this file directly.
     from mouse_pupil_analysis.pupil_predictions import (
         find_default_checkpoint,
         frames_from_image_directory,
