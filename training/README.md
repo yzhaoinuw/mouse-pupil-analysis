@@ -99,6 +99,9 @@ automatic assignment:
 python training\split_manager.py --data-root .
 ```
 
+Do not open `split_manager.html` directly in a browser: it is the interface asset, while
+`split_manager.py` starts the local service that reads and safely writes `splits.json`.
+
 It displays image counts, tiny/medium/large pupil counts, median pupil diameter, and median
 brightness for every session and fold. Drag a whole session between development folds or into
 the **validation holdout**. Saving validates the complete session assignment and updates

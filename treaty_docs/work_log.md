@@ -29,7 +29,10 @@ Prepend new session notes to the top of this file. The live log holds at most th
   tests/test_promotion.py tests/test_split_manager.py` (passed); the full pytest suite also
   passed; Ruff and Black on changed
   Python files; `python training/data_splits.py --help`; `python training/run_train.py --help`;
-  local browser render of the live 22-session manager; `git diff --check`.
+  local browser render of the live 22-session manager; `git diff --check`. A direct-open guard
+  now explains that `split_manager.html` needs the local `split_manager.py` service, while a
+  fresh `--no-open` server returned HTTP 200 from `/api/state`; focused manager tests, Ruff, and
+  Black pass after the guard.
 
 ## 2026-08-20
 
