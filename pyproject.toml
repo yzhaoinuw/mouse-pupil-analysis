@@ -67,6 +67,9 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Training utilities are source-checkout tools, not an installed package. Make
+# the checkout root importable when pytest is launched through its console script.
+pythonpath = ["."]
 
 [tool.black]
 line-length = 100

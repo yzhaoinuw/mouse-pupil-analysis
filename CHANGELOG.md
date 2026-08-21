@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Pytest now adds the repository root to its import path, so tests for the source-only
+  `training/` utilities run when CI invokes the `pytest` console script.
+- The console-script smoke test now resolves its executable from the active Python environment,
+  avoiding platform-specific `PATH` assumptions.
+
 ### Added
 
 - Running `mouse_pupil_analysis/run_pupil_analysis.py` with no arguments now uses an editable

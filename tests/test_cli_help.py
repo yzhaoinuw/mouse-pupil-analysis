@@ -12,11 +12,18 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _console_script(name: str) -> Path:
+    """Return a console-script path from the active Python environment."""
+    executable_dir = Path(sys.executable).parent
+    if sys.platform == "win32":
+        return executable_dir / "Scripts" / f"{name}.exe"
+    return executable_dir / name
+
+
 def test_cli_help_runs():
-    # Uses the console script entrypoint you advertise in README
-    # (works on all OS; if it fails on Windows CI later, we can adjust)
+    # Uses the console-script entrypoint advertised in the README.
     proc = subprocess.run(
-        ["run-pupil-analysis", "--help"],
+        [_console_script("run-pupil-analysis"), "--help"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

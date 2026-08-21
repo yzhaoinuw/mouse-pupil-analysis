@@ -4,6 +4,17 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-20
 
+### Restore CI imports for source-only training utilities (Codex, GPT-5)
+
+- Added pytest's repository-root `pythonpath` setting. The editable distribution correctly
+  installs only `mouse_pupil_analysis`, while tests also need to import the repository-only
+  `training/` scripts; the setting keeps that source boundary intact and makes console-script
+  pytest launches portable across CI runners.
+- Updated the console-script smoke test to invoke the script installed beside the active Python
+  interpreter instead of assuming its script directory is on `PATH`.
+- Verification: reproduced the missing `training` import from outside the checkout, then ran the
+  two previously failing test modules successfully through console-script pytest from that context.
+
 ### Make the analysis entry point directly executable (Codex, GPT-5)
 
 - Added the same no-argument direct-run pattern used by `training/run_train.py` to
