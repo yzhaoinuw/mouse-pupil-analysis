@@ -14,6 +14,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
+- [Training workflow compaction](#training-workflow-compaction) - core README flow is now session layout, split refresh, and validation-backed training; decide and build the narrow split-manager UI before folding other utilities into a larger workbench.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action. When a thread closes, drop its bullet and compress its section to a status line plus whatever genuinely remains.
 
@@ -389,6 +390,24 @@ Remaining work:
   model-pixel column, now that both are exported. This changes the README demo, so it is
   deliberately deferred.
 
+## Training Workflow Compaction
+
+Status: active (2026-08-21), branch `training-compaction`
+
+The training README now treats labelled image/mask pairs as the input contract and puts the
+ordinary path first: organise sessions, refresh `splits.json`, then run `run_train.py` with one
+held-out fold. Labelme, frame recommendation, augmentation review, cross-validation, holdout
+evaluation, and checkpoint promotion are optional tools.
+
+The current `data_splits.py` automatically assigns and freezes whole-session folds. A user can
+choose which existing fold validates a run with `run_train.py --fold N`, but cannot conveniently
+inspect session statistics and manually assign sessions to folds or a validation group. If a UI is
+built, keep its first version narrow: show session-level counts and pupil-size statistics, edit
+only whole-session assignments, and validate/write the manifest through the split engine. A static
+browser page cannot safely update `splits.json` by itself; it needs either an importable assignment
+file or a local Python-backed interface. Do not combine intake, recommendation, and training into
+that first implementation.
+
 ## Closed
 
 Threads with no open work. Kept as one-liners because each carries a constraint that is easy to
@@ -410,10 +429,6 @@ violate by accident; the history is in `work_log.md` and `work_log_archive/`.
   `tests/test_real_images.py` is the only test that can catch a corrupted or swapped checkpoint,
   because synthetic input segments plausibly regardless of the weights. The two source resolutions
   are what make the input-pixel diameter conversion verifiable against real geometry.
-- **Training workflow documentation** - `training/README.md` covers the workflow. Fine-tuning
-  deliberately restores weights only, starting fresh optimizer, scheduler, early-stopping, and
-  logging state; add structured optimizer/scheduler checkpointing only if exact interrupted-run
-  resume becomes necessary.
 
 ## Background / Paused
 

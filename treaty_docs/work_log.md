@@ -2,6 +2,25 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-21
+
+### Compact the training workflow and park a split-manager UI (Codex, GPT-5)
+
+- Fast-forwarded local `dev` from `38398e3` to the completed recording-splits work at `e0d6bf6`,
+  then created `training-compaction` from it. `origin/dev` intentionally remains unchanged until
+  a push is explicitly requested.
+- Reframed `training/README.md` around the normal validation-backed path: labelled sessions,
+  `data_splits.py`, and `run_train.py --split-manifest ... --fold N`. Fine-tuning, Labelme,
+  frame recommendation, augmentation inspection, CV, holdout evaluation, promotion, and the
+  developer fixture are optional; detailed selection-result prose was removed from the README.
+- Confirmed the user-facing split limitation: folds are automatically assigned and frozen, while
+  `run_train.py --fold N` chooses validation. A future UI should edit only whole-session
+  assignments and hand validated changes back to the split engine; do not turn the first UI into
+  a broad training dashboard.
+- Verification: `python -m pytest -q --basetemp .pytest_tmp_training_ci tests/test_cli_help.py
+  tests/test_training_workflow.py tests/test_training_pairing.py` (19 passed); `python
+  training/data_splits.py --help`; `python training/run_train.py --help`; `git diff --check`.
+
 ## 2026-08-20
 
 ### Restore CI imports for source-only training utilities (Codex, GPT-5)
