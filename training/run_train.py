@@ -163,10 +163,9 @@ class TrainingConfig:
             raise ValueError("final_prediction_threshold is only valid for a final refit.")
         if not self.final and self.final_lr_milestones:
             raise ValueError("final_lr_milestones is only valid for a final refit.")
-        if not self.final and (self.split_manifest is None) != (self.fold is None):
+        if not self.final and self.fold is not None and self.split_manifest is None:
             raise ValueError(
-                "split_manifest and fold must be given together: a manifest selects the "
-                "grouped split, and fold selects which group is held out."
+                "fold needs split_manifest: only a grouped manifest defines development folds."
             )
         if self.fold is not None and self.fold < 0:
             raise ValueError("fold must be nonnegative.")
@@ -254,7 +253,7 @@ def make_split_datasets(
             raise FileNotFoundError(
                 f"No images_train/ under {config.data_root}. The labelled pool is one flat "
                 "labeled_frames/ folder now, and splitting it needs the grouped manifest: "
-                "pass --split-manifest splits.json --fold N. See training/data_collection.md."
+                "pass --split-manifest splits.json. See training/data_collection.md."
             )
         return (
             make_dataset(
@@ -274,7 +273,15 @@ def make_split_datasets(
             "A final refit has no validation dataset; use make_final_training_dataset()."
         )
     manifest = data_splits.load_manifest(config.split_manifest)
-    train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
+    if config.fold is None:
+        train, validation = data_splits.validation_holdout_paths(manifest, config.data_root)
+        if not validation[0]:
+            raise ValueError(
+                "The manifest has no validation holdout. Train all development data with the "
+                "fixed all-data workflow instead."
+            )
+    else:
+        train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
     return (
         SegmentationDataset(train[0], train[1], augment=True),
         SegmentationDataset(validation[0], validation[1], augment=False),
@@ -307,6 +314,18 @@ def split_description(config: TrainingConfig) -> str:
             f"{name} final refit: trained on every non-holdout image for a fixed schedule; "
             f"{len(gate)} untouched holdout session(s) are not loaded: {', '.join(sorted(gate))}"
         )
+    if config.fold is None:
+        validation = data_splits.validation_holdout_sessions(manifest)
+        test_gate = data_splits.holdout_sessions(manifest)
+        suffix = (
+            f"; outer test holdout excluded: {', '.join(sorted(test_gate))}" if test_gate else ""
+        )
+        if validation:
+            return (
+                f"{name} validation holdout: {len(validation)} session(s): "
+                f"{', '.join(sorted(validation))}{suffix}"
+            )
+        return f"{name} all development sessions, no validation holdout{suffix}"
     held_out = data_splits.fold_sessions(manifest, config.fold)
     gate = data_splits.holdout_sessions(manifest)
     suffix = f", gate sessions excluded entirely: {', '.join(sorted(gate))}" if gate else ""
@@ -744,10 +763,139 @@ def run_final_training(config: TrainingConfig) -> Path:
     return checkpoint_path
 
 
+def _all_data_milestones(n_epochs: int) -> tuple[int, ...]:
+    """Return a simple fixed learning-rate schedule when no validation labels exist."""
+    return tuple(
+        sorted({epoch for epoch in (n_epochs // 2, (3 * n_epochs) // 4) if 0 < epoch < n_epochs})
+    )
+
+
+def run_all_data_training(config: TrainingConfig) -> Path:
+    """Train all development sessions with fixed, non-validation-driven defaults.
+
+    This is the normal fallback when the manifest's validation holdout is empty.
+    It deliberately has no early stopping, threshold calibration, or plateau scheduler:
+    none can be chosen honestly without validation labels.
+    """
+    if config.split_manifest is None or config.fold is not None or config.final:
+        raise ValueError(
+            "run_all_data_training needs a non-final manifest configuration without fold."
+        )
+
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
+
+    manifest = data_splits.load_manifest(config.split_manifest)
+    train_paths, validation_paths = data_splits.validation_holdout_paths(manifest, config.data_root)
+    if validation_paths[0]:
+        raise ValueError("Validation holdout exists; use the validation-backed training workflow.")
+    train_dataset = SegmentationDataset(train_paths[0], train_paths[1], augment=True)
+    split = split_description(config)
+    print(f"Split: {split}")
+
+    sampler = None
+    if config.balance_training_sizes:
+        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
+        print(f"Training target counts by size: {dict(size_counts)}")
+
+    device = resolve_device(config.device)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.batch_size,
+        shuffle=sampler is None,
+        sampler=sampler,
+        pin_memory=device.type == "cuda",
+    )
+    learning_rate = initial_learning_rate(config)
+    if config.finetune_checkpoint is None:
+        model = UNet(use_attention=config.use_attention).to(device)
+    else:
+        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
+
+    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    run_name = config.run_name or default_run_name(config)
+    run_dir = config.checkpoint_dir / run_name
+    if run_dir.exists() and any(run_dir.iterdir()):
+        raise FileExistsError(
+            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
+            "remove the old experimental run deliberately."
+        )
+    run_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = run_dir / "all_data.pth"
+    metadata_path = run_dir / "all_data.json"
+    log_path = run_dir / "train.log"
+    print(f"Run directory: {run_dir}")
+    print(f"Device: {device.type}")
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    milestones = _all_data_milestones(config.n_epochs)
+    scheduler = (
+        optim.lr_scheduler.MultiStepLR(optimizer, milestones=list(milestones), gamma=0.5)
+        if milestones
+        else None
+    )
+    threshold = config.selection_threshold or config.threshold_candidates[0]
+
+    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
+        header = run_header(config, len(train_dataset), device) | {
+            "workflow": "all_data_no_validation",
+            "validation_examples": 0,
+            "prediction_threshold": threshold,
+            "lr_milestones": milestones,
+        }
+        log_file.write(json.dumps(header, sort_keys=True) + "\n")
+        for epoch in range(1, config.n_epochs + 1):
+            model.train()
+            total_loss = 0.0
+            total_images = 0
+            for images, masks in train_loader:
+                images, masks = images.to(device), masks.to(device)
+                optimizer.zero_grad(set_to_none=True)
+                loss = criterion(model(images), masks)
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item() * len(images)
+                total_images += len(images)
+            if scheduler is not None:
+                scheduler.step()
+            train_loss = total_loss / total_images
+            current_lr = optimizer.param_groups[0]["lr"]
+            log_line = f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | LR: {current_lr:g}"
+            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.n_epochs:
+                print(log_line)
+            log_file.write(log_line + "\n")
+
+    torch.save(model.state_dict(), checkpoint_path)
+    payload = {
+        "run_name": run_dir.name,
+        "workflow": "all_data_no_validation",
+        "training_mode": training_mode(config),
+        "training_examples": len(train_dataset),
+        "trained_epochs": config.n_epochs,
+        "prediction_threshold": threshold,
+        "lr_milestones": list(milestones),
+        "split": split,
+        "split_manifest_sha256": file_sha256(Path(config.split_manifest)),
+        "checkpoint_sha256": file_sha256(checkpoint_path),
+        "config": _jsonable_config(config),
+    }
+    metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"All-data weights: {checkpoint_path}")
+    print(f"Fixed-schedule metadata: {metadata_path}")
+    return checkpoint_path
+
+
 def run_training(config: TrainingConfig) -> Path:
     """Run training and return the stable path holding the best model weights."""
     if config.final:
         return run_final_training(config)
+
+    if config.split_manifest is not None and config.fold is None:
+        manifest = data_splits.load_manifest(config.split_manifest)
+        if not data_splits.validation_holdout_sessions(manifest):
+            return run_all_data_training(config)
 
     random.seed(config.seed)
     np.random.seed(config.seed)
@@ -967,14 +1115,14 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--split-manifest",
         type=Path,
-        help="Grouped split from training/data_splits.py. Requires --fold. Without it, the "
-        "fixed images_train/images_validation folders are used where they exist, which "
-        "share recordings across the split.",
+        help="Grouped split from training/data_splits.py. Without --fold, uses its validation "
+        "holdout when present or trains all development data with a fixed schedule. Without a "
+        "manifest, the fixed images_train/images_validation folders are used where they exist.",
     )
     parser.add_argument(
         "--fold",
         type=int,
-        help="Fold held out for validation; every other fold trains. Requires --split-manifest.",
+        help="Development fold held out for one CV-style validation run. Requires --split-manifest.",
     )
     parser.add_argument(
         "--final",

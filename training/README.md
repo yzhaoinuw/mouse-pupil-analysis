@@ -5,7 +5,8 @@ experimental pupil-segmentation checkpoint. The normal path is deliberately shor
 
 1. Put labelled frames in session folders.
 2. Refresh `splits.json`.
-3. Train while holding out one session group for validation.
+3. Review the automatic assignment and optionally reserve a validation holdout.
+4. Train with validation when that holdout exists.
 
 `run_train.py` selects the best checkpoint, early-stops, and calibrates its prediction
 threshold against that held-out group. Cross-validation is useful when comparing
@@ -17,8 +18,9 @@ configurations, but it is not required for a working training run.
   - [Environment](#environment)
   - [1. Prepare labelled sessions](#1-prepare-labelled-sessions)
   - [2. Refresh the session split](#2-refresh-the-session-split)
-  - [3. Train and validate](#3-train-and-validate)
-  - [4. Use the experimental checkpoint](#4-use-the-experimental-checkpoint)
+  - [3. Review or adjust assignments](#3-review-or-adjust-assignments)
+  - [4. Train and validate](#4-train-and-validate)
+  - [5. Use the experimental checkpoint](#5-use-the-experimental-checkpoint)
 - [Optional tools](#optional-tools)
   - [Fine-tune a checkpoint](#fine-tune-a-checkpoint)
   - [Label a batch with Labelme](#label-a-batch-with-labelme)
@@ -84,31 +86,49 @@ Review the assignment without writing changes when needed:
 python training\data_splits.py --data-root . --show
 ```
 
-For a normal run, one fold is the validation set and all other folds train the model. The
-current CLI chooses that group with `--fold N`; session-to-fold assignment is automatic and
-frozen in `splits.json` once written.
+The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
+size and lighting summaries across development folds. Existing assignments are preserved when
+new labels arrive.
 
-### 3. Train and validate
+### 3. Review or adjust assignments
 
-This trains from scratch and uses fold 0 as the validation set:
+Open the local split manager when you want to inspect the session statistics or change the
+automatic assignment:
+
+```powershell
+python training\split_manager.py --data-root .
+```
+
+It displays image counts, tiny/medium/large pupil counts, median pupil diameter, and median
+brightness for every session and fold. Drag a whole session between development folds or into
+the **validation holdout**. Saving validates the complete session assignment and updates
+`splits.json`.
+
+Development folds are used only by cross-validation. The validation holdout is excluded from
+CV and is used by the normal training command below. It may be empty.
+
+### 4. Train and validate
+
+This trains from scratch using the validation holdout configured in `splits.json`:
 
 ```powershell
 python training\run_train.py `
     --data-root . `
     --split-manifest splits.json `
-    --fold 0 `
-    --run-name scratch_f0
+    --run-name scratch
 ```
 
-Choose another fold with `--fold 1`, `--fold 2`, and so on. During training, the held-out
-sessions control early stopping, learning-rate scheduling, checkpoint selection, and
-prediction-threshold calibration. The other sessions are the training set.
+When the validation holdout contains sessions, they control early stopping, learning-rate
+scheduling, checkpoint selection, and prediction-threshold calibration. All development folds
+train the model. When it is empty, the trainer uses all development sessions with its fixed
+default epoch schedule, fixed learning-rate milestones, and fixed prediction threshold; it does
+not pretend to auto-tune without validation labels.
 
 Use `python training\run_train.py --help` to set the epoch limit, batch size, learning rate,
 seed, sampling mode, architecture, or output directory. CUDA is selected automatically when
 available.
 
-### 4. Use the experimental checkpoint
+### 5. Use the experimental checkpoint
 
 Each run writes a new folder under `checkpoints_exp/<run-name>/`; an existing run folder is
 never overwritten.
@@ -116,6 +136,9 @@ never overwritten.
 - `best.pth` — selected model weights.
 - `best.json` — selected threshold, validation metrics, epoch, and full configuration.
 - `train.log` — per-epoch training and validation record.
+
+An all-data run with no validation holdout writes `all_data.pth` and `all_data.json` instead of
+`best.*`; its metadata records the fixed schedule and threshold used.
 
 Treat this folder as experimental output. Test the checkpoint on representative recordings
 before replacing the package's default model.
@@ -131,10 +154,9 @@ existing labelled pool. It uses the same held-out-fold validation workflow:
 python training\run_train.py `
     --data-root . `
     --split-manifest splits.json `
-    --fold 0 `
     --finetune-checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
     --learning-rate 1e-4 `
-    --run-name ft_f0
+    --run-name ft
 ```
 
 Fine-tuning loads model weights but starts a new optimizer, scheduler, and training log. Keep
@@ -185,7 +207,8 @@ transforms look plausible.
 ### Cross-validate a configuration
 
 Use cross-validation when you need to compare configurations or estimate how sensitive a
-result is to the held-out session group. It repeats the normal training workflow across folds:
+result is to the held-out session group. It takes turns holding out each development fold and
+never loads the validation holdout:
 
 ```powershell
 python training\run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp\cv

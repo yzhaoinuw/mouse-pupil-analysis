@@ -17,6 +17,8 @@ default_run_name = TRAINING["default_run_name"]
 TrainingConfig = TRAINING["TrainingConfig"]
 training_main = TRAINING["main"]
 make_final_training_dataset = TRAINING["make_final_training_dataset"]
+make_split_datasets = TRAINING["make_split_datasets"]
+run_training = TRAINING["run_training"]
 
 
 def test_grouped_training_defaults_to_macro_iou_selection():
@@ -56,6 +58,52 @@ def test_final_training_dataset_never_constructs_a_dataset_from_holdout_paths(
     assert isinstance(dataset, FakeDataset)
     assert constructed == [(development[0], development[1], True)]
     assert holdout_count == 1
+
+
+def test_normal_manifest_run_uses_the_validation_holdout(monkeypatch, tmp_path):
+    development = ([tmp_path / "dev.png"], [tmp_path / "dev_mask.png"])
+    validation = ([tmp_path / "validation.png"], [tmp_path / "validation_mask.png"])
+    constructed = []
+
+    class FakeDataset:
+        def __init__(self, images, masks, augment):
+            constructed.append((images, masks, augment))
+
+    data_splits = make_split_datasets.__globals__["data_splits"]
+    monkeypatch.setattr(data_splits, "load_manifest", lambda _: {})
+    monkeypatch.setattr(
+        data_splits, "validation_holdout_paths", lambda *_: (development, validation)
+    )
+    monkeypatch.setitem(make_split_datasets.__globals__, "SegmentationDataset", FakeDataset)
+
+    train, held_out = make_split_datasets(
+        TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+    )
+
+    assert isinstance(train, FakeDataset)
+    assert isinstance(held_out, FakeDataset)
+    assert constructed == [
+        (development[0], development[1], True),
+        (validation[0], validation[1], False),
+    ]
+
+
+def test_manifest_without_fold_is_a_valid_normal_training_configuration(tmp_path):
+    config = TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+
+    assert config.fold is None
+
+
+def test_empty_validation_holdout_uses_fixed_all_data_training(monkeypatch, tmp_path):
+    captured = []
+    data_splits = run_training.__globals__["data_splits"]
+    monkeypatch.setattr(data_splits, "load_manifest", lambda _: {})
+    monkeypatch.setattr(data_splits, "validation_holdout_sessions", lambda _: [])
+    monkeypatch.setitem(run_training.__globals__, "run_all_data_training", captured.append)
+    config = TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+
+    assert run_training(config) is None
+    assert captured == [config]
 
 
 def test_per_image_iou_does_not_let_a_large_mask_hide_a_missed_small_mask():

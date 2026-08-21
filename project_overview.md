@@ -78,11 +78,11 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 11. `training/`
 
-- Contains the training launcher, Labelme JSON conversion, and augmentation inspection.
+- Contains the training launcher, split manager, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional model promotion.
 - `training/run_train.py` owns the training implementation. Arguments enable terminal use;
   running it without arguments preserves the editable direct-run block.
-- The trainer supports fresh training or lower-rate weight fine-tuning, balances training across mask-size bins, calibrates the prediction threshold on per-image size-stratified validation metrics, and always retains the best checkpoint, JSON metadata, and complete log in a collision-safe, descriptive run folder under `checkpoints_exp/`.
+- The trainer supports fresh training or lower-rate weight fine-tuning. A manifest validation holdout drives checkpoint selection and threshold calibration; when it is empty, all development sessions train with a fixed schedule and recorded fixed threshold instead. `training/split_manager.py` renders the automatic session grouping, its pupil-size/lighting summaries, and validates manual whole-session reassignment.
 
 ### 12. `media/`
 
@@ -142,6 +142,7 @@ mouse-pupil-analysis/
 |  |- run_train.py
 |  |- run_cv.py
 |  |- data_splits.py
+|  |- split_manager.py
 |  |- provenance.py
 |  |- data_collection.md
 |  |- import_labelme_batch.py
@@ -204,6 +205,7 @@ Active, package-facing files:
 Active local/developer scripts:
 
 - `training/run_train.py`
+- `training/split_manager.py`
 - `training/import_labelme_batch.py`
 - `training/labelme_json2png.py`
 - `training/check_augmentation.py`

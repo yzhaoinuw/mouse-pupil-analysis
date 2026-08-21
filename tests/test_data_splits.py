@@ -433,6 +433,47 @@ def test_holdout_sessions_appear_in_no_fold(pool: Path):
         assert "rig0_day0" not in seen
 
 
+def test_validation_holdout_is_excluded_from_cv_and_loaded_for_normal_training(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3, validation_holdout={"rig0_day0"})
+
+    gate = [e for e in manifest["sessions"] if e["session"] == "rig0_day0"][0]
+    assert gate["validation_holdout"] is True
+    assert gate["fold"] == data_splits.VALIDATION_HOLDOUT_FOLD
+    assert data_splits.validation_holdout_sessions(manifest) == ["rig0_day0"]
+
+    for fold in range(3):
+        (train_images, _), (val_images, _) = data_splits.fold_paths(manifest, fold, pool)
+        seen = {p.parents[1].name for p in train_images} | {p.parents[1].name for p in val_images}
+        assert "rig0_day0" not in seen
+
+    (train_images, _), (validation_images, _) = data_splits.validation_holdout_paths(manifest, pool)
+    assert {p.parents[1].name for p in validation_images} == {"rig0_day0"}
+    assert "rig0_day0" not in {p.parents[1].name for p in train_images}
+
+
+def test_manual_session_assignments_update_images_and_validation_holdout(pool: Path):
+    manifest = data_splits.build_manifest(pool, n_folds=3)
+    sessions = [entry["session"] for entry in manifest["sessions"]]
+    assignments = {entry["session"]: entry["fold"] for entry in manifest["sessions"]}
+    session = next(
+        entry["session"]
+        for entry in manifest["sessions"]
+        if sum(other["fold"] == entry["fold"] for other in manifest["sessions"]) > 1
+    )
+    assignments[session] = "validation_holdout"
+
+    updated = data_splits.apply_session_assignments(manifest, assignments)
+
+    assert data_splits.validation_holdout_sessions(updated) == [session]
+    assert all(
+        image["validation_holdout"] == (image["session"] == session) for image in updated["images"]
+    )
+    with pytest.raises(ValueError, match="cover every editable session"):
+        data_splits.apply_session_assignments(manifest, {})
+    with pytest.raises(ValueError, match="Every development fold"):
+        data_splits.apply_session_assignments(manifest, {name: 0 for name in sessions})
+
+
 def test_final_run_trains_on_everything_else_and_validates_on_the_gate(pool: Path):
     manifest = data_splits.build_manifest(pool, n_folds=3, holdout={"rig0_day0"})
     (train_images, _), (gate_images, _) = data_splits.final_paths(manifest, pool)

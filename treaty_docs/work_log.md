@@ -4,22 +4,29 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-21
 
-### Compact the training workflow and park a split-manager UI (Codex, GPT-5)
+### Compact the training workflow and build a validation-holdout split manager (Codex, GPT-5)
 
 - Fast-forwarded local `dev` from `38398e3` to the completed recording-splits work at `e0d6bf6`,
   then created `training-compaction` from it. `origin/dev` intentionally remains unchanged until
   a push is explicitly requested.
-- Reframed `training/README.md` around the normal validation-backed path: labelled sessions,
-  `data_splits.py`, and `run_train.py --split-manifest ... --fold N`. Fine-tuning, Labelme,
-  frame recommendation, augmentation inspection, CV, holdout evaluation, promotion, and the
-  developer fixture are optional; detailed selection-result prose was removed from the README.
-- Confirmed the user-facing split limitation: folds are automatically assigned and frozen, while
-  `run_train.py --fold N` chooses validation. A future UI should edit only whole-session
-  assignments and hand validated changes back to the split engine; do not turn the first UI into
-  a broad training dashboard.
-- Verification: `python -m pytest -q --basetemp .pytest_tmp_training_ci tests/test_cli_help.py
-  tests/test_training_workflow.py tests/test_training_pairing.py` (19 passed); `python
-  training/data_splits.py --help`; `python training/run_train.py --help`; `git diff --check`.
+- Reframed `training/README.md` around labelled sessions, `data_splits.py`, optional split review,
+  and `run_train.py --split-manifest splits.json` without a manually selected CV fold. Fine-tuning,
+  Labelme, frame recommendation, augmentation inspection, CV, outer-test evaluation, promotion,
+  and the developer fixture are optional; detailed selection-result prose was removed.
+- Added `training/split_manager.py`, a loopback-only drag-and-drop UI that renders automatic
+  session grouping plus image count, tiny/medium/large pupil count, median diameter, and median
+  brightness for every session/fold. It validates and writes whole-session fold or validation-
+  holdout assignments through `data_splits.py`; it leaves the outer test holdout read-only.
+- Added a separate validation holdout that CV excludes. A normal manifest training run uses it for
+  early stopping, scheduler/checkpoint selection, and threshold calibration. When empty, the
+  trainer uses every development session with fixed mid/three-quarter learning-rate milestones and
+  a fixed threshold, recording `all_data.*` rather than claiming validation-selected `best.*`.
+- Verification: `python -m pytest -q --basetemp .pytest_tmp_split_manager tests/test_cli_help.py
+  tests/test_data_splits.py tests/test_training_workflow.py tests/test_holdout_evaluation.py
+  tests/test_promotion.py tests/test_split_manager.py` (passed); the full pytest suite also
+  passed; Ruff and Black on changed
+  Python files; `python training/data_splits.py --help`; `python training/run_train.py --help`;
+  local browser render of the live 22-session manager; `git diff --check`.
 
 ## 2026-08-20
 

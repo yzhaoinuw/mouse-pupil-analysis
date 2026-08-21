@@ -11,9 +11,8 @@ the labelled pool.
     python training/run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp/cv
 
 Use this to compare *configurations* -- sampling, loss, augmentation, architecture.
-It is not how the shipped checkpoint is built: once a configuration wins, freeze the
-schedule and threshold, refit on the non-holdout development pool, and consume the outer
-holdout once with ``training/evaluate_holdout.py``. The hard-frame visual check remains a
+The validation holdout, when configured, is excluded from every CV fold and is reserved
+for the normal all-development training run. The hard-frame visual check remains a
 separate promotion gate.
 
 Cross-validation narrows sampling noise, not seed noise; repeat with ``--seed`` to
@@ -170,6 +169,15 @@ def main(argv: list[str] | None = None) -> int:
             f"Holdout excluded from every fold: {len(gate)} session(s), {held} image(s) "
             f"({', '.join(sorted(gate))}). Refit with run_train.py --final, then score "
             "once with training/evaluate_holdout.py."
+        )
+    validation_holdout = data_splits.validation_holdout_sessions(manifest)
+    if validation_holdout:
+        held = sum(
+            entry["n_images"] for entry in manifest["sessions"] if entry.get("validation_holdout")
+        )
+        print(
+            f"Validation holdout excluded from every CV fold: {len(validation_holdout)} session(s), "
+            f"{held} image(s) ({', '.join(sorted(validation_holdout))})."
         )
 
     started = time.perf_counter()

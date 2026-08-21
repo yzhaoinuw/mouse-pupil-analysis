@@ -14,7 +14,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
-- [Training workflow compaction](#training-workflow-compaction) - core README flow is now session layout, split refresh, and validation-backed training; decide and build the narrow split-manager UI before folding other utilities into a larger workbench.
+- [Training workflow compaction](#training-workflow-compaction) - the core README and local split manager are ready for review; decide later whether any intake/recommendation utilities belong in a broader workbench.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action. When a thread closes, drop its bullet and compress its section to a status line plus whatever genuinely remains.
 
@@ -392,21 +392,22 @@ Remaining work:
 
 ## Training Workflow Compaction
 
-Status: active (2026-08-21), branch `training-compaction`
+Status: ready for review (2026-08-21), branch `training-compaction`
 
 The training README now treats labelled image/mask pairs as the input contract and puts the
-ordinary path first: organise sessions, refresh `splits.json`, then run `run_train.py` with one
-held-out fold. Labelme, frame recommendation, augmentation review, cross-validation, holdout
-evaluation, and checkpoint promotion are optional tools.
+ordinary path first: organise sessions, refresh `splits.json`, review the split manager if needed,
+then run `run_train.py` against an optional validation holdout. Labelme, frame recommendation,
+augmentation review, cross-validation, outer-test evaluation, and checkpoint promotion are
+optional tools.
 
-The current `data_splits.py` automatically assigns and freezes whole-session folds. A user can
-choose which existing fold validates a run with `run_train.py --fold N`, but cannot conveniently
-inspect session statistics and manually assign sessions to folds or a validation group. If a UI is
-built, keep its first version narrow: show session-level counts and pupil-size statistics, edit
-only whole-session assignments, and validate/write the manifest through the split engine. A static
-browser page cannot safely update `splits.json` by itself; it needs either an importable assignment
-file or a local Python-backed interface. Do not combine intake, recommendation, and training into
-that first implementation.
+`training/split_manager.py` now serves a local browser UI over the existing manifest. It shows
+session/fold image counts, tiny/medium/large pupil counts, median diameter, and median brightness;
+it starts from the automatic grouping and saves only validated whole-session assignments. The
+validation holdout is excluded from CV and drives ordinary `run_train.py` selection when nonempty.
+When empty, `run_train.py` uses every development session with fixed milestones and a fixed
+threshold rather than validation-driven tuning. The original outer test holdout remains separate
+and read-only in this first UI. Do not combine intake, recommendation, and training into the first
+workbench expansion.
 
 ## Closed
 
