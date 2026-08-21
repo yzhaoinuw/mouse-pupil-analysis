@@ -21,7 +21,10 @@
     button.card[aria-pressed="true"] { outline: 3px solid #6aa8ff; outline-offset: 1px; }
     .card strong { display: block; overflow-wrap: anywhere; }
     .meta { font-size: .78rem; color: #53606c; margin-top: .25rem; }
+    #distribution-charts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 1.5rem; align-items: start; }
+    #distribution-charts.session-hidden { grid-template-columns: minmax(0, 1fr); }
     .chart { max-width: 920px; }
+    #session-chart-section h2 { overflow-wrap: anywhere; }
     .chart svg { width: 100%; height: auto; display: block; }
     .chart-legend { display: flex; flex-wrap: wrap; gap: .9rem; margin: .35rem 0 .75rem; font-size: .85rem; }
     .chart-legend span::before { content: ''; display: inline-block; width: .85rem; height: .85rem; margin-right: .3rem; vertical-align: -.1rem; background: var(--swatch); }
@@ -32,6 +35,11 @@
     .axis { stroke: #758291; stroke-width: 1; }
     .grid { stroke: #d7dee5; stroke-width: 1; }
     .axis-label { fill: #56616d; font-size: 12px; }
+    .brightness-line { fill: none; stroke: #9d5cc6; stroke-width: 3; }
+    .brightness-point { fill: #9d5cc6; }
+    @media (max-width: 800px) {
+      #distribution-charts { grid-template-columns: minmax(0, 1fr); }
+    }
     @media (prefers-color-scheme: dark) {
       body { background: #17202a; color: #eaf0f6; }
       .group { background: #202b36; border-color: #40505f; }
@@ -61,15 +69,17 @@
     <button id="reload" class="secondary">Discard changes</button>
   </div>
 
-  <section aria-labelledby="fold-chart-heading">
-    <h2 id="fold-chart-heading">Fold distribution</h2>
-    <p class="muted">Labelled images by pupil-size bin. Dragging a session redraws this chart immediately.</p>
-    <div id="fold-chart" class="chart"></div>
-  </section>
-  <section id="session-chart-section" aria-labelledby="session-chart-heading" hidden>
-    <h2 id="session-chart-heading">Selected session</h2>
-    <div id="session-chart" class="chart"></div>
-  </section>
+  <div id="distribution-charts" class="session-hidden">
+    <section aria-labelledby="fold-chart-heading">
+      <h2 id="fold-chart-heading">Fold distribution</h2>
+      <p class="muted">Bars count labelled images by pupil size. The purple line is median background brightness (0 black–255 white).</p>
+      <div id="fold-chart" class="chart"></div>
+    </section>
+    <section id="session-chart-section" aria-labelledby="session-chart-heading" hidden>
+      <h2 id="session-chart-heading">Selected session</h2>
+      <div id="session-chart" class="chart"></div>
+    </section>
+  </div>
 
   <h2>Session assignments</h2>
   <p class="muted">Click a session to show its size distribution.</p>
@@ -79,6 +89,7 @@
     let selectedSession;
     const notice = document.querySelector('#notice');
     const groups = document.querySelector('#groups');
+    const distributionCharts = document.querySelector('#distribution-charts');
     const fileMode = window.location.protocol === 'file:';
     const sizeBins = [
       {key: 'tiny', label: 'Tiny', color: '#477db6'},
@@ -121,7 +132,13 @@
         tiny: sum('tiny'),
         medium: sum('medium'),
         large: sum('large'),
+        medianBrightness: median(records.map(session => session.median_brightness)),
       };
+    }
+
+    function median(values) {
+      const sorted = values.filter(Number.isFinite).sort((left, right) => left - right);
+      return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
     }
 
     function niceMaximum(value) {
@@ -137,11 +154,14 @@
         item.style.setProperty('--swatch', bin.color);
         legend.append(item);
       });
+      const brightness = el('span', '', 'Median background brightness');
+      brightness.style.setProperty('--swatch', '#9d5cc6');
+      legend.append(brightness);
       container.append(legend);
 
       const width = Math.max(460, 120 * items.length + 100);
       const height = 300;
-      const margin = {top: 20, right: 20, bottom: 58, left: 58};
+      const margin = {top: 20, right: 66, bottom: 58, left: 58};
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const maximum = niceMaximum(Math.max(1, ...items.map(item => item.images)));
@@ -156,11 +176,19 @@
         graph.append(svg('text', {class: 'axis-label', x: margin.left - 8, y: y + 4, 'text-anchor': 'end'}, String(Math.round(value))));
       }
       graph.append(svg('line', {class: 'axis', x1: margin.left, x2: margin.left, y1: margin.top, y2: margin.top + plotHeight}));
+      graph.append(svg('line', {class: 'axis', x1: width - margin.right, x2: width - margin.right, y1: margin.top, y2: margin.top + plotHeight}));
       graph.append(svg('line', {class: 'axis', x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight}));
       graph.append(svg('text', {class: 'axis-label', x: 16, y: margin.top + plotHeight / 2, transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Labelled images'));
+      graph.append(svg('text', {class: 'axis-label', x: width - 14, y: margin.top + plotHeight / 2, transform: `rotate(90 ${width - 14} ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Brightness (0–255)'));
+      for (let tick = 0; tick <= 4; tick += 1) {
+        const brightness = Math.round(255 * tick / 4);
+        const y = margin.top + plotHeight - plotHeight * tick / 4;
+        graph.append(svg('text', {class: 'axis-label', x: width - margin.right + 8, y: y + 4}, String(brightness)));
+      }
 
       const slot = plotWidth / items.length;
       const barWidth = Math.min(58, slot * 0.58);
+      const brightnessPoints = [];
       items.forEach((item, index) => {
         const x = margin.left + slot * index + (slot - barWidth) / 2;
         let y = margin.top + plotHeight;
@@ -178,7 +206,16 @@
         });
         graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 20, 'text-anchor': 'middle'}, item.label));
         graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 38, 'text-anchor': 'middle'}, `${item.images} images`));
+        brightnessPoints.push([x + barWidth / 2, margin.top + plotHeight * (1 - item.medianBrightness / 255)]);
       });
+      graph.append(svg('polyline', {class: 'brightness-line', points: brightnessPoints.map(point => point.join(',')).join(' ')}));
+      brightnessPoints.forEach((point, index) => graph.append(svg('circle', {
+        class: 'brightness-point',
+        cx: point[0],
+        cy: point[1],
+        r: 5,
+        'data-tooltip': `${items[index].label}: median background brightness ${items[index].medianBrightness.toFixed(1)} / 255`,
+      })));
       container.append(graph);
     }
 
@@ -192,7 +229,7 @@
       node.append(el('strong', '', session.session));
       node.append(el('div', 'meta', `${session.n_images} labelled images · ${session.source}`));
       node.addEventListener('click', () => {
-        selectedSession = session.session;
+        selectedSession = selected ? undefined : session.session;
         render();
       });
       node.addEventListener('dragstart', event => event.dataTransfer.setData('text/plain', session.session));
@@ -207,10 +244,18 @@
         [...Array(state.n_folds).keys()].map(target => ({label: label(target), ...stats(target)})),
       );
       const selectedSection = document.querySelector('#session-chart-section');
+      distributionCharts.classList.toggle('session-hidden', !selected);
       if (selected) {
         selectedSection.hidden = false;
         document.querySelector('#session-chart-heading').textContent = `Selected session: ${selected.session}`;
-        drawChart(document.querySelector('#session-chart'), `Pupil-size distribution for ${selected.session}`, [{label: selected.session, ...selected}]);
+        drawChart(document.querySelector('#session-chart'), `Pupil-size distribution for ${selected.session}`, [{
+          label: 'Session',
+          images: selected.n_images,
+          tiny: selected.tiny,
+          medium: selected.medium,
+          large: selected.large,
+          medianBrightness: selected.median_brightness,
+        }]);
       } else {
         selectedSection.hidden = true;
       }

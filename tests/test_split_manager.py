@@ -30,6 +30,7 @@ def test_ui_state_exposes_session_size_and_lighting_stats():
     assert by_session["a"]["target"] == 0
     assert by_session["a"]["tiny"] == 1
     assert by_session["a"]["large"] == 1
+    assert by_session["a"]["median_brightness"] == 40.0
     assert by_session["b"]["target"] == "validation_holdout"
     assert by_session["b"]["medium"] == 1
 
@@ -40,5 +41,6 @@ def test_html_template_is_a_tracked_ui_asset():
     assert b"Training split manager" in page
     assert b"Fold distribution" in page
     assert b"Selected session" in page
+    assert b"Median background brightness" in page
     assert b"drawChart" in page
     assert b"/api/assignments" in page

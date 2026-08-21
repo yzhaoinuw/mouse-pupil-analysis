@@ -25,6 +25,14 @@ Prepend new session notes to the top of this file. The live log holds at most th
   guide now use the shorter term "fold". The local server stays the supported launch/save path:
   a directly opened browser file cannot reliably obtain permission to read and overwrite the
   active manifest.
+- Put the selected-session chart beside the fold chart, fixed its image-count field, and made a
+  second click deselect it. Both charts now overlay a right-axis line for median background
+  brightness, the existing 0–255 feature measured outside the labelled pupil and stored per image
+  in `splits.json` when `data_splits.py` refreshes the manifest.
+- Follow-up verification: the live 22-session page rendered 12 fold size bars and four brightness
+  points; selecting a real 62-image session rendered three size bars and one brightness point
+  without `NaN`, and clicking it again hid the session panel. Focused manager tests, Ruff, and
+  Black pass.
 - Added a separate validation holdout that CV excludes. A normal manifest training run uses it for
   early stopping, scheduler/checkpoint selection, and threshold calibration. When empty, the
   trainer uses every development session with fixed mid/three-quarter learning-rate milestones and
