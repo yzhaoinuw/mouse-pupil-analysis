@@ -35,7 +35,7 @@
     .axis { stroke: #758291; stroke-width: 1; }
     .grid { stroke: #d7dee5; stroke-width: 1; }
     .axis-label { fill: #56616d; font-size: 12px; }
-    .brightness-line { fill: none; stroke: #9d5cc6; stroke-width: 3; }
+    .brightness-range { stroke: #9d5cc6; stroke-width: 8; stroke-linecap: round; opacity: .45; }
     .brightness-point { fill: #9d5cc6; }
     @media (max-width: 800px) {
       #distribution-charts { grid-template-columns: minmax(0, 1fr); }
@@ -72,7 +72,7 @@
   <div id="distribution-charts" class="session-hidden">
     <section aria-labelledby="fold-chart-heading">
       <h2 id="fold-chart-heading">Fold distribution</h2>
-      <p class="muted">Bars count labelled images by pupil size. The purple line is median background brightness (0 black–255 white).</p>
+      <p class="muted">Bars count labelled images by pupil size. Purple ranges show background-brightness Q1–Q3; dots are medians (0 black–255 white).</p>
       <div id="fold-chart" class="chart"></div>
     </section>
     <section id="session-chart-section" aria-labelledby="session-chart-heading" hidden>
@@ -91,6 +91,7 @@
     const groups = document.querySelector('#groups');
     const distributionCharts = document.querySelector('#distribution-charts');
     const fileMode = window.location.protocol === 'file:';
+    const clientId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     const sizeBins = [
       {key: 'tiny', label: 'Tiny', color: '#477db6'},
       {key: 'medium', label: 'Medium', color: '#d3882e'},
@@ -132,13 +133,20 @@
         tiny: sum('tiny'),
         medium: sum('medium'),
         large: sum('large'),
-        medianBrightness: median(records.map(session => session.median_brightness)),
+        brightness: quartiles(records.flatMap(session => session.brightness_values)),
       };
     }
 
-    function median(values) {
+    function quartiles(values) {
       const sorted = values.filter(Number.isFinite).sort((left, right) => left - right);
-      return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+      const percentile = fraction => {
+        if (!sorted.length) return 0;
+        const position = (sorted.length - 1) * fraction;
+        const lower = Math.floor(position);
+        const upper = Math.ceil(position);
+        return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+      };
+      return {q1: percentile(.25), median: percentile(.5), q3: percentile(.75)};
     }
 
     function niceMaximum(value) {
@@ -154,7 +162,7 @@
         item.style.setProperty('--swatch', bin.color);
         legend.append(item);
       });
-      const brightness = el('span', '', 'Median background brightness');
+      const brightness = el('span', '', 'Background brightness: Q1–Q3; dot = median');
       brightness.style.setProperty('--swatch', '#9d5cc6');
       legend.append(brightness);
       container.append(legend);
@@ -188,7 +196,6 @@
 
       const slot = plotWidth / items.length;
       const barWidth = Math.min(58, slot * 0.58);
-      const brightnessPoints = [];
       items.forEach((item, index) => {
         const x = margin.left + slot * index + (slot - barWidth) / 2;
         let y = margin.top + plotHeight;
@@ -206,16 +213,24 @@
         });
         graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 20, 'text-anchor': 'middle'}, item.label));
         graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 38, 'text-anchor': 'middle'}, `${item.images} images`));
-        brightnessPoints.push([x + barWidth / 2, margin.top + plotHeight * (1 - item.medianBrightness / 255)]);
+        const brightnessX = x + barWidth / 2;
+        const brightnessY = value => margin.top + plotHeight * (1 - value / 255);
+        graph.append(svg('line', {
+          class: 'brightness-range',
+          x1: brightnessX,
+          x2: brightnessX,
+          y1: brightnessY(item.brightness.q1),
+          y2: brightnessY(item.brightness.q3),
+          'data-tooltip': `${item.label}: brightness Q1 ${item.brightness.q1.toFixed(1)}, Q3 ${item.brightness.q3.toFixed(1)} / 255`,
+        }));
+        graph.append(svg('circle', {
+          class: 'brightness-point',
+          cx: brightnessX,
+          cy: brightnessY(item.brightness.median),
+          r: 5,
+          'data-tooltip': `${item.label}: median background brightness ${item.brightness.median.toFixed(1)} / 255`,
+        }));
       });
-      graph.append(svg('polyline', {class: 'brightness-line', points: brightnessPoints.map(point => point.join(',')).join(' ')}));
-      brightnessPoints.forEach((point, index) => graph.append(svg('circle', {
-        class: 'brightness-point',
-        cx: point[0],
-        cy: point[1],
-        r: 5,
-        'data-tooltip': `${items[index].label}: median background brightness ${items[index].medianBrightness.toFixed(1)} / 255`,
-      })));
       container.append(graph);
     }
 
@@ -254,7 +269,7 @@
           tiny: selected.tiny,
           medium: selected.medium,
           large: selected.large,
-          medianBrightness: selected.median_brightness,
+          brightness: quartiles(selected.brightness_values),
         }]);
       } else {
         selectedSection.hidden = true;
@@ -294,7 +309,16 @@
       });
     }
 
+    async function heartbeat() {
+      await fetch('/api/heartbeat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({clientId}),
+      });
+    }
+
     async function load() {
+      await heartbeat();
       const response = await fetch('/api/state');
       state = await response.json();
       notice.textContent = `Loaded ${state.sessions.length} sessions. Tiny ≤ ${state.tiny_max_diameter}; large ≥ ${state.large_min_diameter} model pixels.`;
@@ -331,6 +355,10 @@
       document.querySelector('#save').disabled = true;
       document.querySelector('#reload').disabled = true;
     } else {
+      window.setInterval(() => heartbeat().catch(() => {}), 3000);
+      window.addEventListener('pagehide', () => {
+        navigator.sendBeacon('/api/close', JSON.stringify({clientId}));
+      });
       load().catch(error => {
         notice.textContent = error.message;
         notice.className = 'error';

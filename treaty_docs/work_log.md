@@ -33,6 +33,13 @@ Prepend new session notes to the top of this file. The live log holds at most th
   points; selecting a real 62-image session rendered three size bars and one brightness point
   without `NaN`, and clicking it again hid the session panel. Focused manager tests, Ruff, and
   Black pass.
+- Added browser-tab heartbeats so the loopback server stops after the last manager tab closes,
+  with a brief grace period for reloads. Brightness overlays now show the full within-group
+  interquartile range (Q1–Q3) plus the median, calculated from the per-image values already
+  stored in the manifest rather than rereading image files.
+- Verification: after closing a live manager tab, the process printed its automatic shutdown
+  message and exited. The same live page rendered one brightness range and median dot for each
+  of four folds, then the selected session's own range and dot.
 - Added a separate validation holdout that CV excludes. A normal manifest training run uses it for
   early stopping, scheduler/checkpoint selection, and threshold calibration. When empty, the
   trainer uses every development session with fixed mid/three-quarter learning-rate milestones and

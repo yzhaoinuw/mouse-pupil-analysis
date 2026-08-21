@@ -102,12 +102,16 @@ python training\split_manager.py --data-root .
 Do not open `split_manager.html` directly in a browser: it is the interface asset, while
 `split_manager.py` starts the local service that reads and safely writes `splits.json`.
 
-It displays a stacked pupil-size chart for the folds, overlaid with each fold's median background
-brightness (0 black–255 white). Click a session for its own chart; click it again to hide that
-chart. Both charts update immediately when a session is dragged. Drag a whole session between
-folds or into the **validation holdout**. Saving validates the complete session assignment and updates
+It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
+brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
+own chart; click it again to hide that chart. Both charts update immediately when a session is
+dragged. Drag a whole session between folds or into the **validation holdout**. Saving validates
+the complete session assignment and updates
 `splits.json`. The served interface is the tracked [`split_manager.html`](split_manager.html)
 asset; `split_manager.py` provides its local manifest API.
+
+The local server stops automatically shortly after every split-manager tab is closed. It also
+stops if no browser tab connects after launch.
 
 Folds are used only by cross-validation. The validation holdout is excluded from CV and is used
 by the normal training command below. It may be empty.

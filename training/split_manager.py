@@ -14,6 +14,8 @@ import hashlib
 import json
 import statistics
 import sys
+import threading
+import time
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,6 +28,47 @@ HOST = "127.0.0.1"
 MAX_REQUEST_BYTES = 1_000_000
 LARGE_MIN_DIAMETER = 80.0
 PAGE_PATH = Path(__file__).with_name("split_manager.html")
+TAB_STALE_SECONDS = 8.0
+TAB_CLOSE_GRACE_SECONDS = 5.0
+STARTUP_GRACE_SECONDS = 120.0
+
+
+class BrowserLifecycle:
+    """Track manager tabs so the loopback server exits after they are gone."""
+
+    def __init__(self) -> None:
+        self.started_at = time.monotonic()
+        self.last_client_change_at = self.started_at
+        self.clients: dict[str, float] = {}
+        self.connected_once = False
+        self.lock = threading.Lock()
+
+    def touch(self, client_id: str) -> None:
+        with self.lock:
+            self.clients[client_id] = time.monotonic()
+            self.connected_once = True
+            self.last_client_change_at = time.monotonic()
+
+    def close(self, client_id: str) -> None:
+        with self.lock:
+            self.clients.pop(client_id, None)
+            self.last_client_change_at = time.monotonic()
+
+    def should_stop(self) -> bool:
+        """Return true only after startup failure or the last tab has been gone briefly."""
+        with self.lock:
+            now = time.monotonic()
+            stale = [
+                client_id
+                for client_id, last_seen in self.clients.items()
+                if now - last_seen > TAB_STALE_SECONDS
+            ]
+            for client_id in stale:
+                self.clients.pop(client_id)
+                self.last_client_change_at = now
+            if not self.connected_once:
+                return now - self.started_at > STARTUP_GRACE_SECONDS
+            return not self.clients and now - self.last_client_change_at > TAB_CLOSE_GRACE_SECONDS
 
 
 def manifest_revision(manifest: dict) -> str:
@@ -61,6 +104,7 @@ def ui_state(manifest: dict) -> dict:
                 "large": sum(diameter >= LARGE_MIN_DIAMETER for diameter in diameters),
                 "median_diameter": round(statistics.median(diameters), 1),
                 "median_brightness": round(statistics.median(brightness), 1),
+                "brightness_values": brightness,
             }
         )
     return {
@@ -88,7 +132,7 @@ def read_page() -> bytes:
     return PAGE_PATH.read_bytes()
 
 
-def handler_factory(manifest_path: Path):
+def handler_factory(manifest_path: Path, lifecycle: BrowserLifecycle):
     """Build a loopback request handler bound to one manifest path."""
 
     class SplitManagerHandler(BaseHTTPRequestHandler):
@@ -100,6 +144,22 @@ def handler_factory(manifest_path: Path):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(encoded)
+
+        def _payload(self) -> dict:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_REQUEST_BYTES:
+                raise ValueError("Request body must be between 1 and 1,000,000 bytes.")
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                raise ValueError("Request body must be a JSON object.")
+            return payload
+
+        @staticmethod
+        def _client_id(payload: dict) -> str:
+            client_id = payload.get("clientId")
+            if not isinstance(client_id, str) or not client_id:
+                raise ValueError("A browser client id is required.")
+            return client_id
 
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/":
@@ -119,14 +179,23 @@ def handler_factory(manifest_path: Path):
                 self._json(HTTPStatus.NOT_FOUND, {"error": "Not found."})
 
         def do_POST(self) -> None:  # noqa: N802
+            if self.path in {"/api/heartbeat", "/api/close"}:
+                try:
+                    payload = self._payload()
+                    client_id = self._client_id(payload)
+                    if self.path == "/api/heartbeat":
+                        lifecycle.touch(client_id)
+                    else:
+                        lifecycle.close(client_id)
+                    self._json(HTTPStatus.OK, {"ok": True})
+                except (TypeError, ValueError, json.JSONDecodeError) as error:
+                    self._json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+                return
             if self.path != "/api/assignments":
                 self._json(HTTPStatus.NOT_FOUND, {"error": "Not found."})
                 return
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= MAX_REQUEST_BYTES:
-                    raise ValueError("Request body must be between 1 and 1,000,000 bytes.")
-                payload = json.loads(self.rfile.read(length))
+                payload = self._payload()
                 manifest = data_splits.load_manifest(manifest_path)
                 if payload.get("revision") != manifest_revision(manifest):
                     self._json(
@@ -146,6 +215,14 @@ def handler_factory(manifest_path: Path):
             return
 
     return SplitManagerHandler
+
+
+def stop_when_browser_closes(server: ThreadingHTTPServer, lifecycle: BrowserLifecycle) -> None:
+    """Stop the loopback service after its last browser tab is gone."""
+    while not lifecycle.should_stop():
+        time.sleep(1)
+    print("Split manager stopped because its browser tab(s) closed.")
+    server.shutdown()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -172,11 +249,18 @@ def main(argv: list[str] | None = None) -> int:
         f"Loaded {manifest['n_sessions']} sessions into {manifest['n_folds']} folds; "
         f"{manifest.get('n_validation_holdout_sessions', 0)} validation-holdout session(s)."
     )
-    server = ThreadingHTTPServer((HOST, 0), handler_factory(manifest_path))
+    lifecycle = BrowserLifecycle()
+    server = ThreadingHTTPServer((HOST, 0), handler_factory(manifest_path, lifecycle))
+    server.daemon_threads = True
     url = f"http://{HOST}:{server.server_port}/"
-    print(f"Split manager: {url}\nPress Ctrl+C to stop.")
+    print(f"Split manager: {url}\nThe server stops after the last browser tab closes.")
     if not args.no_open:
         webbrowser.open(url)
+    threading.Thread(
+        target=stop_when_browser_closes,
+        args=(server, lifecycle),
+        daemon=True,
+    ).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
