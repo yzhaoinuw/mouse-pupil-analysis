@@ -143,6 +143,7 @@ mouse-pupil-analysis/
 |  |- run_cv.py
 |  |- data_splits.py
 |  |- split_manager.py
+|  |- split_manager.html
 |  |- provenance.py
 |  |- data_collection.md
 |  |- import_labelme_batch.py

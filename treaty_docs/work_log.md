@@ -17,6 +17,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
   session grouping plus image count, tiny/medium/large pupil count, median diameter, and median
   brightness for every session/fold. It validates and writes whole-session fold or validation-
   holdout assignments through `data_splits.py`; it leaves the outer test holdout read-only.
+- Kept the browser surface as the tracked `training/split_manager.html` asset rather than a raw
+  string hidden in Python; `split_manager.py` now serves that asset and remains solely responsible
+  for the local manifest API and validated write path.
 - Added a separate validation holdout that CV excludes. A normal manifest training run uses it for
   early stopping, scheduler/checkpoint selection, and threshold calibration. When empty, the
   trainer uses every development session with fixed mid/three-quarter learning-rate milestones and

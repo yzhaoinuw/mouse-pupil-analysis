@@ -102,7 +102,8 @@ python training\split_manager.py --data-root .
 It displays image counts, tiny/medium/large pupil counts, median pupil diameter, and median
 brightness for every session and fold. Drag a whole session between development folds or into
 the **validation holdout**. Saving validates the complete session assignment and updates
-`splits.json`.
+`splits.json`. The served interface is the tracked [`split_manager.html`](split_manager.html)
+asset; `split_manager.py` provides its local manifest API.
 
 Development folds are used only by cross-validation. The validation holdout is excluded from
 CV and is used by the normal training command below. It may be empty.

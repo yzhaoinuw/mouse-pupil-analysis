@@ -6,6 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "split_manager.py"))
 ui_state = MANAGER["ui_state"]
+read_page = MANAGER["read_page"]
 
 
 def test_ui_state_exposes_session_size_and_lighting_stats():
@@ -31,3 +32,10 @@ def test_ui_state_exposes_session_size_and_lighting_stats():
     assert by_session["a"]["large"] == 1
     assert by_session["b"]["target"] == "validation_holdout"
     assert by_session["b"]["medium"] == 1
+
+
+def test_html_template_is_a_tracked_ui_asset():
+    page = read_page()
+
+    assert b"Training split manager" in page
+    assert b"/api/assignments" in page
