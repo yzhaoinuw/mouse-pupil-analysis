@@ -8,42 +8,49 @@
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
     body { max-width: 1500px; margin: 0 auto; padding: 1.5rem; background: #f7f8fa; color: #18212b; }
     h1 { margin: 0; }
+    h2 { margin-top: 1.75rem; }
     p { line-height: 1.45; }
     .muted { color: #56616d; }
     #notice { min-height: 1.5rem; font-weight: 600; }
     .error { color: #a61919; }
-    #summary, #groups { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); }
-    .summary, .group { background: white; border: 1px solid #d9dee4; border-radius: 10px; padding: 1rem; box-shadow: 0 1px 2px #0000000d; }
-    .summary h2, .group h2 { margin: 0 0 .35rem; font-size: 1rem; }
-    .numbers { display: grid; grid-template-columns: repeat(4, 1fr); gap: .25rem; font-size: .82rem; }
-    .numbers span { background: #eef2f6; padding: .3rem; border-radius: 4px; text-align: center; }
-    .group { min-height: 185px; }
-    .group.drop-target { outline: 3px solid #6aa8ff; }
-    .card { background: #f5f8fb; border: 1px solid #cbd6e2; border-left: 5px solid #497aa8; border-radius: 7px; margin: .55rem 0; padding: .55rem; cursor: grab; }
-    .card.locked { border-left-color: #8d5c23; cursor: default; background: #fbf6ee; }
-    .card strong { display: block; overflow-wrap: anywhere; }
-    .meta { font-size: .78rem; color: #53606c; margin-top: .25rem; }
+    .actions { margin: 1.25rem 0; }
     button { border: 0; border-radius: 6px; padding: .65rem .9rem; margin-right: .5rem; background: #175ea8; color: white; font-weight: 700; cursor: pointer; }
     button.secondary { background: #697784; }
-    .actions { margin: 1.25rem 0; }
+    button.card { width: 100%; margin: .55rem 0; padding: .55rem; text-align: left; background: #f5f8fb; border: 1px solid #cbd6e2; border-left: 5px solid #497aa8; border-radius: 7px; color: inherit; cursor: grab; }
+    button.card.locked { border-left-color: #8d5c23; cursor: default; background: #fbf6ee; }
+    button.card[aria-pressed="true"] { outline: 3px solid #6aa8ff; outline-offset: 1px; }
+    .card strong { display: block; overflow-wrap: anywhere; }
+    .meta { font-size: .78rem; color: #53606c; margin-top: .25rem; }
+    .chart { max-width: 920px; }
+    .chart svg { width: 100%; height: auto; display: block; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: .9rem; margin: .35rem 0 .75rem; font-size: .85rem; }
+    .chart-legend span::before { content: ''; display: inline-block; width: .85rem; height: .85rem; margin-right: .3rem; vertical-align: -.1rem; background: var(--swatch); }
+    #groups { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); }
+    .group { min-height: 135px; background: white; border: 1px solid #d9dee4; border-radius: 10px; padding: 1rem; box-shadow: 0 1px 2px #0000000d; }
+    .group h3 { margin: 0 0 .35rem; font-size: 1rem; }
+    .group.drop-target { outline: 3px solid #6aa8ff; }
+    .axis { stroke: #758291; stroke-width: 1; }
+    .grid { stroke: #d7dee5; stroke-width: 1; }
+    .axis-label { fill: #56616d; font-size: 12px; }
     @media (prefers-color-scheme: dark) {
       body { background: #17202a; color: #eaf0f6; }
-      .summary, .group { background: #202b36; border-color: #40505f; }
-      .card { background: #273543; border-color: #52687d; }
-      .numbers span { background: #314252; }
-      .meta, .muted { color: #b1c0ce; }
-      .card.locked { background: #423928; }
+      .group { background: #202b36; border-color: #40505f; }
+      button.card { background: #273543; border-color: #52687d; }
+      button.card.locked { background: #423928; }
+      .meta, .muted, .axis-label { color: #b1c0ce; fill: #b1c0ce; }
+      .axis { stroke: #8899aa; }
+      .grid { stroke: #40505f; }
     }
   </style>
 </head>
 <body>
   <h1>Training split manager</h1>
   <p class="muted">
-    The automatic grouping is the starting point. Drag whole sessions to change development folds
-    or create a validation holdout. Cross-validation ignores the validation holdout. Save writes
+    Automatic grouping is the starting point. Drag whole sessions between folds or into the
+    validation holdout. Cross-validation ignores the validation holdout. Save writes
     <code>splits.json</code> after validation.
   </p>
-  <div id="notice"></div>
+  <div id="notice" aria-live="polite"></div>
   <p id="launch-help" class="error" hidden>
     Do not open this file directly. Start the local split manager with
     <code>python training\split_manager.py --data-root .</code>; it will open this page with the
@@ -53,15 +60,32 @@
     <button id="save">Save assignments</button>
     <button id="reload" class="secondary">Discard changes</button>
   </div>
-  <div id="summary"></div>
+
+  <section aria-labelledby="fold-chart-heading">
+    <h2 id="fold-chart-heading">Fold distribution</h2>
+    <p class="muted">Labelled images by pupil-size bin. Dragging a session redraws this chart immediately.</p>
+    <div id="fold-chart" class="chart"></div>
+  </section>
+  <section id="session-chart-section" aria-labelledby="session-chart-heading" hidden>
+    <h2 id="session-chart-heading">Selected session</h2>
+    <div id="session-chart" class="chart"></div>
+  </section>
+
   <h2>Session assignments</h2>
+  <p class="muted">Click a session to show its size distribution.</p>
   <div id="groups"></div>
   <script>
     let state;
+    let selectedSession;
     const notice = document.querySelector('#notice');
-    const summary = document.querySelector('#summary');
     const groups = document.querySelector('#groups');
     const fileMode = window.location.protocol === 'file:';
+    const sizeBins = [
+      {key: 'tiny', label: 'Tiny', color: '#477db6'},
+      {key: 'medium', label: 'Medium', color: '#d3882e'},
+      {key: 'large', label: 'Large', color: '#4b9562'},
+    ];
+    const svgNamespace = 'http://www.w3.org/2000/svg';
 
     function el(tag, className, text) {
       const node = document.createElement(tag);
@@ -70,10 +94,17 @@
       return node;
     }
 
+    function svg(tag, attributes = {}, text) {
+      const node = document.createElementNS(svgNamespace, tag);
+      Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, value));
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
     function label(target) {
       if (target === 'validation_holdout') return 'Validation holdout';
       if (target === 'test_holdout') return 'Outer test holdout';
-      return `Development fold ${target + 1}`;
+      return `Fold ${target + 1}`;
     }
 
     function targets() {
@@ -83,10 +114,6 @@
     function stats(target) {
       const records = state.sessions.filter(session => session.target === target);
       const sum = field => records.reduce((total, session) => total + session[field], 0);
-      const median = field => {
-        const values = records.map(session => session[field]).sort((a, b) => a - b);
-        return values.length ? values[Math.floor(values.length / 2)].toFixed(1) : '—';
-      };
       return {
         records,
         sessions: records.length,
@@ -94,44 +121,112 @@
         tiny: sum('tiny'),
         medium: sum('medium'),
         large: sum('large'),
-        diameter: median('median_diameter'),
-        brightness: median('median_brightness'),
       };
     }
 
+    function niceMaximum(value) {
+      if (value <= 10) return 10;
+      return Math.ceil(value / 10) * 10;
+    }
+
+    function drawChart(container, title, items) {
+      container.replaceChildren();
+      const legend = el('div', 'chart-legend');
+      sizeBins.forEach(bin => {
+        const item = el('span', '', bin.label);
+        item.style.setProperty('--swatch', bin.color);
+        legend.append(item);
+      });
+      container.append(legend);
+
+      const width = Math.max(460, 120 * items.length + 100);
+      const height = 300;
+      const margin = {top: 20, right: 20, bottom: 58, left: 58};
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const maximum = niceMaximum(Math.max(1, ...items.map(item => item.images)));
+      const graph = svg('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': title});
+      graph.append(svg('title', {}, title));
+      graph.append(svg('desc', {}, 'Stacked bars show tiny, medium, and large labelled pupil images.'));
+
+      for (let tick = 0; tick <= 4; tick += 1) {
+        const value = maximum * tick / 4;
+        const y = margin.top + plotHeight - plotHeight * tick / 4;
+        graph.append(svg('line', {class: 'grid', x1: margin.left, x2: width - margin.right, y1: y, y2: y}));
+        graph.append(svg('text', {class: 'axis-label', x: margin.left - 8, y: y + 4, 'text-anchor': 'end'}, String(Math.round(value))));
+      }
+      graph.append(svg('line', {class: 'axis', x1: margin.left, x2: margin.left, y1: margin.top, y2: margin.top + plotHeight}));
+      graph.append(svg('line', {class: 'axis', x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight}));
+      graph.append(svg('text', {class: 'axis-label', x: 16, y: margin.top + plotHeight / 2, transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Labelled images'));
+
+      const slot = plotWidth / items.length;
+      const barWidth = Math.min(58, slot * 0.58);
+      items.forEach((item, index) => {
+        const x = margin.left + slot * index + (slot - barWidth) / 2;
+        let y = margin.top + plotHeight;
+        sizeBins.forEach(bin => {
+          const segmentHeight = plotHeight * item[bin.key] / maximum;
+          y -= segmentHeight;
+          graph.append(svg('rect', {
+            x,
+            y,
+            width: barWidth,
+            height: segmentHeight,
+            fill: bin.color,
+            'data-tooltip': `${item.label}: ${bin.label.toLowerCase()} ${item[bin.key]} image(s)`,
+          }));
+        });
+        graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 20, 'text-anchor': 'middle'}, item.label));
+        graph.append(svg('text', {class: 'axis-label', x: x + barWidth / 2, y: margin.top + plotHeight + 38, 'text-anchor': 'middle'}, `${item.images} images`));
+      });
+      container.append(graph);
+    }
+
     function card(session) {
-      const node = el('article', `card${session.target === 'test_holdout' ? ' locked' : ''}`);
+      const selected = session.session === selectedSession;
+      const node = el('button', `card${session.target === 'test_holdout' ? ' locked' : ''}`);
+      node.type = 'button';
       node.draggable = session.target !== 'test_holdout';
       node.dataset.session = session.session;
+      node.setAttribute('aria-pressed', String(selected));
       node.append(el('strong', '', session.session));
-      node.append(el('div', 'meta', `${session.n_images} images · tiny ${session.tiny} · medium ${session.medium} · large ${session.large}`));
-      node.append(el('div', 'meta', `median diameter ${session.median_diameter} · brightness ${session.median_brightness} · ${session.source}`));
+      node.append(el('div', 'meta', `${session.n_images} labelled images · ${session.source}`));
+      node.addEventListener('click', () => {
+        selectedSession = session.session;
+        render();
+      });
       node.addEventListener('dragstart', event => event.dataTransfer.setData('text/plain', session.session));
       return node;
     }
 
     function render() {
-      summary.replaceChildren();
+      const selected = state.sessions.find(session => session.session === selectedSession);
+      drawChart(
+        document.querySelector('#fold-chart'),
+        'Pupil-size distribution by fold',
+        [...Array(state.n_folds).keys()].map(target => ({label: label(target), ...stats(target)})),
+      );
+      const selectedSection = document.querySelector('#session-chart-section');
+      if (selected) {
+        selectedSection.hidden = false;
+        document.querySelector('#session-chart-heading').textContent = `Selected session: ${selected.session}`;
+        drawChart(document.querySelector('#session-chart'), `Pupil-size distribution for ${selected.session}`, [{label: selected.session, ...selected}]);
+      } else {
+        selectedSection.hidden = true;
+      }
+
       groups.replaceChildren();
       targets().forEach(target => {
         const value = stats(target);
         if (target === 'test_holdout' && !value.sessions) return;
-        const summaryCard = el('section', 'summary');
-        summaryCard.append(el('h2', '', label(target)));
-        summaryCard.append(el('div', 'muted', `${value.sessions} sessions · ${value.images} images · median diameter ${value.diameter} · brightness ${value.brightness}`));
-        const counts = el('div', 'numbers');
-        [['Tiny', value.tiny], ['Medium', value.medium], ['Large', value.large], ['Images', value.images]].forEach(([name, number]) => counts.append(el('span', '', `${name}: ${number}`)));
-        summaryCard.append(counts);
-        summary.append(summaryCard);
-
         const group = el('section', 'group');
         group.dataset.target = target;
-        group.append(el('h2', '', label(target)));
+        group.append(el('h3', '', label(target)));
         const description = target === 'validation_holdout'
-          ? 'Used by normal run_train validation; excluded from CV.'
+          ? `${value.sessions} session(s). Used by normal training; excluded from CV.`
           : target === 'test_holdout'
-            ? 'Read-only here; reserved for one-time final evaluation.'
-            : 'Used by cross-validation.';
+            ? `${value.sessions} session(s). Read-only here; reserved for final evaluation.`
+            : `${value.sessions} session(s). Used by cross-validation.`;
         group.append(el('div', 'muted', description));
         value.records.forEach(session => group.append(card(session)));
         if (target !== 'test_holdout') {

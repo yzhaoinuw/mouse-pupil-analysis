@@ -20,6 +20,11 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - Kept the browser surface as the tracked `training/split_manager.html` asset rather than a raw
   string hidden in Python; `split_manager.py` now serves that asset and remains solely responsible
   for the local manifest API and validated write path.
+- Replaced the manager's number tiles with a stacked tiny/medium/large pupil chart for the folds.
+  Clicking a session reveals its matching chart; both redraw as sessions are dragged. The UI and
+  guide now use the shorter term "fold". The local server stays the supported launch/save path:
+  a directly opened browser file cannot reliably obtain permission to read and overwrite the
+  active manifest.
 - Added a separate validation holdout that CV excludes. A normal manifest training run uses it for
   early stopping, scheduler/checkpoint selection, and threshold calibration. When empty, the
   trainer uses every development session with fixed mid/three-quarter learning-rate milestones and

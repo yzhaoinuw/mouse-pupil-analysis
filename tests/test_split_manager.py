@@ -38,4 +38,7 @@ def test_html_template_is_a_tracked_ui_asset():
     page = read_page()
 
     assert b"Training split manager" in page
+    assert b"Fold distribution" in page
+    assert b"Selected session" in page
+    assert b"drawChart" in page
     assert b"/api/assignments" in page

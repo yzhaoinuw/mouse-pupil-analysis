@@ -17,10 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `training/split_manager.py` provides a local drag-and-drop view of automatic session grouping,
-  pupil-size and lighting summaries, and validated assignment to development folds or an optional
-  validation holdout. Normal `run_train.py --split-manifest splits.json` runs validate against
-  that holdout when it exists; when it is empty, they train all development sessions with a
-  recorded fixed schedule instead of tuning against validation labels that do not exist.
+  a live stacked pupil-size chart for the folds and a selectable session chart, plus validated
+  assignment to folds or an optional validation holdout. Normal `run_train.py --split-manifest
+  splits.json` runs validate against that holdout when it exists; when it is empty, they train
+  all development sessions with a recorded fixed schedule instead of tuning against validation
+  labels that do not exist.
 - Running `mouse_pupil_analysis/run_pupil_analysis.py` with no arguments now uses an editable
   direct-run configuration block, while the `run-pupil-analysis` command keeps its existing
   terminal-argument workflow.

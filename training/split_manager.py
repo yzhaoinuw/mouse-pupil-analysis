@@ -1,7 +1,7 @@
 """Run a local browser UI for reviewing and editing session-level data splits.
 
 The page reads ``splits.json`` produced by the existing automatic grouping, then opens a
-loopback-only interface. Drag whole sessions between development folds and the validation
+loopback-only interface. Drag whole sessions between folds and the validation
 holdout; the Python backend validates and writes the manifest.
 
     python training/split_manager.py --data-root .
@@ -169,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         manifest = data_splits.load_manifest(manifest_path)
     print(
-        f"Loaded {manifest['n_sessions']} sessions into {manifest['n_folds']} development folds; "
+        f"Loaded {manifest['n_sessions']} sessions into {manifest['n_folds']} folds; "
         f"{manifest.get('n_validation_holdout_sessions', 0)} validation-holdout session(s)."
     )
     server = ThreadingHTTPServer((HOST, 0), handler_factory(manifest_path))

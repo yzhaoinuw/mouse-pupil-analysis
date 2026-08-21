@@ -87,7 +87,7 @@ python training\data_splits.py --data-root . --show
 ```
 
 The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
-size and lighting summaries across development folds. Existing assignments are preserved when
+size and lighting summaries across folds. Existing assignments are preserved when
 new labels arrive.
 
 ### 3. Review or adjust assignments
@@ -102,14 +102,14 @@ python training\split_manager.py --data-root .
 Do not open `split_manager.html` directly in a browser: it is the interface asset, while
 `split_manager.py` starts the local service that reads and safely writes `splits.json`.
 
-It displays image counts, tiny/medium/large pupil counts, median pupil diameter, and median
-brightness for every session and fold. Drag a whole session between development folds or into
+It displays a stacked pupil-size chart for the folds. Click a session for its own chart; both
+charts update immediately when a session is dragged. Drag a whole session between folds or into
 the **validation holdout**. Saving validates the complete session assignment and updates
 `splits.json`. The served interface is the tracked [`split_manager.html`](split_manager.html)
 asset; `split_manager.py` provides its local manifest API.
 
-Development folds are used only by cross-validation. The validation holdout is excluded from
-CV and is used by the normal training command below. It may be empty.
+Folds are used only by cross-validation. The validation holdout is excluded from CV and is used
+by the normal training command below. It may be empty.
 
 ### 4. Train and validate
 
@@ -123,8 +123,8 @@ python training\run_train.py `
 ```
 
 When the validation holdout contains sessions, they control early stopping, learning-rate
-scheduling, checkpoint selection, and prediction-threshold calibration. All development folds
-train the model. When it is empty, the trainer uses all development sessions with its fixed
+scheduling, checkpoint selection, and prediction-threshold calibration. All folds train the
+model. When it is empty, the trainer uses all non-holdout sessions with its fixed
 default epoch schedule, fixed learning-rate milestones, and fixed prediction threshold; it does
 not pretend to auto-tune without validation labels.
 
@@ -211,7 +211,7 @@ transforms look plausible.
 ### Cross-validate a configuration
 
 Use cross-validation when you need to compare configurations or estimate how sensitive a
-result is to the held-out session group. It takes turns holding out each development fold and
+result is to the held-out session group. It takes turns holding out each fold and
 never loads the validation holdout:
 
 ```powershell
