@@ -178,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
         f"{total_uncertain} uncertain annotation(s) intentionally excluded."
     )
     if total_written:
-        print("Now refresh the split: python training/data_splits.py --data-root . --materialize")
+        print("Now refresh the split: python training/data_splits.py")
     return 0
 
 

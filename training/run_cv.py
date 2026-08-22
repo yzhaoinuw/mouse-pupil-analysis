@@ -7,7 +7,7 @@ setting. The headline number is the mean per-session IoU: averaging over images
 instead lets the largest session dominate, and one session currently holds 28% of
 the labelled pool.
 
-    python training/data_splits.py --data-root . --out splits.json
+    python training/data_splits.py
     python training/run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp/cv
 
 Use this to compare *configurations* -- sampling, loss, augmentation, architecture.

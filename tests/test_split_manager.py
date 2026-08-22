@@ -8,6 +8,7 @@ MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "split_manager.py"))
 BrowserLifecycle = MANAGER["BrowserLifecycle"]
 ui_state = MANAGER["ui_state"]
 read_page = MANAGER["read_page"]
+split_paths = MANAGER["split_paths"]
 
 
 def test_ui_state_exposes_session_size_and_lighting_stats():
@@ -15,8 +16,8 @@ def test_ui_state_exposes_session_size_and_lighting_stats():
         "tiny_max_diameter": 15.0,
         "n_folds": 2,
         "sessions": [
-            {"session": "a", "source": "folder", "fold": 0},
-            {"session": "b", "source": "folder", "fold": -2, "validation_holdout": True},
+            {"session": "a", "fold": 0},
+            {"session": "b", "fold": -2, "validation_holdout": True},
         ],
         "images": [
             {"session": "a", "diameter": 10, "brightness": 30},
@@ -35,6 +36,13 @@ def test_ui_state_exposes_session_size_and_lighting_stats():
     assert by_session["a"]["brightness_values"] == [30.0, 50.0]
     assert by_session["b"]["target"] == "validation_holdout"
     assert by_session["b"]["medium"] == 1
+
+
+def test_split_paths_uses_the_manifest_beside_labeled_frames(tmp_path: Path):
+    data_root, manifest_path = split_paths(tmp_path / "labeled_frames")
+
+    assert data_root == tmp_path.resolve()
+    assert manifest_path == tmp_path.resolve() / "splits.json"
 
 
 def test_html_template_is_a_tracked_ui_asset():

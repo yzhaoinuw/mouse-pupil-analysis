@@ -181,13 +181,14 @@ def apply_import(plan: list[ImportEntry], data_root: Path, session: str) -> Path
 
 
 def refresh_split_manifest(data_root: Path) -> int:
-    """Refresh the frozen manifest and materialized folds after a successful import."""
+    """Refresh the frozen manifest after a successful import."""
     if __package__:
         from . import data_splits
     else:
         import data_splits
 
-    return data_splits.main(["--data-root", str(Path(data_root).resolve()), "--materialize"])
+    labeled_frames_dir = Path(data_root).resolve() / "labeled_frames"
+    return data_splits.main(["--labeled_frames_dir", str(labeled_frames_dir)])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -198,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Import the session, refresh splits.json, and materialize folds.",
+        help="Import the session and refresh splits.json.",
     )
     args = parser.parse_args(argv)
 

@@ -52,7 +52,7 @@ In priority order. Spend the budget top-down.
    the pool actually holds before labelling:
 
    ```bash
-   python training/data_splits.py --data-root . --show
+   python training/data_splits.py --show
    ```
 
    The census prints images, tiny-mask count, median diameter, and median background
@@ -154,41 +154,8 @@ folders keep them apart.
 
 The whole split is reproducible from this layout alone: delete `splits.json` and
 regenerate, and the folds come back identical, because the sessions come from the
-directories and the packing is deterministic.
-
-### When a batch arrives pre-mixed
-
-Two fallbacks exist for data you cannot sort into session folders yet. Both outrank the
-folder, so they can also correct one.
-
-1. **A labelme flag** — set `session` once per batch in the Labelme UI and it lands in
-   the `flags` block of each `<image name>.json`, beside the image.
-
-   ```json
-   { "flags": { "session": "HQL091_sleep260820" }, "shapes": [...] }
-   ```
-
-2. **A sidecar** — `provenance.csv` (columns `key,session`) or `provenance.json`
-   (`{key: session}`) at the data root, where a *key* is `<session>/<filename>` for a
-   pair in a session folder, or the bare filename for one in a legacy flat folder.
-
-   The maintained pool no longer keeps a sidecar: the session folders state everything it
-   used to. Note that a stale sidecar *overrides* the folders, so do not leave one lying
-   around after sorting a batch — moving an image to a different session folder would be
-   silently ignored.
-
-3. **Nothing at all** — every unresolved image in a run collapses into a *single* group.
-   Over-merging two settings only costs data efficiency; tearing one apart leaks, so
-   this is the safe failure and it needs no human input. The census prints a `NOTE`
-   naming any such group.
-
-   The cost is real and is the reason to bother with 1–3: the whole batch lands in one
-   fold, exactly like the oversized `5003` session. A pool with *no* provenance anywhere
-   becomes one group and cannot be folded at all, which is an error rather than a
-   silently bad split.
-
-   Two unknown batches become two groups. If you have reason to think they share a
-   recording, pass the same `--batch-name` to both and they merge.
+directories and the packing is deterministic. A mixed or unassigned batch is not valid
+split input: sort it into its recording-session directory before importing it.
 
 ## Adding a labelled batch to the split
 
@@ -213,19 +180,14 @@ folder, so they can also correct one.
    source folders: the manifest decides what trains and validates, so re-splitting moves no
    labelled file.
 3. Read the census it prints before training. Check that the new session landed in
-   sensible folds, that no batch-fallback `NOTE` appeared unexpectedly, and that fold
-   sizes and strata are still roughly even.
+   sensible folds and that fold sizes and strata are still roughly even.
 4. Re-run cross-validation ([`README.md`](README.md#5-cross-validate-a-configuration)).
-
-**If a provenance source now disagrees with what the manifest already recorded, that is
-an error, not a repack.** The manifest wins, and the command fails naming the images
-involved. Fix the source, or accept the change deliberately with `--reassign`.
 
 **Never pass `--reassign` casually.** It repacks every session from scratch, which
 invalidates comparison against every previously recorded run. It is correct only when
-changing `--folds`, when correcting genuinely wrong provenance, or after so much new
-data has arrived that the old packing is badly unbalanced — and in that case, say so in
-the work log and treat prior numbers as a different experiment.
+changing `--folds` or after so much new data has arrived that the old packing is badly
+unbalanced — and in that case, say so in the work log and treat prior numbers as a
+different experiment.
 
 ## How folds are balanced
 
@@ -285,17 +247,6 @@ padded mean would encode the crop's aspect ratio as if it were lighting. Across 
 session means span 71 to 157 while the spread *within* a session is 1 to 11, which is
 what makes it usable as a lighting axis.
 
-## Seeing the folds on disk
-
-`python training/data_splits.py --data-root . --materialize` writes `folds/cv1/`,
-`folds/cv2/`, ... each holding `images/` and `masks/`, plus `holdout/` if one is set.
-`cvN` is fold `N-1`.
-
-Derived output, one way: rebuilt from the manifest, never read back, overwritten on the
-next run. Do not add labelled data there — it goes in `labeled_frames/`, and the folders
-are regenerated. The manifest remains the record because it is committed while the image
-folders are not, so it is the only part of the split that survives a fresh clone.
-
 ## The holdout gate
 
 Cross-validation chooses configurations. Because every fold's number feeds that choice,
@@ -306,7 +257,7 @@ A **holdout** is one or more sessions set aside entirely: in no fold, trained on
 validated on never.
 
 ```bash
-python training/data_splits.py --data-root . --holdout HQL090_sleep251012 --out splits.json
+python training/data_splits.py --final_test_session HQL090_sleep251012
 python training/run_train.py --split-manifest splits.json --final \
     --final-prediction-threshold 0.5 --epochs <frozen epoch count>
 python training/evaluate_holdout.py --run-dir checkpoints_exp/<final run> \

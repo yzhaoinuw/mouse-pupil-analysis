@@ -111,20 +111,11 @@ overfit and must not be treated as a useful trained model.
 ## Try the grouped, stratified split
 
 ```powershell
-python training\data_splits.py --data-root sample_data --show
+python training\data_splits.py --labeled_frames_dir sample_data\labeled_frames --show
 ```
 
 prints the per-session census and the per-fold summary. `sample_data/splits.json` is
-committed, so a fresh clone can read the split without running anything. `folds/` is not:
-it is derived output, rebuilt deterministically from the session folders by
-
-```powershell
-python training\data_splits.py --data-root sample_data --materialize
-```
-
-which writes `folds/cv1/` … `folds/cv4/`, each with `images/` and `masks/`. It is never
-read back, so editing it changes nothing and re-running overwrites it. Train one fold
-with:
+committed, so a fresh clone can read the split without running anything. Train one fold with:
 
 ```powershell
 python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1

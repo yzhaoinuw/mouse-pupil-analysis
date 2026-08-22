@@ -5,8 +5,8 @@ experimental pupil-segmentation checkpoint. The normal path is deliberately shor
 
 1. Put labelled frames in session folders.
 2. Refresh `splits.json`.
-3. Review the automatic assignment and optionally reserve a validation holdout.
-4. Train with validation when that holdout exists.
+3. Review the automatic assignment and optionally reserve a validation session.
+4. Train with validation when that session exists.
 
 `run_train.py` selects the best checkpoint, early-stops, and calibrates its prediction
 threshold against that held-out group. Cross-validation is useful when comparing
@@ -72,7 +72,7 @@ yourself.
 Run this after adding labelled frames, including a completely new session:
 
 ```powershell
-python training\data_splits.py --data-root . --out splits.json
+python training\data_splits.py
 ```
 
 `data_splits.py` keeps every session together, assigns each session to a validation fold,
@@ -80,10 +80,15 @@ and preserves existing assignments when new data arrives. It does not move image
 The first manifest uses five folds by default; if the dataset has fewer than five sessions,
 choose a smaller count once, for example `--folds 3`.
 
+`--labeled_frames_dir` names the `labeled_frames/` folder itself when it is outside the
+repository; its parent always receives `splits.json`. `--validation_session <session>`
+reserves a session for choosing a normal training run, while `--final_test_session <session>`
+reserves an untouched session for one final evaluation only.
+
 Review the assignment without writing changes when needed:
 
 ```powershell
-python training\data_splits.py --data-root . --show
+python training\data_splits.py --show
 ```
 
 The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
@@ -96,7 +101,7 @@ Open the local split manager when you want to inspect the session statistics or 
 automatic assignment:
 
 ```powershell
-python training\split_manager.py --data-root .
+python training\split_manager.py
 ```
 
 Do not open `split_manager.html` directly in a browser: it is the interface asset, while
@@ -105,7 +110,7 @@ Do not open `split_manager.html` directly in a browser: it is the interface asse
 It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
 brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
 own chart; click it again to hide that chart. Both charts update immediately when a session is
-dragged. Drag a whole session between folds or into the **validation holdout**. Saving validates
+dragged. Drag a whole session between folds or into the **validation session**. Saving validates
 the complete session assignment and updates
 `splits.json`. The served interface is the tracked [`split_manager.html`](split_manager.html)
 asset; `split_manager.py` provides its local manifest API.
@@ -113,12 +118,12 @@ asset; `split_manager.py` provides its local manifest API.
 The local server stops automatically shortly after every split-manager tab is closed. It also
 stops if no browser tab connects after launch.
 
-Folds are used only by cross-validation. The validation holdout is excluded from CV and is used
+Folds are used only by cross-validation. The validation session is excluded from CV and is used
 by the normal training command below. It may be empty.
 
 ### 4. Train and validate
 
-This trains from scratch using the validation holdout configured in `splits.json`:
+This trains from scratch using the validation session configured in `splits.json`:
 
 ```powershell
 python training\run_train.py `
@@ -127,7 +132,7 @@ python training\run_train.py `
     --run-name scratch
 ```
 
-When the validation holdout contains sessions, they control early stopping, learning-rate
+When the validation session contains sessions, they control early stopping, learning-rate
 scheduling, checkpoint selection, and prediction-threshold calibration. All folds train the
 model. When it is empty, the trainer uses all non-holdout sessions with its fixed
 default epoch schedule, fixed learning-rate milestones, and fixed prediction threshold; it does
@@ -146,7 +151,7 @@ never overwritten.
 - `best.json` — selected threshold, validation metrics, epoch, and full configuration.
 - `train.log` — per-epoch training and validation record.
 
-An all-data run with no validation holdout writes `all_data.pth` and `all_data.json` instead of
+An all-data run with no validation session writes `all_data.pth` and `all_data.json` instead of
 `best.*`; its metadata records the fixed schedule and threshold used.
 
 Treat this folder as experimental output. Test the checkpoint on representative recordings
@@ -217,7 +222,7 @@ transforms look plausible.
 
 Use cross-validation when you need to compare configurations or estimate how sensitive a
 result is to the held-out session group. It takes turns holding out each fold and
-never loads the validation holdout:
+never loads the validation session:
 
 ```powershell
 python training\run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp\cv
@@ -235,14 +240,14 @@ Use an untouched session only when you need a stricter final performance gate. S
 while building the split manifest, train a fixed all-development refit, and evaluate it once:
 
 ```powershell
-python training\data_splits.py --data-root . --holdout <session> --out splits.json
+python training\data_splits.py --final_test_session <session>
 python training\run_train.py --split-manifest splits.json --final `
     --final-prediction-threshold <threshold> --epochs <fixed-epoch-count>
 python training\evaluate_holdout.py --run-dir checkpoints_exp\<final-run> `
     --split-manifest splits.json --confirm-frozen
 ```
 
-The holdout is never loaded while training. Do not use its score to tune another run; it has
+The final-test session is never loaded while training. Do not use its score to tune another run; it has
 then become development data.
 
 </details>

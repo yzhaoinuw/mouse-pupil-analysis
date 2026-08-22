@@ -41,10 +41,9 @@ not 25 recordings and not 10 animals. Do not re-litigate.
 **Settled: the session is recorded at intake, not inferred.** Measured, not assumed — crop
 geometry splits 6 of 16 sessions, agglomerative clustering on preprocessed frames tears 3 at
 k=5 and 6 at k=10, and file mtime is destroyed by copying. The images are tight eye crops with
-no rig context left to fingerprint. Filenames are no longer parsed at all; provenance comes from
-an intake subfolder, a labelme `session` flag, or `provenance.csv`, and anything unresolved
-becomes one safe over-merged group. Do not re-litigate; add a provenance *source* to
-`training/provenance.py` if a new intake route appears.
+no rig context left to fingerprint. Filenames are no longer parsed at all: the required
+`labeled_frames/<session>/` directory is the only session source. Sort a mixed batch before
+importing it; do not add an inferred or sidecar grouping route.
 
 Two structural facts that constrained the original 222-image comparison:
 
@@ -396,16 +395,16 @@ Status: ready for review (2026-08-21), branch `training-compaction`
 
 The training README now treats labelled image/mask pairs as the input contract and puts the
 ordinary path first: organise sessions, refresh `splits.json`, review the split manager if needed,
-then run `run_train.py` against an optional validation holdout. Labelme, frame recommendation,
+then run `run_train.py` against an optional validation session. Labelme, frame recommendation,
 augmentation review, cross-validation, outer-test evaluation, and checkpoint promotion are
 optional tools.
 
 `training/split_manager.py` now serves a local browser UI over the existing manifest. It shows
 session/fold image counts, tiny/medium/large pupil counts, median diameter, and median brightness;
 it starts from the automatic grouping and saves only validated whole-session assignments. The
-validation holdout is excluded from CV and drives ordinary `run_train.py` selection when nonempty.
+validation session is excluded from CV and drives ordinary `run_train.py` selection when nonempty.
 When empty, `run_train.py` uses every development session with fixed milestones and a fixed
-threshold rather than validation-driven tuning. The original outer test holdout remains separate
+threshold rather than validation-driven tuning. The original final-test session remains separate
 and read-only in this first UI. Do not combine intake, recommendation, and training into the first
 workbench expansion.
 

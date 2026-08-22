@@ -2,6 +2,32 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-22
+
+### Simplify the grouped-split command (Codex, GPT-5)
+
+- Reduced `data_splits.py` to the session-folder workflow: it now accepts only
+  `--labeled_frames_dir`, `--folds`, `--final_test_session`, `--validation_session`,
+  `--show`, and `--reassign`. All multiword options use underscores.
+- Removed legacy flat-pool, sidecar, Labelme-flag, batch-fallback, schema-migration, and
+  materialized-fold support. The manifest is the sole split record and trainers read it directly.
+  A labelled pair must live under `labeled_frames/<session>/images|masks`.
+- Clarified the two reservations: a validation session selects a normal development run; a final
+  test session is never used for training or model decisions and is evaluated only after choices
+  are frozen. Updated intake, sample-data, Labelme-import, and CV guidance accordingly.
+- Verification: focused split, sample-data, Labelme-import, split-manager, and training-workflow
+  tests passed with a repository-local pytest base temp; the full pytest suite also passed with a
+  repository-local base temp. `data_splits.py --help` and a real `sample_data/labeled_frames`
+  census passed; repository-wide Ruff and Black checks passed (Black emitted its known unreadable
+  user-cache warning only), and `git diff --check` passed.
+- Aligned `split_manager.py` with the split engine: it now takes optional
+  `--labeled_frames_dir`, uses the fixed parent `splits.json`, and exposes `--no_open` rather than
+  dash-separated flags. The UI calls `data_splits.build_manifest` only on refresh and
+  `data_splits.apply_session_assignments` when saving; it does not own grouping or assignment
+  rules. Rendered the live sample-data manager to verify the renamed validation/final-test labels
+  and removal of the now-uninformative provenance source label. Focused split-manager tests, Ruff,
+  Black, and `split_manager.py --help` passed.
+
 ## 2026-08-21
 
 ### Compact the training workflow and build a validation-holdout split manager (Codex, GPT-5)

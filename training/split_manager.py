@@ -1,10 +1,10 @@
 """Run a local browser UI for reviewing and editing session-level data splits.
 
-The page reads ``splits.json`` produced by the existing automatic grouping, then opens a
-loopback-only interface. Drag whole sessions between folds and the validation
-holdout; the Python backend validates and writes the manifest.
+The page reads ``splits.json`` produced by :mod:`data_splits`, then opens a loopback-only
+interface. Drag whole sessions between folds and the validation session; the Python
+backend delegates validation and manifest writes to ``data_splits``.
 
-    python training/split_manager.py --data-root .
+    python training/split_manager.py
 """
 
 from __future__ import annotations
@@ -92,7 +92,6 @@ def ui_state(manifest: dict) -> dict:
         sessions.append(
             {
                 "session": entry["session"],
-                "source": entry["source"],
                 "target": (
                     "test_holdout"
                     if entry.get("holdout")
@@ -116,8 +115,21 @@ def ui_state(manifest: dict) -> dict:
     }
 
 
-def refresh_manifest(data_root: Path, manifest_path: Path, folds: int | None) -> dict:
-    """Refresh source statistics while preserving prior automatic/manual assignments."""
+def split_paths(labeled_frames_dir: Path) -> tuple[Path, Path]:
+    """Return the dataset parent and its fixed split-manifest path."""
+    labeled_frames_dir = Path(labeled_frames_dir).resolve()
+    if labeled_frames_dir.name != data_splits.LABELLED_ROOT:
+        raise ValueError(
+            f"--labeled_frames_dir must name a {data_splits.LABELLED_ROOT!r} folder; got "
+            f"{labeled_frames_dir}."
+        )
+    data_root = labeled_frames_dir.parent
+    return data_root, data_root / "splits.json"
+
+
+def refresh_manifest(labeled_frames_dir: Path, folds: int | None) -> dict:
+    """Refresh source statistics through data_splits while preserving assignments."""
+    data_root, manifest_path = split_paths(labeled_frames_dir)
     previous = data_splits.read_previous(manifest_path)
     n_folds = folds if folds is not None else previous["n_folds"] if previous else 5
     manifest = data_splits.build_manifest(data_root, n_folds=n_folds, previous=previous)
@@ -227,8 +239,13 @@ def stop_when_browser_closes(server: ThreadingHTTPServer, lifecycle: BrowserLife
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--data-root", type=Path, default=Path.cwd())
-    parser.add_argument("--manifest", type=Path, help="Default: <data-root>/splits.json.")
+    parser.add_argument(
+        "--labeled_frames_dir",
+        type=Path,
+        default=Path.cwd() / data_splits.LABELLED_ROOT,
+        help="Folder containing one <session>/images and <session>/masks pair per recording "
+        "(default: ./labeled_frames). Its parent always contains splits.json.",
+    )
     parser.add_argument("--folds", type=int, help="Used only when creating the first manifest.")
     parser.add_argument(
         "--refresh",
@@ -236,18 +253,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Refresh source data with automatic grouping before opening the page.",
     )
     parser.add_argument(
-        "--no-open", action="store_true", help="Do not open the browser automatically."
+        "--no_open", action="store_true", help="Do not open the browser automatically."
     )
     args = parser.parse_args(argv)
-    data_root = args.data_root.resolve()
-    manifest_path = (args.manifest or data_root / "splits.json").resolve()
+    _, manifest_path = split_paths(args.labeled_frames_dir)
     if args.refresh or not manifest_path.exists():
-        manifest = refresh_manifest(data_root, manifest_path, args.folds)
+        manifest = refresh_manifest(args.labeled_frames_dir, args.folds)
     else:
         manifest = data_splits.load_manifest(manifest_path)
     print(
         f"Loaded {manifest['n_sessions']} sessions into {manifest['n_folds']} folds; "
-        f"{manifest.get('n_validation_holdout_sessions', 0)} validation-holdout session(s)."
+        f"{manifest.get('n_validation_holdout_sessions', 0)} validation session(s)."
     )
     lifecycle = BrowserLifecycle()
     server = ThreadingHTTPServer((HOST, 0), handler_factory(manifest_path, lifecycle))

@@ -1,8 +1,6 @@
 import csv
-import importlib.util
 import json
 import re
-import sys
 from collections import Counter
 from pathlib import Path
 
@@ -77,32 +75,6 @@ def test_fixture_split_mirrors_the_maintained_layout():
             entry["mask"] == f"labeled_frames/{entry['session']}/masks/{Path(entry['mask']).name}"
         )
     assert all(e["source"] == "folder" for e in manifest["sessions"])
-
-
-def test_folds_regenerate_from_the_fixture(tmp_path):
-    """folds/ is not committed, so what matters is that it rebuilds correctly.
-
-    The instructions in sample_data/README.md tell a reader to run --materialize; this
-    is that command's output checked against the committed manifest.
-    """
-    spec = importlib.util.spec_from_file_location(
-        "data_splits_fixture", PROJECT_ROOT / "training" / "data_splits.py"
-    )
-    data_splits = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = data_splits
-    spec.loader.exec_module(data_splits)
-
-    manifest = json.loads((SAMPLE_ROOT / "splits.json").read_text(encoding="utf-8"))
-    out = tmp_path / "folds"
-    data_splits.materialize(manifest, SAMPLE_ROOT, out)
-
-    for entry in manifest["images"]:
-        name = f"cv{entry['fold'] + 1}"
-        assert (out / name / "images" / f"{entry['key']}.png").is_file()
-        assert (out / name / "masks" / f"{entry['key']}.png").is_file()
-
-    # Folds partition the pool: nothing duplicated, nothing stale left behind.
-    assert len(list(out.glob("cv*/images/**/*.png"))) == manifest["n_images"]
 
 
 def test_unlabeled_and_velocity_fixture_contracts():
