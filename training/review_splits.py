@@ -1,10 +1,10 @@
 """Run a local browser UI for reviewing and editing session-level data splits.
 
-The page reads ``training_data_split.json`` produced by :mod:`data_splits`, then opens a loopback-only
+The page reads ``training_data_split.json`` produced by :mod:`prepare_splits`, then opens a loopback-only
 interface. Drag whole sessions between folds and the validation session; the Python
-backend delegates validation and manifest writes to ``data_splits``.
+backend delegates validation and manifest writes to ``prepare_splits``.
 
-    python training/split_manager.py
+    python training/review_splits.py
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import data_splits  # noqa: E402
+import prepare_splits as data_splits  # noqa: E402
 
 HOST = "127.0.0.1"
 MAX_REQUEST_BYTES = 1_000_000

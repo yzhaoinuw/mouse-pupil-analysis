@@ -4,6 +4,25 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-24
 
+### Make the training command surface explicit (Codex, GPT-5)
+
+- Replaced noun- and abbreviation-based command names with action names:
+  `prepare_splits.py`, `review_splits.py`, `run_cross_validation.py`,
+  `import_labelme.py`, `preview_augmentation.py`, and `package_checkpoint.py`.
+  No compatibility wrappers remain; these source-checkout tools are still under active development.
+- Removed the completed filename-compaction migration, the standalone Labelme-mask converter,
+  and the obsolete final-refit/one-shot-holdout command. Labelme validation, mask rasterization,
+  compact frame naming, and atomic intake now live together in `import_labelme.py`.
+- Reduced `run_train.py` from 927 to 182 lines by moving the model loop, metrics, data loading,
+  and run artifacts into private `_trainer.py`. Frame scoring is likewise private in
+  `_frame_scoring.py`; there are now eight runnable commands and three clearly marked support modules.
+- Simplified checkpoint packaging to validation-selected `best.*` run folders only. The renamed
+  `package_checkpoint.py` still writes the weights, threshold metadata, and redacted training log
+  required by package/release checks, so manual checkpoint copying is not the supported path.
+- Updated the training guides, project map, reports, tests, and split-manager launch text.
+- Verification: all eight training-command `--help` calls passed; Ruff and Black passed on
+  `training`, `tests`, and `reports/scripts`; full Pytest passed with a repository-local base temp.
+
 ### Name the training split record explicitly (Codex, GPT-5)
 
 - Renamed the fixed grouped-split manifest to `training_data_split.json`, including the

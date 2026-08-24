@@ -23,7 +23,7 @@ def _load(name: str):
     return module
 
 
-selection = _load("frame_selection")
+selection = _load("_frame_scoring")
 recommend = _load("recommend_frames")
 
 

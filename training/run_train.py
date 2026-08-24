@@ -1,859 +1,27 @@
-# -*- coding: utf-8 -*-
-"""Train or fine-tune the pupil-segmentation UNet.
+"""Run one fresh or fine-tuned pupil-segmentation training job.
 
-Run this script with terminal arguments for a command-line workflow, or run it
-without arguments to use the editable configuration block at the bottom.
-Importing the module is side-effect free.
+Pass terminal arguments for an ordinary command-line run. Running this file without
+arguments uses the editable configuration block at the bottom.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import importlib.util
 import json
-import math
-import random
 import sys
-from dataclasses import asdict, dataclass
 from pathlib import Path
 
-import cv2
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
+if __package__:
+    from . import _trainer as trainer
+    from . import prepare_splits
+else:  # Direct ``python training/run_train.py`` execution from a source checkout.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from training import _trainer as trainer
+    from training import prepare_splits
 
-from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
-from mouse_pupil_analysis.pupil_predictions import load_unet_checkpoint
-from mouse_pupil_analysis.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LABELED_FRAMES_DIR = PROJECT_ROOT / "labeled_frames"
-
-SIZE_BIN_NAMES = ("tiny", "medium", "large")
-DEVICE_CHOICES = ("auto", "cuda", "mps", "cpu")
-SELECTION_METRICS = ("balanced_iou", "macro_iou")
-SCHEDULER_METRICS = ("val_loss", "balanced_iou", "macro_iou")
-
-
-def _load_data_splits():
-    """Load the sibling split module by path.
-
-    ``reports/scripts`` loads this trainer with ``runpy.run_path``, which does not put
-    ``training/`` on ``sys.path``, so a plain ``import data_splits`` would work as a
-    script and fail from those callers.
-    """
-    path = Path(__file__).resolve().parent / "data_splits.py"
-    spec = importlib.util.spec_from_file_location("training_data_splits", path)
-    module = importlib.util.module_from_spec(spec)
-    # dataclasses resolves string annotations through sys.modules, so the module has to
-    # be registered before it executes or every @dataclass in it raises.
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-data_splits = _load_data_splits()
-
-
-def resolve_device(preference: str = "auto") -> torch.device:
-    """Select the training device, preferring CUDA, then Apple MPS, then CPU.
-
-    Apple silicon runs this model several times faster on MPS than on CPU. Its
-    kernels are not bit-identical to the CPU ones, so a run reproduced on a
-    different device matches closely rather than exactly; pass an explicit
-    device when a run has to be repeated precisely.
-    """
-    if preference != "auto":
-        return torch.device(preference)
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
-
-
-@dataclass(frozen=True)
-class TrainingConfig:
-    """Editable settings for one fresh-training or fine-tuning run."""
-
-    labeled_frames_dir: Path = LABELED_FRAMES_DIR
-    checkpoint_dir: Path | None = None
-    finetune_checkpoint: Path | None = None
-    split_manifest: Path | None = None
-    fold: int | None = None
-    train_all_labeled_frames: bool = False
-    training_config_path: Path | None = None
-    lr_milestones: tuple[int, ...] = ()
-    prediction_threshold: float = 0.5
-    use_attention: bool = True
-    batch_size: int = 8
-    scratch_learning_rate: float = 1e-3
-    finetune_learning_rate: float = 1e-4
-    max_epochs: int = 200
-    early_stopping_patience: int = 40
-    scheduler_patience: int = 8
-    promotion_target_iou: float = 0.85
-    min_improvement: float = 1e-4
-    # Floored at 0.50 deliberately. Measured over the 24 grouped-fold checkpoints of
-    # 2026-08-16: on the folds the model handles, the optimum never falls below 0.50 and
-    # allowing lower gains exactly 0.0000 in 10 of 12 runs. Only the failing folds want
-    # lower, where a low threshold over-predicts to scrape back IoU on a bad mask -- a
-    # symptom to surface, not a calibration to adopt. A shipping calibration aimed at
-    # diameter bias rather than IoU is a separate question and may legitimately go lower.
-    threshold_candidates: tuple[float, ...] = (
-        0.50,
-        0.55,
-        0.60,
-        0.65,
-        0.70,
-        0.75,
-        0.80,
-        0.85,
-        0.90,
-    )
-    tiny_max_diameter: float = 15.0
-    large_min_diameter: float = 80.0
-    low_circularity_cutoff: float = 0.45
-    # ``balanced_iou`` averages the represented size bins equally. Under grouped folds a bin
-    # can hold one or two images, so a single noisy image swings a third of the metric;
-    # ``macro_iou`` averages over images instead and is what the first grouped sweep showed
-    # to be the stabler selection signal. See reports/2026-08-16-selection-metric-repair.md.
-    selection_metric: str = "macro_iou"
-    # The learning-rate plateau signal. Driving it from a size-bin IoU let one spiking epoch
-    # define the high-water mark and decay the rate to its floor while the model was still
-    # improving; validation loss is the quantity the gradient actually descends.
-    scheduler_metric: str = "val_loss"
-    # Threshold used for the per-epoch selection comparison only. ``None`` restores the old
-    # behaviour of selecting on the best of ``threshold_candidates``, which makes each epoch's
-    # score a maximum over several draws before the epoch maximum is taken on top of it. The
-    # metadata written for the winning epoch is always fully calibrated either way.
-    selection_threshold: float | None = 0.5
-    console_interval: int = 10
-    seed: int = 0
-    device: str = "auto"
-
-    def __post_init__(self) -> None:
-        if self.device not in DEVICE_CHOICES:
-            raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
-        if self.fold is not None and self.split_manifest is None:
-            raise ValueError(
-                "fold needs split_manifest: only a grouped manifest defines development folds."
-            )
-        if self.train_all_labeled_frames and (
-            self.split_manifest is not None or self.fold is not None
-        ):
-            raise ValueError("all-labeled training does not use a split manifest or fold.")
-        if self.fold is not None and self.fold < 0:
-            raise ValueError("fold must be nonnegative.")
-        if self.batch_size <= 0 or self.max_epochs <= 0:
-            raise ValueError("batch_size and max_epochs must be positive.")
-        if self.scratch_learning_rate <= 0 or self.finetune_learning_rate <= 0:
-            raise ValueError("Learning rates must be positive.")
-        if self.early_stopping_patience <= 0 or self.scheduler_patience < 0:
-            raise ValueError(
-                "Early-stopping patience must be positive and scheduler patience nonnegative."
-            )
-        if not self.threshold_candidates or any(
-            not 0 < threshold < 1 for threshold in self.threshold_candidates
-        ):
-            raise ValueError("threshold_candidates must contain probabilities between 0 and 1.")
-        if self.selection_metric not in SELECTION_METRICS:
-            raise ValueError(f"selection_metric must be one of {', '.join(SELECTION_METRICS)}.")
-        if self.scheduler_metric not in SCHEDULER_METRICS:
-            raise ValueError(f"scheduler_metric must be one of {', '.join(SCHEDULER_METRICS)}.")
-        if self.selection_threshold is not None and not 0 < self.selection_threshold < 1:
-            raise ValueError("selection_threshold must be a probability between 0 and 1.")
-        if not 0 < self.prediction_threshold < 1:
-            raise ValueError("prediction_threshold must be a probability between 0 and 1.")
-        if any(epoch <= 0 or epoch >= self.max_epochs for epoch in self.lr_milestones):
-            raise ValueError("lr_milestones must fall strictly between 0 and max_epochs.")
-        if tuple(sorted(set(self.lr_milestones))) != self.lr_milestones:
-            raise ValueError("lr_milestones must be sorted and unique.")
-        if self.tiny_max_diameter >= self.large_min_diameter:
-            raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
-        if not 0 <= self.promotion_target_iou <= 1:
-            raise ValueError("promotion_target_iou must be between 0 and 1.")
-        if self.min_improvement < 0:
-            raise ValueError("min_improvement cannot be negative.")
-        if self.console_interval <= 0:
-            raise ValueError("console_interval must be positive.")
-
-    @property
-    def data_root(self) -> Path:
-        """Return the project directory containing ``labeled_frames/``."""
-        return Path(self.labeled_frames_dir).parent
-
-
-@dataclass(frozen=True)
-class ValidationReport:
-    """Macro validation results at one candidate prediction threshold."""
-
-    threshold: float
-    macro_iou: float
-    macro_dice: float
-    balanced_iou: float
-    size_iou: dict[str, float | None]
-    low_circularity_iou: float | None
-
-
-def make_split_datasets(
-    config: TrainingConfig,
-) -> tuple[SegmentationDataset, SegmentationDataset]:
-    """Return the ``(train, validation)`` datasets this run's configuration selects.
-
-    Both datasets come from the grouped manifest and no session spans the boundary.
-    ``run_cv.py`` supplies a fold; the ordinary training workflow supplies no fold and
-    therefore uses the manifest's validation session.
-    """
-    if config.split_manifest is None:
-        raise ValueError("Validation-backed training requires a split manifest.")
-    manifest = data_splits.load_manifest(config.split_manifest)
-    if config.fold is None:
-        train, validation = data_splits.validation_holdout_paths(manifest, config.data_root)
-        if not validation[0]:
-            raise ValueError(
-                "The manifest has no validation session. Add one with training/data_splits.py, "
-                "or run CV and train the generated all-labeled configuration."
-            )
-    else:
-        train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
-    return (
-        SegmentationDataset(train[0], train[1], augment=True),
-        SegmentationDataset(validation[0], validation[1], augment=False),
-    )
-
-
-def make_all_labeled_dataset(config: TrainingConfig) -> SegmentationDataset:
-    """Return every valid image/mask pair beneath ``labeled_frames/``.
-
-    This is the trusted production-training path selected by a CV-generated training
-    configuration. It intentionally does not read ``training_data_split.json``.
-    """
-    image_paths: list[Path] = []
-    mask_paths: list[Path] = []
-    labeled_frames_dir = Path(config.labeled_frames_dir)
-    for session_dir in sorted(path for path in labeled_frames_dir.iterdir() if path.is_dir()):
-        images_dir = session_dir / "images"
-        masks_dir = session_dir / "masks"
-        if images_dir.is_dir() and masks_dir.is_dir():
-            images, masks = paired_image_mask_paths(images_dir, masks_dir)
-            image_paths.extend(images)
-            mask_paths.extend(masks)
-    if not image_paths:
-        raise FileNotFoundError(f"No paired images and masks found under {labeled_frames_dir}.")
-    return SegmentationDataset(image_paths, mask_paths, augment=True)
-
-
-def split_description(config: TrainingConfig) -> str:
-    """Return a one-line description of which split a run used."""
-    if config.train_all_labeled_frames:
-        return (
-            f"all labeled sessions under {Path(config.labeled_frames_dir).name}/ (splits ignored)"
-        )
-    if config.split_manifest is None:
-        raise ValueError("Validation-backed training requires a split manifest.")
-    manifest = data_splits.load_manifest(config.split_manifest)
-    name = Path(config.split_manifest).name
-    if config.fold is None:
-        validation = data_splits.validation_holdout_sessions(manifest)
-        test_gate = data_splits.holdout_sessions(manifest)
-        suffix = (
-            f"; outer test holdout excluded: {', '.join(sorted(test_gate))}" if test_gate else ""
-        )
-        if validation:
-            return (
-                f"{name} validation holdout: {len(validation)} session(s): "
-                f"{', '.join(sorted(validation))}{suffix}"
-            )
-        return f"{name} all development sessions, no validation session{suffix}"
-    held_out = data_splits.fold_sessions(manifest, config.fold)
-    gate = data_splits.holdout_sessions(manifest)
-    suffix = f", gate sessions excluded entirely: {', '.join(sorted(gate))}" if gate else ""
-    return (
-        f"{name} fold {config.fold}/{manifest['n_folds']}, "
-        f"holding out {len(held_out)} session(s): {', '.join(sorted(held_out))}{suffix}"
-    )
-
-
-def size_bin_labels(
-    diameters: np.ndarray,
-    tiny_max_diameter: float,
-    large_min_diameter: float,
-) -> np.ndarray:
-    """Assign model-space target diameters to tiny, medium, or large bins."""
-    diameters = np.asarray(diameters, dtype=float)
-    if tiny_max_diameter >= large_min_diameter:
-        raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
-    return np.select(
-        [diameters <= tiny_max_diameter, diameters >= large_min_diameter],
-        ["tiny", "large"],
-        default="medium",
-    )
-
-
-def per_image_overlap_scores(
-    probabilities: torch.Tensor,
-    targets: torch.Tensor,
-    threshold: float,
-    epsilon: float = 1e-6,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return per-image IoU and Dice instead of a batch-area-weighted score."""
-    predictions = probabilities > threshold
-    targets = targets > 0.5
-    dimensions = tuple(range(1, predictions.ndim))
-    intersection = (predictions & targets).sum(dim=dimensions).float()
-    predicted_area = predictions.sum(dim=dimensions).float()
-    target_area = targets.sum(dim=dimensions).float()
-    union = predicted_area + target_area - intersection
-    iou = torch.where(union > 0, intersection / (union + epsilon), torch.ones_like(union))
-    denominator = predicted_area + target_area
-    dice = torch.where(
-        denominator > 0,
-        2.0 * intersection / (denominator + epsilon),
-        torch.ones_like(denominator),
-    )
-    return iou, dice
-
-
-def _target_diameters(targets: torch.Tensor) -> np.ndarray:
-    dimensions = tuple(range(1, targets.ndim))
-    areas = (targets > 0.5).sum(dim=dimensions).cpu().numpy().astype(float)
-    return np.sqrt(4.0 * areas / math.pi)
-
-
-def _low_circularity_targets(targets: torch.Tensor, cutoff: float) -> np.ndarray:
-    low_circularity = []
-    for target in (targets > 0.5).cpu().numpy():
-        mask = np.asarray(target).squeeze().astype(np.uint8)
-        area = int(mask.sum())
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        perimeter = sum(cv2.arcLength(contour, closed=True) for contour in contours)
-        circularity = 0.0 if area == 0 or perimeter <= 0 else 4.0 * math.pi * area / perimeter**2
-        low_circularity.append(circularity < cutoff)
-    return np.asarray(low_circularity, dtype=bool)
-
-
-def evaluate_thresholds(
-    probabilities: torch.Tensor,
-    targets: torch.Tensor,
-    thresholds: tuple[float, ...],
-    tiny_max_diameter: float,
-    large_min_diameter: float,
-    low_circularity_cutoff: float,
-    metric: str = "macro_iou",
-) -> ValidationReport:
-    """Score every candidate threshold and return the one maximising ``metric``.
-
-    With a single candidate this is a plain evaluation at that threshold, which is how the
-    per-epoch selection comparison uses it.
-    """
-    if not thresholds:
-        raise ValueError("At least one threshold candidate is required.")
-    if metric not in SELECTION_METRICS:
-        raise ValueError(f"metric must be one of {', '.join(SELECTION_METRICS)}.")
-    diameters = _target_diameters(targets)
-    size_labels = size_bin_labels(diameters, tiny_max_diameter, large_min_diameter)
-    low_circularity = _low_circularity_targets(targets, low_circularity_cutoff)
-    reports = []
-
-    for threshold in thresholds:
-        iou, dice = per_image_overlap_scores(probabilities, targets, threshold)
-        iou_values = iou.cpu().numpy()
-        size_iou: dict[str, float | None] = {}
-        represented_bin_scores = []
-        for label in SIZE_BIN_NAMES:
-            selected = size_labels == label
-            score = float(iou_values[selected].mean()) if selected.any() else None
-            size_iou[label] = score
-            if score is not None:
-                represented_bin_scores.append(score)
-
-        low_circularity_iou = (
-            float(iou_values[low_circularity].mean()) if low_circularity.any() else None
-        )
-        reports.append(
-            ValidationReport(
-                threshold=float(threshold),
-                macro_iou=float(iou.mean()),
-                macro_dice=float(dice.mean()),
-                balanced_iou=float(np.mean(represented_bin_scores)),
-                size_iou=size_iou,
-                low_circularity_iou=low_circularity_iou,
-            )
-        )
-
-    return max(
-        reports,
-        key=lambda report: (
-            getattr(report, metric),
-            report.macro_iou,
-            -abs(report.threshold - 0.7),
-        ),
-    )
-
-
-def _metric_text(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.4f}"
-
-
-def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
-    values = asdict(config)
-    for key in (
-        "labeled_frames_dir",
-        "checkpoint_dir",
-        "finetune_checkpoint",
-        "split_manifest",
-        "training_config_path",
-    ):
-        value = values[key]
-        values[key] = None if value is None else str(value)
-    return values
-
-
-def file_sha256(path: Path) -> str:
-    """Return a stable fingerprint for a manifest, checkpoint, or other run input."""
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def training_mode(config: TrainingConfig) -> str:
-    """Return ``fine_tune`` or ``scratch`` for the configured run."""
-    return "fine_tune" if config.finetune_checkpoint is not None else "scratch"
-
-
-def initial_learning_rate(config: TrainingConfig) -> float:
-    """Return the learning rate the run starts from, selected by training mode."""
-    return (
-        config.finetune_learning_rate
-        if config.finetune_checkpoint is not None
-        else config.scratch_learning_rate
-    )
-
-
-def run_header(
-    config: TrainingConfig,
-    training_examples: int,
-    device: torch.device | None = None,
-) -> dict[str, object]:
-    """Return the config plus the run facts a promoted checkpoint needs.
-
-    ``training/promote_checkpoint.py`` reads these fields, so a packaged
-    checkpoint can be rebuilt from its run folder instead of hand-assembled.
-    The resolved device is recorded because MPS, CUDA, and CPU kernels do not
-    produce bit-identical results.
-    """
-    return _jsonable_config(config) | {
-        "training_examples": training_examples,
-        "training_mode": training_mode(config),
-        "device_used": None if device is None else device.type,
-    }
-
-
-def _default_checkpoint_dir(config: TrainingConfig) -> Path:
-    """Return a collision-safe default directory for one training run."""
-    run_kind = "ft" if config.finetune_checkpoint is not None else "scratch"
-    learning_rate = initial_learning_rate(config)
-    learning_rate_text = (
-        f"{learning_rate:.0e}".replace("e-0", "e-").replace("e+0", "e").replace("e+", "e")
-    )
-    name = f"{run_kind}_natural_lr{learning_rate_text}_s{config.seed}"
-    if config.fold is not None:
-        name = f"{name}_f{config.fold}"
-    elif config.train_all_labeled_frames:
-        name = f"{name}_all_data"
-    candidate = config.data_root / "checkpoints_exp" / name
-    index = 2
-    while candidate.exists():
-        candidate = config.data_root / "checkpoints_exp" / f"{name}_{index}"
-        index += 1
-    return candidate
-
-
-def _prepare_run_dir(config: TrainingConfig) -> Path:
-    """Create the requested empty output directory for one run."""
-    run_dir = (
-        Path(config.checkpoint_dir)
-        if config.checkpoint_dir is not None
-        else _default_checkpoint_dir(config)
-    )
-    if run_dir.exists() and any(run_dir.iterdir()):
-        raise FileExistsError(
-            f"Training checkpoint_dir is not empty: {run_dir}. Choose an empty directory."
-        )
-    run_dir.mkdir(parents=True, exist_ok=True)
-    return run_dir
-
-
-def _write_metadata(
-    path: Path,
-    config: TrainingConfig,
-    report: ValidationReport,
-    epoch: int,
-    learning_rate: float,
-    training_examples: int,
-    split: str | None = None,
-) -> None:
-    payload = {
-        "run_name": path.parent.name,
-        "training_mode": training_mode(config),
-        "training_examples": training_examples,
-        "split": split,
-        "prediction_threshold": report.threshold,
-        "best_epoch": epoch,
-        "balanced_iou": report.balanced_iou,
-        "macro_iou": report.macro_iou,
-        "macro_dice": report.macro_dice,
-        "size_iou": report.size_iou,
-        "low_circularity_iou": report.low_circularity_iou,
-        "learning_rate": learning_rate,
-        "meets_promotion_target": (
-            getattr(report, config.selection_metric) >= config.promotion_target_iou
-        ),
-        "config": _jsonable_config(config),
-    }
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
-
-def _collect_validation(
-    model: nn.Module,
-    val_loader: DataLoader,
-    criterion: nn.Module,
-    device: torch.device,
-) -> tuple[float, torch.Tensor, torch.Tensor]:
-    model.eval()
-    total_loss = 0.0
-    total_images = 0
-    probability_batches = []
-    target_batches = []
-    with torch.no_grad():
-        for images, masks in val_loader:
-            images, masks = images.to(device), masks.to(device)
-            logits = model(images)
-            batch_size = len(images)
-            total_loss += criterion(logits, masks).item() * batch_size
-            total_images += batch_size
-            probability_batches.append(torch.sigmoid(logits).cpu())
-            target_batches.append(masks.cpu())
-    return (
-        total_loss / total_images,
-        torch.cat(probability_batches),
-        torch.cat(target_batches),
-    )
-
-
-def evaluate_checkpoint(
-    checkpoint_path: Path,
-    config: TrainingConfig,
-) -> tuple[float, ValidationReport]:
-    """Evaluate one checkpoint with the same calibrated validation used in training."""
-    _, val_dataset = make_split_datasets(config)
-    device = resolve_device(config.device)
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config.batch_size,
-        shuffle=False,
-        pin_memory=device.type == "cuda",
-    )
-    model = load_unet_checkpoint(Path(checkpoint_path), device)
-    val_loss, probabilities, targets = _collect_validation(
-        model,
-        val_loader,
-        nn.BCEWithLogitsLoss(),
-        device,
-    )
-    report = evaluate_thresholds(
-        probabilities,
-        targets,
-        config.threshold_candidates,
-        config.tiny_max_diameter,
-        config.large_min_diameter,
-        config.low_circularity_cutoff,
-        config.selection_metric,
-    )
-    return val_loss, report
-
-
-def run_all_labeled_training(config: TrainingConfig) -> Path:
-    """Train every labelled session with a CV-generated fixed configuration."""
-    if not config.train_all_labeled_frames:
-        raise ValueError("run_all_labeled_training needs train_all_labeled_frames=True.")
-
-    random.seed(config.seed)
-    np.random.seed(config.seed)
-    torch.manual_seed(config.seed)
-
-    train_dataset = make_all_labeled_dataset(config)
-    split = split_description(config)
-    print(f"Split: {split}")
-
-    device = resolve_device(config.device)
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
-        shuffle=True,
-        pin_memory=device.type == "cuda",
-    )
-    learning_rate = initial_learning_rate(config)
-    if config.finetune_checkpoint is None:
-        model = UNet(use_attention=config.use_attention).to(device)
-    else:
-        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
-
-    run_dir = _prepare_run_dir(config)
-    checkpoint_path = run_dir / "all_data.pth"
-    metadata_path = run_dir / "all_data.json"
-    log_path = run_dir / "train.log"
-    print(f"Run directory: {run_dir}")
-    print(f"Device: {device.type}")
-
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    milestones = config.lr_milestones
-    scheduler = (
-        optim.lr_scheduler.MultiStepLR(optimizer, milestones=list(milestones), gamma=0.5)
-        if milestones
-        else None
-    )
-    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-        header = run_header(config, len(train_dataset), device) | {
-            "workflow": "all_labeled_training",
-            "prediction_threshold": config.prediction_threshold,
-            "lr_milestones": milestones,
-        }
-        log_file.write(json.dumps(header, sort_keys=True) + "\n")
-        for epoch in range(1, config.max_epochs + 1):
-            model.train()
-            total_loss = 0.0
-            total_images = 0
-            for images, masks in train_loader:
-                images, masks = images.to(device), masks.to(device)
-                optimizer.zero_grad(set_to_none=True)
-                loss = criterion(model(images), masks)
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item() * len(images)
-                total_images += len(images)
-            if scheduler is not None:
-                scheduler.step()
-            train_loss = total_loss / total_images
-            current_lr = optimizer.param_groups[0]["lr"]
-            log_line = f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | LR: {current_lr:g}"
-            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.max_epochs:
-                print(log_line)
-            log_file.write(log_line + "\n")
-
-    torch.save(model.state_dict(), checkpoint_path)
-    payload = {
-        "run_name": run_dir.name,
-        "workflow": "all_labeled_training",
-        "training_mode": training_mode(config),
-        "training_examples": len(train_dataset),
-        "trained_epochs": config.max_epochs,
-        "prediction_threshold": config.prediction_threshold,
-        "lr_milestones": list(milestones),
-        "split": split,
-        "training_config_sha256": (
-            file_sha256(config.training_config_path)
-            if config.training_config_path is not None
-            else None
-        ),
-        "checkpoint_sha256": file_sha256(checkpoint_path),
-        "config": _jsonable_config(config),
-    }
-    metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    print(f"All-labeled weights: {checkpoint_path}")
-    print(f"Training metadata: {metadata_path}")
-    return checkpoint_path
-
-
-def run_training(config: TrainingConfig) -> Path:
-    """Run training and return the stable path holding the best model weights."""
-    if config.train_all_labeled_frames:
-        return run_all_labeled_training(config)
-
-    random.seed(config.seed)
-    np.random.seed(config.seed)
-    torch.manual_seed(config.seed)
-
-    train_dataset, val_dataset = make_split_datasets(config)
-    split = split_description(config)
-    print(f"Split: {split}")
-
-    training_examples = len(train_dataset)
-
-    device = resolve_device(config.device)
-    pin_memory = device.type == "cuda"
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
-        shuffle=True,
-        pin_memory=pin_memory,
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config.batch_size,
-        shuffle=False,
-        pin_memory=pin_memory,
-    )
-
-    learning_rate = initial_learning_rate(config)
-    if config.finetune_checkpoint is None:
-        model = UNet(use_attention=config.use_attention).to(device)
-    else:
-        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
-
-    run_dir = _prepare_run_dir(config)
-    checkpoint_path = run_dir / "best.pth"
-    metadata_path = run_dir / "best.json"
-    log_path = run_dir / "train.log"
-    print(f"Run directory: {run_dir}")
-    print(f"Device: {device.type}")
-
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        # Validation loss is minimised; the IoU metrics are maximised.
-        mode="min" if config.scheduler_metric == "val_loss" else "max",
-        factor=0.5,
-        patience=config.scheduler_patience,
-        min_lr=learning_rate * 0.5**5,
-    )
-
-    best_selection_score = -math.inf
-    patience_counter = 0
-    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-        log_file.write(
-            json.dumps(run_header(config, training_examples, device), sort_keys=True) + "\n"
-        )
-        for epoch in range(1, config.max_epochs + 1):
-            model.train()
-            total_train_loss = 0.0
-            total_train_images = 0
-            for images, masks in train_loader:
-                images, masks = images.to(device), masks.to(device)
-                logits = model(images)
-                loss = criterion(logits, masks)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                total_train_loss += loss.item() * len(images)
-                total_train_images += len(images)
-
-            train_loss = total_train_loss / total_train_images
-            val_loss, probabilities, targets = _collect_validation(
-                model,
-                val_loader,
-                criterion,
-                device,
-            )
-            report = evaluate_thresholds(
-                probabilities,
-                targets,
-                config.threshold_candidates,
-                config.tiny_max_diameter,
-                config.large_min_diameter,
-                config.low_circularity_cutoff,
-                config.selection_metric,
-            )
-            # The reported threshold is calibrated over every candidate, but selecting on that
-            # maximum makes each epoch's score a max over several draws, and the epoch maximum is
-            # then taken on top of it. Compare epochs at one fixed threshold instead.
-            selection_report = (
-                report
-                if config.selection_threshold is None
-                else evaluate_thresholds(
-                    probabilities,
-                    targets,
-                    (config.selection_threshold,),
-                    config.tiny_max_diameter,
-                    config.large_min_diameter,
-                    config.low_circularity_cutoff,
-                    config.selection_metric,
-                )
-            )
-            selection_score = getattr(selection_report, config.selection_metric)
-            scheduler.step(
-                val_loss
-                if config.scheduler_metric == "val_loss"
-                else getattr(report, config.scheduler_metric)
-            )
-            current_lr = optimizer.param_groups[0]["lr"]
-
-            log_line = (
-                f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | "
-                f"Val Loss: {val_loss:.4f} | Macro Dice: {report.macro_dice:.4f} | "
-                f"Macro IoU: {report.macro_iou:.4f} | Balanced IoU: {report.balanced_iou:.4f} | "
-                f"Threshold: {report.threshold:.2f} | Tiny: {_metric_text(report.size_iou['tiny'])} | "
-                f"Medium: {_metric_text(report.size_iou['medium'])} | "
-                f"Large: {_metric_text(report.size_iou['large'])} | "
-                f"Low-circularity: {_metric_text(report.low_circularity_iou)} | LR: {current_lr:g}"
-            )
-            show_epoch = epoch == 1 or epoch % config.console_interval == 0
-            if show_epoch:
-                print(log_line)
-            log_file.write(log_line + "\n")
-
-            improved = selection_score > best_selection_score + config.min_improvement
-            if improved:
-                best_selection_score = selection_score
-                patience_counter = 0
-                torch.save(model.state_dict(), checkpoint_path)
-                _write_metadata(
-                    metadata_path,
-                    config,
-                    report,
-                    epoch,
-                    current_lr,
-                    training_examples,
-                    split,
-                )
-                if show_epoch:
-                    print("Best model updated.")
-            else:
-                patience_counter += 1
-                if show_epoch:
-                    print(
-                        f"Patience: {patience_counter}/{config.early_stopping_patience} "
-                        f"(best {config.selection_metric} {best_selection_score:.4f})"
-                    )
-                if patience_counter >= config.early_stopping_patience:
-                    print("Early stopping triggered; the best checkpoint remains saved.")
-                    break
-
-    # The calibrated threshold landing on the grid edge means the optimum is somewhere
-    # outside it. At the low edge that reflects the image-weighted majority of the
-    # validation set wanting more pixels predicted -- which says nothing about the minority.
-    # Measured on 2026-08-16 fold 1: the threshold sat on the floor because the 32-image
-    # session under-predicted (0.72x the labelled area), while the two sessions that
-    # actually failed were over-predicting by 4.8x and 7.8x and needed the opposite. One
-    # global threshold cannot serve sessions whose errors point in different directions.
-    calibrated = json.loads(metadata_path.read_text(encoding="utf-8"))["prediction_threshold"]
-    low, high = min(config.threshold_candidates), max(config.threshold_candidates)
-    if calibrated == low:
-        print(
-            f"WARNING: calibrated threshold {calibrated:.2f} is the lowest candidate, so this "
-            "run wanted to go lower still. That is driven by whichever sessions supply the most "
-            "validation images, and can coexist with severe over-segmentation elsewhere. Check "
-            "the per-session scores, and the predicted-to-labelled area ratio, before trusting "
-            "this checkpoint."
-        )
-    elif calibrated == high:
-        print(
-            f"WARNING: calibrated threshold {calibrated:.2f} is the highest candidate, so the "
-            f"calibration is censored by the fixed grid at {calibrated:.2f}."
-        )
-
-    print(f"Training log: {log_path}")
-    print(f"Threshold and validation metadata: {metadata_path}")
-    return checkpoint_path
 
 
 def _build_cli_parser() -> argparse.ArgumentParser:
@@ -870,8 +38,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--training_config_path",
         type=Path,
-        help="CV-generated JSON recipe. It trains every labeled session and ignores "
-        "training_data_split.json.",
+        help="Cross-validation-generated JSON recipe. It trains every labeled session and "
+        "ignores training_data_split.json.",
     )
     parser.add_argument(
         "--checkpoint_dir",
@@ -894,7 +62,7 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, help="Random seed (default: 0).")
     parser.add_argument(
         "--device",
-        choices=DEVICE_CHOICES,
+        choices=trainer.DEVICE_CHOICES,
         default="auto",
         help="Training device. 'auto' prefers CUDA, then Apple MPS, then CPU.",
     )
@@ -903,8 +71,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
 
 def _training_config(
     config_path: Path, labeled_frames_dir: Path, checkpoint_dir: Path | None, device: str
-) -> TrainingConfig:
-    """Load the CV hand-off recipe for trusted all-labeled training."""
+) -> trainer.TrainingConfig:
+    """Load the cross-validation hand-off recipe for all-labeled training."""
     config_path = Path(config_path).resolve()
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
@@ -920,7 +88,7 @@ def _training_config(
     learning_rate_key = (
         "finetune_learning_rate" if finetune_checkpoint is not None else "scratch_learning_rate"
     )
-    return TrainingConfig(
+    return trainer.TrainingConfig(
         labeled_frames_dir=labeled_frames_dir,
         checkpoint_dir=checkpoint_dir,
         finetune_checkpoint=None if finetune_checkpoint is None else Path(finetune_checkpoint),
@@ -980,14 +148,14 @@ def main(argv: list[str] | None = None) -> int:
                 else "scratch_learning_rate"
             )
             learning_rate_override[key] = args.learning_rate
-        manifest = labeled_frames_dir.parent / data_splits.TRAINING_DATA_SPLIT_FILENAME
+        manifest = labeled_frames_dir.parent / prepare_splits.TRAINING_DATA_SPLIT_FILENAME
         if not manifest.is_file():
             parser.error(
-                f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
-                "create it with training/data_splits.py "
-                "or pass --training_config_path for all-labeled training."
+                f"No {prepare_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
+                "create it with training/prepare_splits.py or pass --training_config_path "
+                "for all-labeled training."
             )
-        config = TrainingConfig(
+        config = trainer.TrainingConfig(
             labeled_frames_dir=labeled_frames_dir,
             checkpoint_dir=checkpoint_dir,
             finetune_checkpoint=args.finetune_checkpoint,
@@ -998,12 +166,12 @@ def main(argv: list[str] | None = None) -> int:
             device=args.device,
             **learning_rate_override,
         )
-    run_training(config)
+    trainer.run_training(config)
     return 0
 
 
 def _run_direct_configuration() -> None:
-    """Run the editable no-argument configuration at the bottom of this file."""
+    """Run the editable no-argument configuration below."""
     # Set this to a compatible .pth file to fine-tune its weights. Leave it as None
     # for fresh training. Fine-tuning automatically uses the lower learning rate.
     finetune_checkpoint = None
@@ -1014,12 +182,13 @@ def _run_direct_configuration() -> None:
     #     / "checkpoints"
     #     / "166pupils_thresh=0.4_iou=0.8749.pth"
     # )
-
-    run_training(
-        TrainingConfig(
+    trainer.run_training(
+        trainer.TrainingConfig(
             labeled_frames_dir=LABELED_FRAMES_DIR,
             finetune_checkpoint=finetune_checkpoint,
-            split_manifest=LABELED_FRAMES_DIR.parent / data_splits.TRAINING_DATA_SPLIT_FILENAME,
+            split_manifest=(
+                LABELED_FRAMES_DIR.parent / prepare_splits.TRAINING_DATA_SPLIT_FILENAME
+            ),
         )
     )
 

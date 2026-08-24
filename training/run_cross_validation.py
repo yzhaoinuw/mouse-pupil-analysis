@@ -7,8 +7,8 @@ setting. The headline number is the mean per-session IoU: averaging over images
 instead lets the largest session dominate, and one session currently holds 28% of
 the labelled pool.
 
-    python training/data_splits.py
-    python training/run_cv.py
+    python training/prepare_splits.py
+    python training/run_cross_validation.py
 
 Use this to compare *configurations* -- sampling, loss, augmentation, architecture.
 The validation session, when configured, is excluded from every CV fold and is reserved
@@ -25,7 +25,6 @@ for a single fold, so treat differences below roughly 0.05 on one fold as noise
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import statistics
 import sys
@@ -38,19 +37,13 @@ from torch.utils.data import DataLoader
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-
-def _load(name: str):
-    """Load a sibling training module by path.
-
-    The module is registered in ``sys.modules`` first because dataclasses resolves
-    string annotations through it.
-    """
-    path = PROJECT_ROOT / "training" / f"{name}.py"
-    spec = importlib.util.spec_from_file_location(f"training_{name}", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+if __package__:
+    from . import _trainer as training_core
+    from . import prepare_splits
+else:  # Direct ``python training/run_cross_validation.py`` execution.
+    sys.path.insert(0, str(PROJECT_ROOT))
+    from training import _trainer as training_core
+    from training import prepare_splits
 
 
 def per_session_iou(
@@ -178,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
             f"--labeled_frames_dir must name a labeled_frames folder; got {labeled_frames_dir}."
         )
     data_root = labeled_frames_dir.parent
-    data_splits = _load("data_splits")
+    data_splits = prepare_splits
     split_manifest = data_root / data_splits.TRAINING_DATA_SPLIT_FILENAME
     checkpoint_dir = (
         args.checkpoint_dir.resolve()
@@ -188,10 +181,10 @@ def main(argv: list[str] | None = None) -> int:
     if not split_manifest.is_file():
         parser.error(
             f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
-            "run training/data_splits.py first."
+            "run training/prepare_splits.py first."
         )
 
-    trainer = _load("run_train")
+    trainer = training_core
 
     manifest = data_splits.load_manifest(split_manifest)
     try:

@@ -67,7 +67,7 @@ def paired_image_mask_paths(
 
     Sorting the two directories independently silently misaligns images and masks as
     soon as the folders diverge, which trains the model against wrong labels without
-    raising anything. ``labelme_json2png.py`` writes each mask as ``<image stem>.png``,
+    raising anything. ``import_labelme.py`` writes each mask as ``<image stem>.png``,
     so the stem is the reliable key.
 
     Both directions are checked. An image with no mask is always an error. A mask with

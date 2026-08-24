@@ -21,8 +21,8 @@ Session identity is the labelled-frame directory name; nothing here parses a fil
 
 Generate or refresh the manifest::
 
-    python training/data_splits.py
-    python training/data_splits.py --show          # census only, no write
+    python training/prepare_splits.py
+    python training/prepare_splits.py --show       # census only, no write
 
 Then train against the optional validation holdout with::
 
@@ -575,32 +575,6 @@ def apply_session_assignments(manifest: dict, assignments: dict[str, int | str])
         entry.get("validation_holdout", False) for entry in updated["sessions"]
     )
     return updated
-
-
-def final_paths(
-    manifest: dict,
-    data_root: Path,
-) -> tuple[tuple[list[Path], list[Path]], tuple[list[Path], list[Path]]]:
-    """Return the development and CV-excluded paths for legacy evaluation workflows.
-
-    Retained for existing historical final-refit artifacts. New all-labeled training reads
-    the session folders directly and intentionally ignores this manifest.
-    """
-    data_root = Path(data_root)
-    train: tuple[list[Path], list[Path]] = ([], [])
-    gate: tuple[list[Path], list[Path]] = ([], [])
-    for entry in sorted(manifest["images"], key=lambda e: e["key"]):
-        target = gate if entry.get("holdout") else train
-        target[0].append(data_root / entry["image"])
-        target[1].append(data_root / entry["mask"])
-
-    if not gate[0]:
-        raise ValueError(
-            "This manifest sets no final-test session, so there is nothing to gate against. "
-            "Regenerate it with --final_test_session SESSION, choosing by condition rather than "
-            "by animal."
-        )
-    return train, gate
 
 
 def holdout_sessions(manifest: dict) -> list[str]:

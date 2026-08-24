@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_data_splits():
-    path = PROJECT_ROOT / "training" / "data_splits.py"
+    path = PROJECT_ROOT / "training" / "prepare_splits.py"
     spec = importlib.util.spec_from_file_location("training_data_splits_census", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

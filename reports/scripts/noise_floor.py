@@ -13,16 +13,15 @@ Summarise the resulting folders with ``reports/scripts/summarize_runs.py``.
 from __future__ import annotations
 
 import argparse
-import runpy
+import sys
 import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-
-def _load_trainer() -> dict:
-    """Load run_train.py without importing it as a package module."""
-    return runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
+from training import _trainer as training_core  # noqa: E402
+from training import prepare_splits  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,7 +45,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    trainer = _load_trainer()
     source = args.finetune_checkpoint
     if source is None and "finetune" in args.arms:
         from mouse_pupil_analysis.pupil_predictions import find_default_checkpoint
@@ -58,15 +56,13 @@ def main(argv: list[str] | None = None) -> int:
         for seed in range(args.seeds):
             name = f"{args.tag}_{arm}_s{seed}"
             print(f"\n===== {name} =====", flush=True)
-            trainer["run_training"](
-                trainer["TrainingConfig"](
-                    data_root=args.data_root,
-                    checkpoint_dir=args.out,
-                    run_name=name,
+            training_core.run_training(
+                training_core.TrainingConfig(
+                    labeled_frames_dir=args.data_root / "labeled_frames",
+                    checkpoint_dir=args.out / name,
+                    split_manifest=(args.data_root / prepare_splits.TRAINING_DATA_SPLIT_FILENAME),
                     finetune_checkpoint=source if arm == "finetune" else None,
-                    # Natural sampling mirrors how the packaged checkpoint was trained.
-                    balance_training_sizes=False,
-                    n_epochs=args.epochs,
+                    max_epochs=args.epochs,
                     seed=seed,
                     device=args.device,
                     console_interval=50,

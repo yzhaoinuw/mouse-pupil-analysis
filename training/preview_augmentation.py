@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 22 17:18:21 2026
+"""Preview random training augmentations for one labelled recording session."""
 
-@author: yzhao
-"""
-
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -13,7 +10,6 @@ import numpy as np
 from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
 
 
 def _first_session(data_root: Path) -> tuple[Path, Path]:
@@ -87,22 +83,33 @@ def show_augmented_samples(
     plt.show()
 
 
-# example paths, paired by filename stem rather than by independent sort order
-image_paths, mask_paths = paired_image_mask_paths(
-    # Review augmentation on one session; any session folder works.
-    *_first_session(DATA_ROOT),
-)
+def main(argv: list[str] | None = None) -> int:
+    """Preview augmented pairs from the first session under the selected data root."""
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--data_root",
+        type=Path,
+        default=PROJECT_ROOT,
+        help="Folder containing labeled_frames/ (default: repository root).",
+    )
+    parser.add_argument("--samples", type=int, default=20, help="Number of source frames to show.")
+    parser.add_argument("--augmentations", type=int, default=2, help="Variants per source frame.")
+    args = parser.parse_args(argv)
+    image_paths, mask_paths = paired_image_mask_paths(*_first_session(args.data_root.resolve()))
+    dataset = SegmentationDataset(
+        image_paths=image_paths,
+        mask_paths=mask_paths,
+        augment=True,
+        target_size=148,
+    )
+    show_augmented_samples(
+        dataset,
+        n_samples=args.samples,
+        n_augs_per_sample=args.augmentations,
+        overlay_mask=True,
+    )
+    return 0
 
-dataset = SegmentationDataset(
-    image_paths=image_paths,
-    mask_paths=mask_paths,
-    augment=True,
-    target_size=148,
-)
 
-show_augmented_samples(
-    dataset,
-    n_samples=20,
-    n_augs_per_sample=2,
-    overlay_mask=True,
-)
+if __name__ == "__main__":
+    raise SystemExit(main())

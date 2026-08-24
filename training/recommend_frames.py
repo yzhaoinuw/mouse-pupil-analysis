@@ -20,7 +20,7 @@ Extraction samples at ``--extraction-fps`` but never exceeds ``--max-extracted``
 falling back to that many equally spaced frames across the whole recording. The
 default caps a recording of any length at 2000 frames.
 
-Scoring is ``training/frame_selection.py``; the evidence that it beats picking at
+Scoring is implemented privately in ``training/_frame_scoring.py``; the evidence that it beats picking at
 random is in ``reports/scripts/validate_frame_selection.py``, which measured 89% of
 the achievable gap over the labelled pool. Read that module's docstring before
 trusting the output: ranking is weakest on recordings whose pupils are much smaller
@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import importlib.util
 import shutil
 import sys
 from pathlib import Path
@@ -46,14 +45,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMMITTEE = "checkpoints_exp/cvnat/*/best.pth"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "frames_to_label"
 
-
-def _load(name: str):
-    path = PROJECT_ROOT / "training" / f"{name}.py"
-    spec = importlib.util.spec_from_file_location(f"training_{name}", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+if __package__:
+    from . import _frame_scoring as frame_scoring
+    from . import _trainer as training_core
+else:  # Direct ``python training/recommend_frames.py`` execution.
+    sys.path.insert(0, str(PROJECT_ROOT))
+    from training import _frame_scoring as frame_scoring
+    from training import _trainer as training_core
 
 
 def spread_picks(
@@ -99,7 +97,7 @@ def spread_picks(
 
 
 def resolve_output_dirs(args) -> tuple[Path, Path, str]:
-    """Return (frames_dir, promote_dir, name) for either input mode."""
+    """Return (frames_dir, recommended_dir, name) for either input mode."""
     output_root = args.output_dir or DEFAULT_OUTPUT_DIR
     if args.video is not None:
         stem = args.video.stem
@@ -109,8 +107,8 @@ def resolve_output_dirs(args) -> tuple[Path, Path, str]:
         stem = (
             args.frames.parent.name if args.frames.name == "extracted_frames" else args.frames.name
         )
-    promote_dir = output_root / stem / "recommended"
-    return frames_dir, promote_dir, stem
+    recommended_dir = output_root / stem / "recommended"
+    return frames_dir, recommended_dir, stem
 
 
 def clear_generated_png_outputs(directory: Path, include_manifest: bool = False) -> None:
@@ -179,8 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true", help="Overwrite a non-empty output folder.")
     args = parser.parse_args(argv)
 
-    trainer = _load("run_train")
-    selection = _load("frame_selection")
+    trainer = training_core
+    selection = frame_scoring
     from mouse_pupil_analysis.extract_frames import extract_selected_frames
     from mouse_pupil_analysis.preprocessing import InferenceDataset
     from mouse_pupil_analysis.pupil_predictions import (
@@ -195,7 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         default_hint = (
             f"The default committee is {DEFAULT_COMMITTEE} under {PROJECT_ROOT}, which is "
             "gitignored -- it exists only on a machine that has run the cross-validation "
-            "sweeps. Produce one with training/run_cv.py, or pass --checkpoints."
+            "sweeps. Produce one with training/run_cross_validation.py, or pass --checkpoints."
             if not args.checkpoints
             else "Pass more paths to --checkpoints."
         )
@@ -205,8 +203,8 @@ def main(argv: list[str] | None = None) -> int:
             f"checkpoint cannot rank frames. {default_hint}"
         )
 
-    frames_dir, promote_dir, name = resolve_output_dirs(args)
-    if frames_dir.resolve() == promote_dir.resolve():
+    frames_dir, recommended_dir, name = resolve_output_dirs(args)
+    if frames_dir.resolve() == recommended_dir.resolve():
         parser.error("The extracted/input frames folder and recommendation output must differ.")
     if args.video is not None and not args.video.is_file():
         parser.error(f"No such video: {args.video}")
@@ -216,10 +214,10 @@ def main(argv: list[str] | None = None) -> int:
     # Check both destinations before extracting or scoring anything: on a long recording
     # the committee pass takes minutes, and refusing to overwrite only at the end wastes
     # all of it.
-    if promote_dir.exists() and any(promote_dir.iterdir()) and not args.force:
-        parser.error(f"{promote_dir} is not empty. Pass --force to overwrite.")
+    if recommended_dir.exists() and any(recommended_dir.iterdir()) and not args.force:
+        parser.error(f"{recommended_dir} is not empty. Pass --force to overwrite.")
     if args.force:
-        clear_generated_png_outputs(promote_dir, include_manifest=True)
+        clear_generated_png_outputs(recommended_dir, include_manifest=True)
 
     if args.video is not None:
         if frames_dir.exists() and any(frames_dir.iterdir()) and not args.force:
@@ -265,11 +263,11 @@ def main(argv: list[str] | None = None) -> int:
     order = sorted(range(len(scored)), key=lambda i: values[i], reverse=True)
     picked = sorted(spread_picks(order, min(args.budget, len(paths)), min_gap, thumbnails, cutoff))
 
-    promote_dir.mkdir(parents=True, exist_ok=True)
+    recommended_dir.mkdir(parents=True, exist_ok=True)
     for index in picked:
-        shutil.copy2(paths[index], promote_dir / paths[index].name)
+        shutil.copy2(paths[index], recommended_dir / paths[index].name)
 
-    manifest = promote_dir / "selection.csv"
+    manifest = recommended_dir / "selection.csv"
     with manifest.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(
@@ -299,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
                 ]
             )
 
-    print(f"\nRecommended {len(picked)} of {len(paths)} frames -> {promote_dir}")
+    print(f"\nRecommended {len(picked)} of {len(paths)} frames -> {recommended_dir}")
     print(f"{'rank':>5}{'frame':>42}{'score':>8}{'disagree':>10}{'implaus':>9}")
     for rank, index in enumerate(sorted(picked, key=lambda i: values[i], reverse=True), 1):
         s = scored[index]
@@ -312,7 +310,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote {manifest}")
     print(
         "\nLabel source frames in Labelme, then preview and apply the batch with "
-        "training/import_labelme_batch.py per training/data_collection.md."
+        "training/import_labelme.py per training/data_collection.md."
     )
     return 0
 

@@ -9,13 +9,16 @@ import pytest
 import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-TRAINING = runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
-CV = runpy.run_path(str(PROJECT_ROOT / "training" / "run_cv.py"))
+TRAINING = runpy.run_path(
+    str(PROJECT_ROOT / "training" / "_trainer.py"), run_name="training._trainer"
+)
+RUN_TRAIN = runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
+CV = runpy.run_path(str(PROJECT_ROOT / "training" / "run_cross_validation.py"))
 
 evaluate_thresholds = TRAINING["evaluate_thresholds"]
 per_image_overlap_scores = TRAINING["per_image_overlap_scores"]
 TrainingConfig = TRAINING["TrainingConfig"]
-training_main = TRAINING["main"]
+training_main = RUN_TRAIN["main"]
 make_all_labeled_dataset = TRAINING["make_all_labeled_dataset"]
 make_split_datasets = TRAINING["make_split_datasets"]
 all_labeled_training_config = CV["all_labeled_training_config"]
@@ -133,7 +136,7 @@ def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypat
     labeled_frames_dir = tmp_path / "labeled_frames"
     labeled_frames_dir.mkdir()
     (tmp_path / "training_data_split.json").write_text("{}", encoding="utf-8")
-    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
+    monkeypatch.setattr(RUN_TRAIN["trainer"], "run_training", captured.append)
 
     assert (
         training_main(
@@ -189,7 +192,7 @@ def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tm
         ),
         encoding="utf-8",
     )
-    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
+    monkeypatch.setattr(RUN_TRAIN["trainer"], "run_training", captured.append)
 
     assert (
         training_main(

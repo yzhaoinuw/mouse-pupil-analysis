@@ -2,11 +2,10 @@
 
 The shipped `.json` used to be assembled by hand, so it drifted from what
 `training/run_train.py` actually writes and could not be regenerated. These
-tests pin both ends of `training/promote_checkpoint.py`: the transform it
+tests pin both ends of `training/package_checkpoint.py`: the transform it
 applies, and the shape of the package data it produces.
 """
 
-import hashlib
 import json
 import runpy
 from pathlib import Path
@@ -20,14 +19,14 @@ from mouse_pupil_analysis.pupil_predictions import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PROMOTE = runpy.run_path(str(PROJECT_ROOT / "training" / "promote_checkpoint.py"))
+PACKAGE = runpy.run_path(str(PROJECT_ROOT / "training" / "package_checkpoint.py"))
 
-build_packaged_metadata = PROMOTE["build_packaged_metadata"]
-packaged_basename = PROMOTE["packaged_basename"]
-redact_log_header = PROMOTE["redact_log_header"]
-promote = PROMOTE["promote"]
-PACKAGED_KEYS = PROMOTE["PACKAGED_KEYS"]
-PACKAGED_TRAINING_KEYS = PROMOTE["PACKAGED_TRAINING_KEYS"]
+build_packaged_metadata = PACKAGE["build_packaged_metadata"]
+packaged_basename = PACKAGE["packaged_basename"]
+redact_log_header = PACKAGE["redact_log_header"]
+package_checkpoint = PACKAGE["package_checkpoint"]
+PACKAGED_KEYS = PACKAGE["PACKAGED_KEYS"]
+PACKAGED_TRAINING_KEYS = PACKAGE["PACKAGED_TRAINING_KEYS"]
 
 
 def _scratch_run_metadata() -> dict:
@@ -103,7 +102,7 @@ def _run_metadata() -> dict:
     }
 
 
-def test_packaged_metadata_matches_the_promotion_schema():
+def test_packaged_metadata_matches_the_packaging_schema():
     packaged = json.loads(
         find_default_checkpoint().with_suffix(".json").read_text(encoding="utf-8")
     )
@@ -112,7 +111,7 @@ def test_packaged_metadata_matches_the_promotion_schema():
     assert tuple(packaged["training"]) == PACKAGED_TRAINING_KEYS
 
 
-def test_promotion_reproduces_the_packaged_metadata_shape():
+def test_packaging_reproduces_the_packaged_metadata_shape():
     packaged = build_packaged_metadata(_run_metadata(), validation_note="Shares recordings.")
     shipped = json.loads(find_default_checkpoint().with_suffix(".json").read_text(encoding="utf-8"))
 
@@ -128,7 +127,7 @@ def test_promotion_reproduces_the_packaged_metadata_shape():
     assert tuple(build_packaged_metadata(_scratch_run_metadata())) == tuple(shipped)
 
 
-def test_promotion_strips_local_paths_from_metadata_and_log():
+def test_packaging_strips_local_paths_from_metadata_and_log():
     packaged = build_packaged_metadata(_run_metadata())
     header = redact_log_header(
         json.dumps(
@@ -155,7 +154,7 @@ def test_packaged_basename_matches_the_shipped_checkpoint():
     )
 
 
-def test_scratch_promotion_records_no_source_checkpoint():
+def test_scratch_packaging_records_no_source_checkpoint():
     packaged = build_packaged_metadata(_scratch_run_metadata())
 
     assert packaged["training"]["mode"] == "scratch"
@@ -164,7 +163,7 @@ def test_scratch_promotion_records_no_source_checkpoint():
     assert packaged_basename(packaged) == "166pupils_thresh=0.5_iou=0.8786"
 
 
-def test_promotion_records_the_initial_rate_not_the_decayed_rate():
+def test_packaging_records_the_initial_rate_not_the_decayed_rate():
     metadata = _run_metadata()
     # `learning_rate` in a run's metadata is the scheduler's rate at the best
     # epoch, which is not the rate the run started from.
@@ -173,7 +172,7 @@ def test_promotion_records_the_initial_rate_not_the_decayed_rate():
     assert build_packaged_metadata(metadata)["training"]["learning_rate"] == pytest.approx(1e-4)
 
 
-def test_promotion_rejects_run_metadata_without_provenance_fields():
+def test_packaging_rejects_run_metadata_without_provenance_fields():
     metadata = _run_metadata()
     del metadata["training_examples"]
 
@@ -181,7 +180,7 @@ def test_promotion_rejects_run_metadata_without_provenance_fields():
         build_packaged_metadata(metadata)
 
 
-def test_promote_writes_the_three_packaged_files_and_refuses_to_clobber(tmp_path):
+def test_packaging_writes_the_three_files_and_refuses_to_clobber(tmp_path):
     run_dir = tmp_path / "ft_natural_lr1e-4_s0"
     run_dir.mkdir()
     torch.save({"weight": torch.zeros(1)}, run_dir / "best.pth")
@@ -192,7 +191,11 @@ def test_promote_writes_the_three_packaged_files_and_refuses_to_clobber(tmp_path
     )
     packaged_dir = tmp_path / "checkpoints"
 
-    targets = promote(run_dir, checkpoints_dir=packaged_dir, validation_note="Shares recordings.")
+    targets = package_checkpoint(
+        run_dir,
+        checkpoints_dir=packaged_dir,
+        validation_note="Shares recordings.",
+    )
 
     assert sorted(path.name for path in packaged_dir.iterdir()) == [
         "166pupils_thresh=0.4_iou=0.8749.json",
@@ -203,67 +206,7 @@ def test_promote_writes_the_three_packaged_files_and_refuses_to_clobber(tmp_path
     assert "yzhao" not in targets["log"].read_text(encoding="utf-8")
 
     with pytest.raises(FileExistsError, match="--force"):
-        promote(run_dir, checkpoints_dir=packaged_dir)
-
-
-def test_evaluated_final_refit_is_promotable(tmp_path):
-    run_dir = tmp_path / "final_candidate"
-    run_dir.mkdir()
-    torch.save({"final": torch.ones(1)}, run_dir / "final.pth")
-    checkpoint_hash = hashlib.sha256((run_dir / "final.pth").read_bytes()).hexdigest()
-    metadata = _run_metadata()
-    for key in (
-        "best_epoch",
-        "balanced_iou",
-        "macro_iou",
-        "macro_dice",
-        "size_iou",
-        "low_circularity_iou",
-    ):
-        metadata.pop(key)
-    metadata |= {
-        "workflow": "final_refit",
-        "trained_epochs": 40,
-        "checkpoint_sha256": checkpoint_hash,
-        "split_manifest_sha256": "manifest-hash",
-    }
-    (run_dir / "final.json").write_text(json.dumps(metadata), encoding="utf-8")
-    (run_dir / "holdout.json").write_text(
-        json.dumps(
-            {
-                "checkpoint_sha256": checkpoint_hash,
-                "split_manifest_sha256": "manifest-hash",
-                "prediction_threshold": 0.4,
-                "balanced_iou": 0.81,
-                "macro_iou": 0.82,
-                "macro_dice": 0.88,
-                "size_iou": {"tiny": 0.7, "medium": 0.8, "large": 0.9},
-                "low_circularity_iou": 0.75,
-            }
-        ),
-        encoding="utf-8",
-    )
-    (run_dir / "train.log").write_text("{}\nEpoch 001 | ...\n", encoding="utf-8")
-
-    targets = promote(run_dir, checkpoints_dir=tmp_path / "packaged")
-    packaged = json.loads(targets["metadata"].read_text(encoding="utf-8"))
-
-    assert packaged["best_epoch"] == 40
-    assert packaged["macro_iou"] == pytest.approx(0.82)
-    assert packaged["training"]["workflow"] == "final_refit"
-    assert packaged["training"]["split_manifest_sha256"] == "manifest-hash"
-    assert torch.load(targets["weights"], weights_only=True)["final"].item() == 1
-
-
-def test_final_refit_cannot_be_promoted_before_holdout_evaluation(tmp_path):
-    run_dir = tmp_path / "final_candidate"
-    run_dir.mkdir()
-    (run_dir / "final.pth").write_bytes(b"weights")
-    (run_dir / "final.json").write_text("{}", encoding="utf-8")
-    (run_dir / "train.log").write_text("{}\n", encoding="utf-8")
-
-    with pytest.raises(FileNotFoundError, match="holdout.json"):
-        promote(run_dir, checkpoints_dir=tmp_path / "packaged")
+        package_checkpoint(run_dir, checkpoints_dir=packaged_dir)
 
 
 def test_packaged_metadata_states_the_scope_of_its_numbers():

@@ -4,7 +4,7 @@ import runpy
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "split_manager.py"))
+MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "review_splits.py"))
 BrowserLifecycle = MANAGER["BrowserLifecycle"]
 ui_state = MANAGER["ui_state"]
 read_page = MANAGER["read_page"]

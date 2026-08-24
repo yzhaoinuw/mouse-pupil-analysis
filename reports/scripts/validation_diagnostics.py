@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import argparse
 import math
-import runpy
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +30,10 @@ import torch
 from torch.utils.data import DataLoader
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from training import _trainer as training_core  # noqa: E402
+from training import prepare_splits  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,8 +51,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--large-min-diameter", type=float, default=80.0)
     args = parser.parse_args(argv)
 
-    trainer = runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
-    data_splits = runpy.run_path(str(PROJECT_ROOT / "training" / "data_splits.py"))
     from mouse_pupil_analysis.pupil_predictions import (
         find_default_checkpoint,
         load_unet_checkpoint,
@@ -58,14 +60,14 @@ def main(argv: list[str] | None = None) -> int:
     checkpoint = args.checkpoint or find_default_checkpoint()
     device = torch.device("cpu")
     model = load_unet_checkpoint(checkpoint, device)
-    manifest = data_splits["load_manifest"](args.split_manifest)
+    manifest = prepare_splits.load_manifest(args.split_manifest)
     if args.holdout:
-        images, masks = data_splits["holdout_paths"](manifest, args.data_root)
-        scope = f"holdout ({', '.join(data_splits['holdout_sessions'](manifest))})"
+        images, masks = prepare_splits.holdout_paths(manifest, args.data_root)
+        scope = f"holdout ({', '.join(prepare_splits.holdout_sessions(manifest))})"
     else:
-        _, (images, masks) = data_splits["fold_paths"](manifest, args.fold, args.data_root)
+        _, (images, masks) = prepare_splits.fold_paths(manifest, args.fold, args.data_root)
         scope = f"fold {args.fold}/{manifest['n_folds']}"
-    dataset = trainer["SegmentationDataset"](images, masks, augment=False)
+    dataset = training_core.SegmentationDataset(images, masks, augment=False)
 
     probabilities, targets = [], []
     with torch.no_grad():
@@ -84,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"checkpoint: {checkpoint.name}   scope: {scope}   n={len(truth_diameter)}\n")
     print(f"{'thr':>5} {'macro IoU':>10} {'signed diam':>12} {'|diam|':>8}")
     for threshold in np.arange(0.20, 0.81, 0.05):
-        iou, _ = trainer["per_image_overlap_scores"](probabilities, targets, float(threshold))
+        iou, _ = training_core.per_image_overlap_scores(probabilities, targets, float(threshold))
         relative = (measured(threshold) - truth_diameter) / truth_diameter * 100
         print(
             f"{threshold:>5.2f} {float(iou.mean()):>10.4f} "
@@ -92,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     packaged = resolve_prediction_threshold(checkpoint)
-    iou, _ = trainer["per_image_overlap_scores"](probabilities, targets, packaged)
+    iou, _ = training_core.per_image_overlap_scores(probabilities, targets, packaged)
     iou = iou.numpy()
     relative = (measured(packaged) - truth_diameter) / truth_diameter * 100
     bins = {

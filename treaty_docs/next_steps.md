@@ -14,7 +14,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 - [Segmentation fine-tuning and visibility](#segmentation-fine-tuning-and-visibility) - the promoted candidate's margin is inside seed noise and the packaged checkpoint is retained; now unblocked by the grouped split.
 - [Pupil-center velocity](#pupil-center-velocity) - shipped; validate the provisional quality thresholds on additional recordings before treating them as a universal rejection policy.
 - [Treaty v0.9.0 docs layout](#treaty-v090-docs-layout) - migrated and verified on `chore/treaty`; review and integrate the branch.
-- [Training workflow compaction](#training-workflow-compaction) - the core README and local split manager are ready for review; decide later whether any intake/recommendation utilities belong in a broader workbench.
+- [Training workflow cleanup](#training-workflow-cleanup) - action-named commands and private implementation modules are in place; keep the command surface focused.
 
 When a new thread starts, add a short bullet here with a link to its section below and the single next action. When a thread closes, drop its bullet and compress its section to a status line plus whatever genuinely remains.
 
@@ -27,10 +27,10 @@ The old fixed split leaked almost completely: 54 of 56 validation images came fr
 that also supplied training images, with **no validation-only animals**. Every IoU this project
 reported before 2026-08-14 therefore measures held-out frames from seen recordings.
 
-`training/data_splits.py` now groups the pool into **sessions** (one animal, one date, one
+`training/prepare_splits.py` now groups the pool into **sessions** (one animal, one date, one
 condition) and packs whole sessions into **stratified** folds, recorded in
 `training_data_split.json`.
-`training/run_cv.py` runs every fold. `training/data_collection.md` documents the labelling
+`training/run_cross_validation.py` runs every fold. `training/data_collection.md` documents the labelling
 policy and how a session gets recorded.
 
 **Settled: the grouping unit is the session.** Not the recording file — same-day siblings like
@@ -56,7 +56,7 @@ Two structural facts that constrained the original 222-image comparison:
 - `HQL080_sleep250625` holds **10 of the 14 tiny masks in the entire dataset**. Stratification
   spread the rest so every fold now contains some tiny mask, up from 2 of 5, and cut the
   cross-fold median-diameter spread from 3.03x to 1.60x. Coverage is still thin: only four
-  sessions contain a tiny mask at all. Report mean per-session IoU; `run_cv.py` prints which
+  sessions contain a tiny mask at all. Report mean per-session IoU; `run_cross_validation.py` prints which
   bins each fold actually scored.
 
 **Measured on 2026-08-16.** See `reports/2026-08-16-selection-metric-repair.md`. Seven sweeps,
@@ -69,7 +69,7 @@ Two structural facts that constrained the original 222-image comparison:
   0.75. The model either transfers to a recording setting or largely fails on it.
 - **Seed noise on the grouped split is ~4x the documented floor.** The +/-0.0069 in
   `reports/2026-08-14-checkpoint-noise-floor.md` was measured on the leaky split. Here the sd is
-  0.0273 on the three-seed mean and up to 0.0873 on one fold. `run_cv.py`'s docstring has been
+  0.0273 on the three-seed mean and up to 0.0873 on one fold. `run_cross_validation.py`'s docstring has been
   corrected; treat single-fold differences below ~0.05 as noise.
 
 **Measured on the 2026-08-19 expanded pool.** The matched seed-0 natural-sampling,
@@ -85,7 +85,7 @@ Then:
   0.7304 -> 0.2585 and predicts 0.218x the labelled area, despite large gains on the two old
   aperture-confusion sessions.
 - `checkpoints_exp/final_516_nat_macro_s0` is a historical 512-image refit with a frozen 115-epoch
-  schedule and threshold 0.5. New production runs instead consume `run_cv.py`'s generated
+  schedule and threshold 0.5. New production runs instead consume `run_cross_validation.py`'s generated
   `training_config.json`, train every labelled session, and are inspected on representative
   unlabeled recordings.
 
@@ -139,8 +139,8 @@ What the diagnosis actually supports, in order:
 ## Frame Recommendation
 
 Status: shipped and validated; fresh four-member committee trained 2026-08-17 under
-`checkpoints_exp/cv255_nat_macro_20260817`. `training/recommend_frames.py`, scoring in
-`training/frame_selection.py`, harness in `reports/scripts/validate_frame_selection.py`.
+`checkpoints_exp/cv255_nat_macro_20260817`. `training/recommend_frames.py`, with private scoring
+in `training/_frame_scoring.py`, harness in `reports/scripts/validate_frame_selection.py`.
 
 The first real recommendation batch is complete: 20 picks each from HQL090, HQL097, and HQL103,
 stored under `frames_to_label/`. HQL090 reused an already-labeled session, so it used three
@@ -220,7 +220,7 @@ filenames use the compact `frame_<five-digit-source-index>` form. HQL097's gener
 copies were removed after verification; the source annotations and six uncertain records remain
 available outside the paired training directories.
 
-New Labelme batches now enter through `training/import_labelme_batch.py`: preview first, then
+New Labelme batches now enter through `training/import_labelme.py`: preview first, then
 apply with `--apply`, which also refreshes the split. The importer keeps uncertainty as metadata
 outside segmentation training rather than inventing an "uncertain mask."
 
@@ -268,7 +268,7 @@ under-trained; fold 0 was one step off `min_lr` when early stopping fired.
 Repairing it moved the measured baseline from 0.5378 to 0.5891 (same sampling, same seed set), and
 folds 0 and 2 gained 0.38 and 0.14 macro IoU.
 
-Three changes, all in `training/run_train.py` and forwarded by `run_cv.py`:
+Three changes, in the training core and used by `run_cross_validation.py`:
 
 - `ReduceLROnPlateau` now runs on `val_loss` (`mode="min"`); `--scheduler-metric` overrides.
 - `--selection-metric {balanced_iou,macro_iou}` chooses what "best" means and also ranks threshold
@@ -390,17 +390,16 @@ Remaining work:
   model-pixel column, now that both are exported. This changes the README demo, so it is
   deliberately deferred.
 
-## Training Workflow Compaction
+## Training Workflow Cleanup
 
-Status: ready for review (2026-08-21), branch `training-compaction`
+Status: cleaned on `training-compaction` (2026-08-24)
 
 The training README now treats labelled image/mask pairs as the input contract and puts the
 ordinary path first: organise sessions, refresh `training_data_split.json`, review the split manager if needed,
 then run `run_train.py` against an optional validation session. Labelme, frame recommendation,
-augmentation review, cross-validation, outer-test evaluation, and checkpoint promotion are
-optional tools.
+augmentation review, cross-validation, and checkpoint packaging are optional tools.
 
-`training/split_manager.py` now serves a local browser UI over the existing manifest. It shows
+`training/review_splits.py` now serves a local browser UI over the existing manifest. It shows
 session/fold image counts, tiny/medium/large pupil counts, median diameter, and median brightness;
 it starts from the automatic grouping and saves only validated whole-session assignments. The
 validation session is excluded from CV and drives ordinary `run_train.py` selection when nonempty.

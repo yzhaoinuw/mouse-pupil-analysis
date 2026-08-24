@@ -27,7 +27,7 @@ configurations, but it is not required for a working training run.
   - [Choose frames to label](#choose-frames-to-label)
   - [Inspect augmentation](#inspect-augmentation)
   - [Cross-validate a configuration](#cross-validate-a-configuration)
-  - [Advanced evaluation and promotion](#advanced-evaluation-and-promotion)
+  - [Package an accepted checkpoint](#package-an-accepted-checkpoint)
   - [Developer fixture](#developer-fixture)
 
 ## Core workflow
@@ -72,10 +72,10 @@ yourself.
 Run this after adding labelled frames, including a completely new session:
 
 ```powershell
-python training\data_splits.py
+python training\prepare_splits.py
 ```
 
-`data_splits.py` keeps every session together, assigns each session to a validation fold,
+`prepare_splits.py` keeps every session together, assigns each session to a validation fold,
 and preserves existing assignments when new data arrives. It does not move images on disk.
 The first manifest uses five folds by default; if the dataset has fewer than five sessions,
 choose a smaller count once, for example `--n_folds 3`.
@@ -88,7 +88,7 @@ keeps a session out of cross-validation until an all-labeled production run is b
 Review the assignment without writing changes when needed:
 
 ```powershell
-python training\data_splits.py --show
+python training\prepare_splits.py --show
 ```
 
 The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
@@ -101,11 +101,11 @@ Open the local split manager when you want to inspect the session statistics or 
 automatic assignment:
 
 ```powershell
-python training\split_manager.py
+python training\review_splits.py
 ```
 
 Do not open `split_manager.html` directly in a browser: it is the interface asset, while
-`split_manager.py` starts the local service that reads and safely writes
+`review_splits.py` starts the local service that reads and safely writes
 `training_data_split.json`.
 
 It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
@@ -115,7 +115,7 @@ dragged. Drag a whole session between folds or into the **validation session**. 
 the complete session assignment and updates
 `training_data_split.json`. The served interface is the tracked
 [`split_manager.html`](split_manager.html)
-asset; `split_manager.py` provides its local manifest API.
+asset; `review_splits.py` provides its local manifest API.
 
 The local server stops automatically shortly after every split-manager tab is closed. It also
 stops if no browser tab connects after launch.
@@ -180,8 +180,8 @@ Labelme is one supported intake route, not a requirement. If you use it, save th
 JSON files beside their source images, then preview and import the complete batch:
 
 ```powershell
-python training\import_labelme_batch.py --source <annotation-folder> --session <new-session>
-python training\import_labelme_batch.py --source <annotation-folder> --session <new-session> --apply
+python training\import_labelme.py --source <annotation-folder> --session <new-session>
+python training\import_labelme.py --source <annotation-folder> --session <new-session> --apply
 ```
 
 The importer creates the session's `images/`, `masks/`, and optional `uncertain/` folders,
@@ -202,14 +202,14 @@ python training\recommend_frames.py --frames D:\data\already_extracted --budget 
 
 By default, its outputs go under `frames_to_label/<session>/`. After labelling, put the
 resulting image/mask pairs in `labeled_frames/<session>/` by any supported method and run
-`data_splits.py`.
+`prepare_splits.py`.
 
 ### Inspect augmentation
 
-`check_augmentation.py` is a visual diagnostic, not preprocessing:
+`preview_augmentation.py` is a visual diagnostic, not preprocessing:
 
 ```powershell
-python training\check_augmentation.py
+python training\preview_augmentation.py
 ```
 
 It renders augmented image/mask pairs so you can check that the pupil remains aligned and the
@@ -222,7 +222,7 @@ result is to the held-out session group. It takes turns holding out each fold an
 never loads the validation session:
 
 ```powershell
-python training\run_cv.py --checkpoint_dir checkpoints_exp\cv
+python training\run_cross_validation.py --checkpoint_dir checkpoints_exp\cv
 ```
 
 Use its per-session results to compare candidate settings. It also writes
@@ -244,17 +244,17 @@ To rerun only specific existing folds, use `--cv_folds`, for example `--cv_folds
 That writes `partial_summary.json` only; it deliberately does not create a production training
 configuration.
 
-### Advanced evaluation and promotion
+### Package an accepted checkpoint
 
 <details>
-<summary>Promote an accepted checkpoint into the installed package</summary>
+<summary>Package an accepted checkpoint into the installed application</summary>
 
-Promotion is a package/release change, not a normal training step. After checking overlays and
-downstream tracking on representative recordings, preview then promote the selected run:
+Packaging is a package/release change, not a normal training step. After checking overlays and
+downstream tracking on representative recordings, preview then package a validation-selected run:
 
 ```powershell
-python training\promote_checkpoint.py --run-dir checkpoints_exp\<run-name> --dry-run
-python training\promote_checkpoint.py --run-dir checkpoints_exp\<run-name> `
+python training\package_checkpoint.py --run-dir checkpoints_exp\<run-name> --dry-run
+python training\package_checkpoint.py --run-dir checkpoints_exp\<run-name> `
     --validation-note "Held-out session validation; see best.json."
 ```
 

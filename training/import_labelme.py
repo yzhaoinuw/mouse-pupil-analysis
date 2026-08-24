@@ -8,8 +8,8 @@ and explicit ``no_visible_pupil`` negatives become compact image/mask pairs unde
 
 Preview, then apply and refresh the frozen split::
 
-    python training/import_labelme_batch.py --source path/to/annotations --session SESSION
-    python training/import_labelme_batch.py --source path/to/annotations --session SESSION \
+    python training/import_labelme.py --source path/to/annotations --session SESSION
+    python training/import_labelme.py --source path/to/annotations --session SESSION \
         --apply
 """
 
@@ -17,30 +17,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-if __package__:
-    from .compact_frame_names import frame_index
-    from .labelme_json2png import (
-        UNCERTAIN_LABEL,
-        annotation_kind,
-        source_image,
-        write_training_mask,
-    )
-else:
-    from compact_frame_names import frame_index
-    from labelme_json2png import (
-        UNCERTAIN_LABEL,
-        annotation_kind,
-        source_image,
-        write_training_mask,
-    )
+from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PUPIL_LABEL = "pupil"
+NO_VISIBLE_PUPIL_LABEL = "no_visible_pupil"
+UNCERTAIN_LABEL = "uncertain"
+SUPPORTED_LABELS = {PUPIL_LABEL, NO_VISIBLE_PUPIL_LABEL, UNCERTAIN_LABEL}
+FRAME_INDEX_PATTERN = re.compile(r"_(\d+)$")
 
 
 @dataclass(frozen=True)
@@ -52,6 +43,79 @@ class ImportEntry:
     image: Path
     kind: str
     compact_stem: str
+
+
+def frame_index(path: Path) -> int:
+    """Return the trailing numeric source-frame index from a Labelme filename."""
+    match = FRAME_INDEX_PATTERN.search(path.stem)
+    if match is None:
+        raise ValueError(f"{path} has no trailing numeric frame index.")
+    return int(match.group(1))
+
+
+def annotation_kind(json_file: Path) -> tuple[str, dict]:
+    """Validate one Labelme annotation and return its image-level target kind."""
+    annotation = json.loads(json_file.read_text(encoding="utf-8"))
+    shapes = annotation.get("shapes", [])
+    labels = {str(shape.get("label", "")).strip().casefold() for shape in shapes}
+    unknown = labels - SUPPORTED_LABELS
+    if unknown:
+        raise ValueError(f"{json_file.name} uses unsupported label(s): {sorted(unknown)}")
+    if not labels:
+        raise ValueError(
+            f"{json_file.name} has no shapes. Mark it {NO_VISIBLE_PUPIL_LABEL!r} or "
+            f"{UNCERTAIN_LABEL!r} explicitly if it has no pupil polygon."
+        )
+    if len(labels) != 1:
+        raise ValueError(f"{json_file.name} mixes contradictory labels: {sorted(labels)}")
+    kind = labels.pop()
+    if kind in {NO_VISIBLE_PUPIL_LABEL, UNCERTAIN_LABEL} and len(shapes) != 1:
+        raise ValueError(f"{json_file.name} must contain exactly one {kind!r} marker.")
+    return kind, annotation
+
+
+def source_image(json_file: Path, annotation: dict) -> Path:
+    """Return the image named by a Labelme annotation after validating its presence."""
+    image_path = annotation.get("imagePath")
+    if not image_path:
+        raise ValueError(f"{json_file.name} has no imagePath.")
+    source = json_file.parent / Path(image_path).name
+    if not source.is_file():
+        raise FileNotFoundError(f"{json_file.name} refers to missing image {source.name}.")
+    return source
+
+
+def _image_size(json_file: Path, annotation: dict) -> tuple[int, int]:
+    source = source_image(json_file, annotation)
+    with Image.open(source) as image:
+        size = image.size
+    declared = (annotation.get("imageWidth"), annotation.get("imageHeight"))
+    if all(value is not None for value in declared) and tuple(declared) != size:
+        raise ValueError(
+            f"{json_file.name} declares image size {tuple(declared)}, but {source.name} is {size}."
+        )
+    return size
+
+
+def write_training_mask(json_file: Path, annotation: dict, kind: str, target: Path) -> None:
+    """Rasterize one validated trainable annotation into its target mask."""
+    size = _image_size(json_file, annotation)
+    if kind == NO_VISIBLE_PUPIL_LABEL:
+        Image.new("L", size, color=0).save(target)
+        return
+    if kind != PUPIL_LABEL:
+        raise ValueError(f"{kind!r} is not a segmentation-mask target.")
+    mask = Image.new("L", size, color=0)
+    draw = ImageDraw.Draw(mask)
+    for shape in annotation["shapes"]:
+        shape_type = shape.get("shape_type", "polygon")
+        points = shape.get("points", [])
+        if shape_type != "polygon" or len(points) < 3:
+            raise ValueError(
+                f"{json_file.name} pupil targets must be polygons with at least three points."
+            )
+        draw.polygon([tuple(point) for point in points], fill=255)
+    mask.save(target)
 
 
 def _validate_session_name(session: str) -> str:
@@ -183,12 +247,12 @@ def apply_import(plan: list[ImportEntry], data_root: Path, session: str) -> Path
 def refresh_split_manifest(data_root: Path) -> int:
     """Refresh the frozen manifest after a successful import."""
     if __package__:
-        from . import data_splits
+        from . import prepare_splits
     else:
-        import data_splits
+        import prepare_splits
 
     labeled_frames_dir = Path(data_root).resolve() / "labeled_frames"
-    return data_splits.main(["--labeled_frames_dir", str(labeled_frames_dir)])
+    return prepare_splits.main(["--labeled_frames_dir", str(labeled_frames_dir)])
 
 
 def main(argv: list[str] | None = None) -> int:

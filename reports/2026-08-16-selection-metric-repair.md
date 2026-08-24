@@ -78,7 +78,7 @@ maximum over 11 draws before the epoch maximum was taken on top of it.
 
 ## 2. The repair
 
-In `training/run_train.py`, forwarded through `run_cv.py`:
+In the training core, used by `training/run_cross_validation.py`:
 
 1. `ReduceLROnPlateau` now runs on `val_loss` (`mode="min"`). New default;
    `--scheduler-metric` overrides.
@@ -224,7 +224,7 @@ but no conclusion in this report depended on it.
 
 None of these 24 models is shippable, by construction. Each trained on three folds —
 about three quarters of the pool — and cross-validation exists to compare
-*configurations*, not to produce weights. `run_cv.py`'s own docstring says so: once a
+*configurations*, not to produce weights. `run_cross_validation.py`'s own docstring says so: once a
 configuration wins, it has to be retrained on the whole pool and gated with
 `reports/scripts/hard_frame_check.py`.
 
@@ -232,17 +232,11 @@ Nor are the numbers comparable to the shipped checkpoint's 0.8749. That figure i
 interpolation on a leaky split; 0.6245 is cross-recording generalisation. They measure
 different tasks, and the drop is not evidence that these models are worse.
 
-**That final step is currently blocked.** `run_train.py --final` trains on everything
-except a designated gate holdout, and `splits.json` records `n_holdout_sessions: 0`:
-
-```
-ValueError: This manifest sets no holdout, so there is nothing to gate against.
-Regenerate it with --holdout SESSION, choosing by condition rather than by animal.
-```
-
-So the project cannot presently produce a gated release candidate at all. Choosing a
-holdout session is the prerequisite for any future promotion, and it costs 15–27% of
-the pool, which is why none was set.
+The current production route is the generated `training_config.json`: `run_train.py`
+uses it to train every labelled session, then the resulting checkpoint is reviewed on
+representative unseen recordings before `package_checkpoint.py` is considered. This
+report's historical final-refit/outer-holdout command has been removed with the rest
+of that superseded workflow.
 
 ## 4b. Why the failing sessions fail: the model segments the eye, not the pupil
 

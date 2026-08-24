@@ -28,7 +28,7 @@ def _load(name: str):
     return module
 
 
-data_splits = _load("data_splits")
+data_splits = _load("prepare_splits")
 
 
 def _write_pair(
@@ -320,28 +320,12 @@ def test_manual_session_assignments_update_images_and_validation_holdout(pool: P
         data_splits.apply_session_assignments(manifest, {name: 0 for name in sessions})
 
 
-def test_final_run_trains_on_everything_else_and_validates_on_the_gate(pool: Path):
-    manifest = data_splits.build_manifest(pool, n_folds=3, final_test_sessions={"rig0_day0"})
-    (train_images, _), (gate_images, _) = data_splits.final_paths(manifest, pool)
-
-    assert {p.parents[1].name for p in gate_images} == {"rig0_day0"}
-    assert "rig0_day0" not in {p.parents[1].name for p in train_images}
-    assert len(train_images) + len(gate_images) == manifest["n_images"]
-
-
 def test_holdout_survives_a_later_regeneration(pool: Path):
     before = data_splits.build_manifest(pool, n_folds=3, final_test_sessions={"rig0_day0"})
     _write_pair(pool, "newcomer", radius=9, session="rig8_day8")
     after = data_splits.build_manifest(pool, n_folds=3, previous=before)
 
     assert data_splits.holdout_sessions(after) == ["rig0_day0"]
-
-
-def test_a_manifest_with_no_holdout_refuses_a_final_run(pool: Path):
-    manifest = data_splits.build_manifest(pool, n_folds=3)
-
-    with pytest.raises(ValueError, match="sets no final-test session"):
-        data_splits.final_paths(manifest, pool)
 
 
 def test_holdout_naming_a_missing_session_is_rejected(pool: Path):

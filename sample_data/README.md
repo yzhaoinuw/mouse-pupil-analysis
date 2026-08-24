@@ -81,13 +81,13 @@ The committed velocity images are grayscale 148 x 148 outputs from the package's
 Inspect paired augmentation:
 
 ```powershell
-python training\check_augmentation.py
+python training\preview_augmentation.py
 ```
 
 Or run a one-epoch CV smoke test:
 
 ```powershell
-python training\run_cv.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
+python training\run_cross_validation.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
 ```
 
 The generated fold checkpoints, JSON metadata, logs, and all-labeled recipe are written under
@@ -97,14 +97,14 @@ overfit and must not be treated as a useful trained model.
 ## Try the grouped, stratified split
 
 ```powershell
-python training\data_splits.py --labeled_frames_dir sample_data\labeled_frames --show
+python training\prepare_splits.py --labeled_frames_dir sample_data\labeled_frames --show
 ```
 
 prints the per-session census and the per-fold summary. `sample_data/training_data_split.json` is
 committed, so a fresh clone can read the split without running anything. Train one fold with:
 
 ```powershell
-python training\run_cv.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
+python training\run_cross_validation.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
 ```
 
 See [`../training/data_collection.md`](../training/data_collection.md) for how sessions are
@@ -114,8 +114,8 @@ not to train anything.
 ## Provenance and use
 
 - The image/mask pairs were copied unchanged from the project's local labelled pool.
-- The labelme `.json` annotations are not shipped. Nothing reads them: `labelme_json2png.py` skips every one because the masks already exist, and the fixture's session comes from its folder rather than a labelme flag.
-- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `training_data_split.json` and `folds/` are generated from that layout by `training/data_splits.py`.
+- The Labelme `.json` annotations are not shipped. The fixture already contains its masks, and its session comes from its folder rather than annotation metadata.
+- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `training_data_split.json` is generated from that layout by `training/prepare_splits.py`.
 - The unlabelled frames were copied unchanged from two original recording frame directories. They were briefly named `raw_frames/`.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.

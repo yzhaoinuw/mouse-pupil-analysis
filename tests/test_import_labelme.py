@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from training import import_labelme_batch
+from training import import_labelme
 
 
 def _annotation(source: Path, stem: str, label: str) -> None:
@@ -38,7 +38,7 @@ def test_dry_run_validates_without_writing(tmp_path):
     _mixed_batch(source)
 
     assert (
-        import_labelme_batch.main(
+        import_labelme.main(
             ["--source", str(source), "--session", "session_a", "--data-root", str(tmp_path)]
         )
         == 0
@@ -49,9 +49,9 @@ def test_dry_run_validates_without_writing(tmp_path):
 def test_apply_imports_masks_and_archives_uncertain_annotation(tmp_path):
     source = tmp_path / "annotations"
     _mixed_batch(source)
-    plan = import_labelme_batch.build_import_plan(source, tmp_path, "session_a")
+    plan = import_labelme.build_import_plan(source, tmp_path, "session_a")
 
-    target = import_labelme_batch.apply_import(plan, tmp_path, "session_a")
+    target = import_labelme.apply_import(plan, tmp_path, "session_a")
 
     assert {path.name for path in (target / "images").glob("*.png")} == {
         "frame_00001.png",
@@ -79,7 +79,7 @@ def test_existing_session_is_rejected_before_writing(tmp_path):
     (tmp_path / "labeled_frames/session_a").mkdir(parents=True)
 
     with pytest.raises(FileExistsError, match="existing session"):
-        import_labelme_batch.build_import_plan(source, tmp_path, "session_a")
+        import_labelme.build_import_plan(source, tmp_path, "session_a")
 
 
 def test_all_uncertain_batch_stays_outside_labelled_pool(tmp_path):
@@ -87,7 +87,7 @@ def test_all_uncertain_batch_stays_outside_labelled_pool(tmp_path):
     _annotation(source, "session_a_00001", "uncertain")
 
     with pytest.raises(ValueError, match="only uncertain"):
-        import_labelme_batch.build_import_plan(source, tmp_path, "session_a")
+        import_labelme.build_import_plan(source, tmp_path, "session_a")
 
 
 def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
@@ -95,13 +95,13 @@ def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
     _mixed_batch(source)
     refreshed = []
     monkeypatch.setattr(
-        import_labelme_batch,
+        import_labelme,
         "refresh_split_manifest",
         lambda data_root: refreshed.append(Path(data_root)) or 0,
     )
 
     assert (
-        import_labelme_batch.main(
+        import_labelme.main(
             [
                 "--source",
                 str(source),

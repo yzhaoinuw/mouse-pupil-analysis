@@ -379,7 +379,7 @@ Deeper documentation lives in the file that owns it:
 
 | Topic | Document |
 |---|---|
-| Training, fine-tuning, and checkpoint promotion | [`training/README.md`][training] |
+| Training, fine-tuning, and checkpoint packaging | [`training/README.md`][training] |
 | Runtime architecture and the segmentation-to-velocity method | [`project_overview.md`][overview] |
 | Sample-data provenance and examples | [`sample_data/README.md`][sample-data] |
 | Regenerating the demo GIF | [`media/README.md`][media] |

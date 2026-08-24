@@ -80,8 +80,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     trainer = _load("run_train")
-    splits = _load("data_splits")
-    selection = _load("frame_selection")
+    splits = _load("prepare_splits")
+    selection = _load("_frame_scoring")
     from mouse_pupil_analysis.pupil_predictions import load_unet_checkpoint
 
     manifest = splits.load_manifest(args.split_manifest)

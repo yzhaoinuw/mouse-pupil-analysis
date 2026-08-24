@@ -52,7 +52,7 @@ In priority order. Spend the budget top-down.
    the pool actually holds before labelling:
 
    ```bash
-   python training/data_splits.py --show
+   python training/prepare_splits.py --show
    ```
 
    The census prints images, tiny-mask count, median diameter, and median background
@@ -87,7 +87,7 @@ large pupil only when its boundary is visible in the target frame. Never fill th
 aperture merely because it could represent maximal dilation.
 
 In Labelme, mark that explicit negative with one small `no_visible_pupil` shape; its geometry is
-ignored by `labelme_json2png.py`. If a pupil may be present but low contrast or occlusion makes
+ignored by `import_labelme.py`. If a pupil may be present but low contrast or occlusion makes
 the boundary unreliable, use one `uncertain` shape instead. An uncertain annotation creates no
 segmentation mask and must remain outside the session's training `images/` directory. Do not turn
 annotation uncertainty into an all-black target: that would teach a confident false negative.
@@ -162,7 +162,7 @@ split input: sort it into its recording-session directory before importing it.
 1. Keep each Labelme JSON beside its source image. Preview the intake before it writes:
 
    ```bash
-   python training/import_labelme_batch.py --source <annotation-folder> --session <session>
+   python training/import_labelme.py --source <annotation-folder> --session <session>
    ```
 
    It validates all labels, image references, frame indices, and destinations together and
@@ -170,7 +170,7 @@ split input: sort it into its recording-session directory before importing it.
 2. Apply the import and refresh the frozen split in one command:
 
    ```bash
-   python training/import_labelme_batch.py --source <annotation-folder> --session <session> --apply
+   python training/import_labelme.py --source <annotation-folder> --session <session> --apply
    ```
 
    `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON
@@ -256,7 +256,7 @@ schedule and other training settings. Use that recipe to train a production mode
 labelled pool:
 
 ```bash
-python training/run_cv.py --checkpoint_dir checkpoints_exp/cv
+python training/run_cross_validation.py --checkpoint_dir checkpoints_exp/cv
 python training/run_train.py \
     --training_config_path checkpoints_exp/cv/training_config.json \
     --checkpoint_dir checkpoints_exp/all_labeled

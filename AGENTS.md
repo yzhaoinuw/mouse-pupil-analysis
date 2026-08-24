@@ -49,7 +49,7 @@ Run analysis, frame extraction, or model training:
 run-pupil-analysis --video_path C:\path\to\movie.avi
 run-pupil-analysis --image_dir C:\path\to\frames
 extract-frames --video_path C:\path\to\movie.avi --out_dir C:\path\to\frames
-python training\split_manager.py
+python training\review_splits.py
 python training\run_train.py --help
 ```
 
