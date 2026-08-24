@@ -140,6 +140,24 @@ def test_changing_fold_count_requires_explicit_reassignment(pool: Path):
     assert after["n_folds"] == 2
 
 
+def test_terminal_flag_names_the_number_of_folds(pool: Path):
+    assert (
+        data_splits.main(
+            [
+                "--labeled_frames_dir",
+                str(pool / "labeled_frames"),
+                "--n_folds",
+                "3",
+                "--show",
+            ]
+        )
+        == 0
+    )
+
+    with pytest.raises(SystemExit):
+        data_splits.main(["--folds", "3"])
+
+
 def test_more_folds_than_sessions_is_rejected(pool: Path):
     with pytest.raises(ValueError, match="every fold needs at least one whole session"):
         data_splits.build_manifest(pool, n_folds=99)

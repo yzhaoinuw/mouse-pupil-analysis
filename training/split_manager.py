@@ -1,6 +1,6 @@
 """Run a local browser UI for reviewing and editing session-level data splits.
 
-The page reads ``splits.json`` produced by :mod:`data_splits`, then opens a loopback-only
+The page reads ``training_data_split.json`` produced by :mod:`data_splits`, then opens a loopback-only
 interface. Drag whole sessions between folds and the validation session; the Python
 backend delegates validation and manifest writes to ``data_splits``.
 
@@ -124,7 +124,7 @@ def split_paths(labeled_frames_dir: Path) -> tuple[Path, Path]:
             f"{labeled_frames_dir}."
         )
     data_root = labeled_frames_dir.parent
-    return data_root, data_root / "splits.json"
+    return data_root, data_root / data_splits.TRAINING_DATA_SPLIT_FILENAME
 
 
 def refresh_manifest(labeled_frames_dir: Path, folds: int | None) -> dict:
@@ -244,9 +244,10 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=Path.cwd() / data_splits.LABELLED_ROOT,
         help="Folder containing one <session>/images and <session>/masks pair per recording "
-        "(default: ./labeled_frames). Its parent always contains splits.json.",
+        "(default: ./labeled_frames). Its parent always contains "
+        f"{data_splits.TRAINING_DATA_SPLIT_FILENAME}.",
     )
-    parser.add_argument("--folds", type=int, help="Used only when creating the first manifest.")
+    parser.add_argument("--n_folds", type=int, help="Used only when creating the first manifest.")
     parser.add_argument(
         "--refresh",
         action="store_true",
@@ -258,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     _, manifest_path = split_paths(args.labeled_frames_dir)
     if args.refresh or not manifest_path.exists():
-        manifest = refresh_manifest(args.labeled_frames_dir, args.folds)
+        manifest = refresh_manifest(args.labeled_frames_dir, args.n_folds)
     else:
         manifest = data_splits.load_manifest(manifest_path)
     print(

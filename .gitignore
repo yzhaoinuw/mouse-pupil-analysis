@@ -62,7 +62,7 @@ images_test*_result/
 /media/readme_demo/
 /frames_to_label/
 /videos/
-# Materialized fold folders are regenerated from splits.json by
+# Materialized fold folders are regenerated from training_data_split.json by
 # training/data_splits.py --materialize, at any data root.
 folds/
 /images_train/

@@ -47,7 +47,7 @@ def test_fixture_split_mirrors_the_maintained_layout():
     satisfy: it had no mask small enough to populate the tiny size bin, and half its
     sessions held a single image, which satisfies "no session spans a fold" vacuously.
     """
-    manifest = json.loads((SAMPLE_ROOT / "splits.json").read_text(encoding="utf-8"))
+    manifest = json.loads((SAMPLE_ROOT / "training_data_split.json").read_text(encoding="utf-8"))
 
     assert manifest["n_images"] == 32
     assert manifest["n_sessions"] == 10

@@ -152,7 +152,7 @@ It asks nothing of how files are named.
 identified by `<session>/<filename>` — `HQL091_sleep260820/frame_0001` — so the session
 folders keep them apart.
 
-The whole split is reproducible from this layout alone: delete `splits.json` and
+The whole split is reproducible from this layout alone: delete `training_data_split.json` and
 regenerate, and the folds come back identical, because the sessions come from the
 directories and the packing is deterministic. A mixed or unassigned batch is not valid
 split input: sort it into its recording-session directory before importing it.
@@ -175,7 +175,8 @@ split input: sort it into its recording-session directory before importing it.
 
    `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON
    pairs are archived under the session's `uncertain/` directory, outside the segmentation
-   pool, and receive no mask or current training loss. Every image already in `splits.json`
+   pool, and receive no mask or current training loss. Every image already in
+   `training_data_split.json`
    keeps its fold; only the genuinely new session is packed. There are no train/validation
    source folders: the manifest decides what trains and validates, so re-splitting moves no
    labelled file.
@@ -185,7 +186,7 @@ split input: sort it into its recording-session directory before importing it.
 
 **Never pass `--reassign` casually.** It repacks every session from scratch, which
 invalidates comparison against every previously recorded run. It is correct only when
-changing `--folds` or after so much new data has arrived that the old packing is badly
+changing `--n_folds` or after so much new data has arrived that the old packing is badly
 unbalanced — and in that case, say so in the work log and treat prior numbers as a
 different experiment.
 
@@ -257,11 +258,11 @@ labelled pool:
 ```bash
 python training/run_cv.py --checkpoint_dir checkpoints_exp/cv
 python training/run_train.py \
-    --training_config_path checkpoints_exp/cv/cv_s0_training_config.json \
+    --training_config_path checkpoints_exp/cv/training_config.json \
     --checkpoint_dir checkpoints_exp/all_labeled
 ```
 
-The second command ignores `splits.json` and trains on every valid image/mask pair under
+The second command ignores `training_data_split.json` and trains on every valid image/mask pair under
 `labeled_frames/`. It is intentionally a trusted all-data path: inspect the resulting model on
 representative unlabeled recordings before promoting it.
 

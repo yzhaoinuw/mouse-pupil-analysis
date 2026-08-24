@@ -231,7 +231,7 @@ def make_all_labeled_dataset(config: TrainingConfig) -> SegmentationDataset:
     """Return every valid image/mask pair beneath ``labeled_frames/``.
 
     This is the trusted production-training path selected by a CV-generated training
-    configuration. It intentionally does not read ``splits.json``.
+    configuration. It intentionally does not read ``training_data_split.json``.
     """
     image_paths: list[Path] = []
     mask_paths: list[Path] = []
@@ -870,7 +870,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--training_config_path",
         type=Path,
-        help="CV-generated JSON recipe. It trains every labeled session and ignores splits.json.",
+        help="CV-generated JSON recipe. It trains every labeled session and ignores "
+        "training_data_split.json.",
     )
     parser.add_argument(
         "--checkpoint_dir",
@@ -979,10 +980,11 @@ def main(argv: list[str] | None = None) -> int:
                 else "scratch_learning_rate"
             )
             learning_rate_override[key] = args.learning_rate
-        manifest = labeled_frames_dir.parent / "splits.json"
+        manifest = labeled_frames_dir.parent / data_splits.TRAINING_DATA_SPLIT_FILENAME
         if not manifest.is_file():
             parser.error(
-                f"No splits.json beside {labeled_frames_dir}; create it with training/data_splits.py "
+                f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
+                "create it with training/data_splits.py "
                 "or pass --training_config_path for all-labeled training."
             )
         config = TrainingConfig(
@@ -1017,7 +1019,7 @@ def _run_direct_configuration() -> None:
         TrainingConfig(
             labeled_frames_dir=LABELED_FRAMES_DIR,
             finetune_checkpoint=finetune_checkpoint,
-            split_manifest=LABELED_FRAMES_DIR.parent / "splits.json",
+            split_manifest=LABELED_FRAMES_DIR.parent / data_splits.TRAINING_DATA_SPLIT_FILENAME,
         )
     )
 

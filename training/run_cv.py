@@ -128,6 +128,20 @@ def all_labeled_training_config(summary: Path, results: list[dict], config, trai
     }
 
 
+def selected_cv_folds(requested: list[int] | None, n_folds: int) -> tuple[list[int], bool]:
+    """Return the requested existing folds and whether they cover the whole CV split."""
+    all_folds = list(range(n_folds))
+    if requested is None:
+        return all_folds, True
+    if len(set(requested)) != len(requested):
+        raise ValueError("--cv_folds cannot repeat a fold.")
+    folds = sorted(requested)
+    invalid = [fold for fold in folds if fold not in all_folds]
+    if invalid:
+        raise ValueError(f"--cv_folds contains invalid fold(s): {invalid}.")
+    return folds, folds == all_folds
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -141,12 +155,16 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Directory for CV run folders and its generated training configuration.",
     )
-    parser.add_argument("--folds", type=int, nargs="+", help="Subset of folds (default: all).")
+    parser.add_argument(
+        "--cv_folds",
+        type=int,
+        nargs="+",
+        help="Existing fold indices to rerun (default: every fold).",
+    )
     parser.add_argument("--max_epochs", type=int, default=400)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
-    parser.add_argument("--tag", default="cv", help="Run-name prefix.")
     parser.add_argument(
         "--finetune_checkpoint",
         type=Path,
@@ -160,7 +178,8 @@ def main(argv: list[str] | None = None) -> int:
             f"--labeled_frames_dir must name a labeled_frames folder; got {labeled_frames_dir}."
         )
     data_root = labeled_frames_dir.parent
-    split_manifest = data_root / "splits.json"
+    data_splits = _load("data_splits")
+    split_manifest = data_root / data_splits.TRAINING_DATA_SPLIT_FILENAME
     checkpoint_dir = (
         args.checkpoint_dir.resolve()
         if args.checkpoint_dir is not None
@@ -168,14 +187,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not split_manifest.is_file():
         parser.error(
-            f"No splits.json beside {labeled_frames_dir}; run training/data_splits.py first."
+            f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
+            "run training/data_splits.py first."
         )
 
     trainer = _load("run_train")
-    data_splits = _load("data_splits")
 
     manifest = data_splits.load_manifest(split_manifest)
-    folds = args.folds if args.folds else list(range(manifest["n_folds"]))
+    try:
+        folds, complete_cv = selected_cv_folds(args.cv_folds, manifest["n_folds"])
+    except ValueError as error:
+        parser.error(str(error))
 
     gate = data_splits.holdout_sessions(manifest)
     if gate:
@@ -199,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     session_scores: dict[str, float] = {}
     for fold in folds:
-        name = f"{args.tag}_f{fold}_s{args.seed}"
+        name = f"fold_{fold}_seed_{args.seed}"
         print(f"\n===== {name} =====", flush=True)
         config = trainer.TrainingConfig(
             labeled_frames_dir=labeled_frames_dir,
@@ -247,13 +269,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"worst session        : {worst} ({session_scores[worst]:.4f})")
         print(f"image-weighted IoU   : {pooled:.4f}  (comparable to previously reported macro IoU)")
 
-    summary = checkpoint_dir / f"{args.tag}_s{args.seed}_summary.json"
+    summary = checkpoint_dir / ("summary.json" if complete_cv else "partial_summary.json")
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text(
         json.dumps(
             {
                 "split_manifest": str(split_manifest),
                 "folds": folds,
+                "complete_cv": complete_cv,
                 "seed": args.seed,
                 "per_session_iou": session_scores,
                 "per_fold": [
@@ -273,12 +296,16 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     print(f"\nWrote {summary}")
-    training_config = checkpoint_dir / f"{args.tag}_s{args.seed}_training_config.json"
-    training_config.write_text(
-        json.dumps(all_labeled_training_config(summary, results, config, trainer), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    print(f"Wrote all-labeled training config: {training_config}")
+    if complete_cv:
+        training_config = checkpoint_dir / "training_config.json"
+        training_config.write_text(
+            json.dumps(all_labeled_training_config(summary, results, config, trainer), indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"Wrote all-labeled training config: {training_config}")
+    else:
+        print("Skipped training_config.json because this was a partial CV run.")
     print(f"Done in {(time.perf_counter() - started) / 60:.0f} min.")
     return 0
 

@@ -156,7 +156,7 @@ mouse-pupil-analysis/
 |- sample_data/
 |  |- README.md
 |  |- manifest.csv
-|  |- splits.json
+|  |- training_data_split.json
 |  |- labeled_frames/
 |  |  |- <session>/
 |  |     |- images/
@@ -168,7 +168,7 @@ mouse-pupil-analysis/
 |     |- images/
 |     |- masks/
 |     |- uncertain/          (optional; excluded from segmentation training)
-|- splits.json
+|- training_data_split.json
 |- folds/                   (generated, gitignored)
 |- .github/workflows/ci.yml
 |- pyproject.toml
@@ -217,7 +217,8 @@ Local/generated surfaces to treat carefully:
 - `images_test_*`, `images_*_result`, `predicted_masks_*`, `predictions_test/`, and `results/` are local analysis outputs.
 - Root `labeled_frames/` holds the local labelled pool, one directory per recording session,
   each with `images/` and `masks/`; an optional `uncertain/` archive is deliberately ignored
-  by segmentation training. It is gitignored, as is the derived `folds/`. `splits.json`
+  by segmentation training. It is gitignored, as is the derived `folds/`.
+  `training_data_split.json`
   records the grouped, stratified fold assignment and *is* committed, so it is the only part
   of the split that survives a fresh clone. The `sample_data/` versions of both are
   intentionally tracked fixtures.

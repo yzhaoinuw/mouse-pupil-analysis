@@ -61,6 +61,7 @@ TINY_MAX_DIAMETER = 15.0
 # without one, which makes provenance a consequence of where the file goes rather than a
 # convention someone has to remember.
 LABELLED_ROOT = "labeled_frames"
+TRAINING_DATA_SPLIT_FILENAME = "training_data_split.json"
 
 
 @dataclass
@@ -315,7 +316,7 @@ def assign_folds(
     empty = [fold for fold in range(n_folds) if not sizes[fold]]
     if empty:
         raise ValueError(
-            f"Folds {empty} would hold no images. This usually means --folds was raised "
+            f"Folds {empty} would hold no images. This usually means --n_folds was raised "
             f"above the {len(assignable)} session(s) the frozen assignment already covers; "
             "pass --reassign to repack every session across the new fold count."
         )
@@ -720,10 +721,11 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=Path.cwd() / LABELLED_ROOT,
         help="Folder containing one <session>/images and <session>/masks pair per recording "
-        "(default: ./labeled_frames). The manifest is always its parent/splits.json.",
+        "(default: ./labeled_frames). The manifest is always its parent/"
+        f"{TRAINING_DATA_SPLIT_FILENAME}.",
     )
     parser.add_argument(
-        "--folds",
+        "--n_folds",
         type=int,
         help="Number of cross-validation folds (default: whatever the existing manifest "
         "uses, else 5). Changing this requires --reassign.",
@@ -764,15 +766,15 @@ def main(argv: list[str] | None = None) -> int:
             f"--labeled_frames_dir must name a {LABELLED_ROOT!r} folder; got "
             f"{labeled_frames_dir}."
         )
-    manifest_path = data_root / "splits.json"
+    manifest_path = data_root / TRAINING_DATA_SPLIT_FILENAME
     previous = None if args.reassign else read_previous(manifest_path)
-    if args.folds is None:
+    if args.n_folds is None:
         # A manifest already records its fold count; silently substituting a default
         # here would repack against a different one and leave folds empty.
-        args.folds = previous["n_folds"] if previous else 5
+        args.n_folds = previous["n_folds"] if previous else 5
     manifest = build_manifest(
         data_root=data_root,
-        n_folds=args.folds,
+        n_folds=args.n_folds,
         previous=previous,
         final_test_sessions=set(args.final_test_session),
         validation_sessions=set(args.validation_session),

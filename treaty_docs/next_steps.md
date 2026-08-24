@@ -28,7 +28,8 @@ that also supplied training images, with **no validation-only animals**. Every I
 reported before 2026-08-14 therefore measures held-out frames from seen recordings.
 
 `training/data_splits.py` now groups the pool into **sessions** (one animal, one date, one
-condition) and packs whole sessions into **stratified** folds, recorded in `splits.json`.
+condition) and packs whole sessions into **stratified** folds, recorded in
+`training_data_split.json`.
 `training/run_cv.py` runs every fold. `training/data_collection.md` documents the labelling
 policy and how a session gets recorded.
 
@@ -394,7 +395,7 @@ Remaining work:
 Status: ready for review (2026-08-21), branch `training-compaction`
 
 The training README now treats labelled image/mask pairs as the input contract and puts the
-ordinary path first: organise sessions, refresh `splits.json`, review the split manager if needed,
+ordinary path first: organise sessions, refresh `training_data_split.json`, review the split manager if needed,
 then run `run_train.py` against an optional validation session. Labelme, frame recommendation,
 augmentation review, cross-validation, outer-test evaluation, and checkpoint promotion are
 optional tools.

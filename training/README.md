@@ -4,7 +4,7 @@ Use this workflow when you already have labelled image/mask pairs and want a new
 experimental pupil-segmentation checkpoint. The normal path is deliberately short:
 
 1. Put labelled frames in session folders.
-2. Refresh `splits.json`.
+2. Refresh `training_data_split.json`.
 3. Review the automatic assignment and optionally reserve a validation session.
 4. Train with validation when that session exists.
 
@@ -78,10 +78,10 @@ python training\data_splits.py
 `data_splits.py` keeps every session together, assigns each session to a validation fold,
 and preserves existing assignments when new data arrives. It does not move images on disk.
 The first manifest uses five folds by default; if the dataset has fewer than five sessions,
-choose a smaller count once, for example `--folds 3`.
+choose a smaller count once, for example `--n_folds 3`.
 
 `--labeled_frames_dir` names the `labeled_frames/` folder itself when it is outside the
-repository; its parent always receives `splits.json`. `--validation_session <session>`
+repository; its parent always receives `training_data_split.json`. `--validation_session <session>`
 reserves a session for choosing a normal training run, while `--final_test_session <session>`
 keeps a session out of cross-validation until an all-labeled production run is built.
 
@@ -105,14 +105,16 @@ python training\split_manager.py
 ```
 
 Do not open `split_manager.html` directly in a browser: it is the interface asset, while
-`split_manager.py` starts the local service that reads and safely writes `splits.json`.
+`split_manager.py` starts the local service that reads and safely writes
+`training_data_split.json`.
 
 It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
 brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
 own chart; click it again to hide that chart. Both charts update immediately when a session is
 dragged. Drag a whole session between folds or into the **validation session**. Saving validates
 the complete session assignment and updates
-`splits.json`. The served interface is the tracked [`split_manager.html`](split_manager.html)
+`training_data_split.json`. The served interface is the tracked
+[`split_manager.html`](split_manager.html)
 asset; `split_manager.py` provides its local manifest API.
 
 The local server stops automatically shortly after every split-manager tab is closed. It also
@@ -123,7 +125,8 @@ by the normal training command below. Assign one before starting a validation-ba
 
 ### 4. Train and validate
 
-This trains from scratch using the validation session configured in `splits.json`:
+This trains from scratch using the validation session configured in
+`training_data_split.json`:
 
 ```powershell
 python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
@@ -131,7 +134,8 @@ python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 
 When the validation session contains sessions, they control early stopping, learning-rate
 scheduling, checkpoint selection, and prediction-threshold calibration. All folds train the
-model. `run_train.py` finds `labeled_frames/` and its sibling `splits.json` automatically; pass
+model. `run_train.py` finds `labeled_frames/` and its sibling
+`training_data_split.json` automatically; pass
 `--labeled_frames_dir <folder>` only when the labelled pool lives elsewhere.
 
 Use `python training\run_train.py --help` to set the maximum epochs, batch size, learning rate,
@@ -222,19 +226,23 @@ python training\run_cv.py --checkpoint_dir checkpoints_exp\cv
 ```
 
 Use its per-session results to compare candidate settings. It also writes
-`cv_s0_training_config.json`, a complete all-labeled training recipe based on the median
+`training_config.json`, a complete all-labeled training recipe based on the median
 successful-fold epoch and calibrated threshold. Train the production model from it with:
 
 ```powershell
 python training\run_train.py `
-    --training_config_path checkpoints_exp\cv\cv_s0_training_config.json `
+    --training_config_path checkpoints_exp\cv\training_config.json `
     --checkpoint_dir checkpoints_exp\all_labeled
 ```
 
 That command deliberately reads every valid image/mask pair under `labeled_frames/` and ignores
-`splits.json`, including any session formerly reserved as a final test. Use it when you are ready
+`training_data_split.json`, including any session formerly reserved as a final test. Use it when you are ready
 to trust the CV-selected recipe and inspect the resulting model on representative unlabeled
 recordings.
+
+To rerun only specific existing folds, use `--cv_folds`, for example `--cv_folds 0 2`.
+That writes `partial_summary.json` only; it deliberately does not create a production training
+configuration.
 
 ### Advanced evaluation and promotion
 

@@ -68,7 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         "--arm", default="cvnat", help="Checkpoint directory under checkpoints_exp."
     )
     parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
-    parser.add_argument("--split-manifest", type=Path, default=PROJECT_ROOT / "splits.json")
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        default=PROJECT_ROOT / "training_data_split.json",
+    )
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--budget", type=int, default=5, help="Frames a human would label.")
     parser.add_argument("--random-trials", type=int, default=200)

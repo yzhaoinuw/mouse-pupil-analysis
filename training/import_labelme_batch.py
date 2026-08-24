@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Import the session and refresh splits.json.",
+        help="Import the session and refresh training_data_split.json.",
     )
     args = parser.parse_args(argv)
 

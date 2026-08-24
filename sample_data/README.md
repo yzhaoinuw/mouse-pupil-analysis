@@ -10,7 +10,7 @@ sample_data/
 |  |- <session>/
 |  |  |- images/          #   the frames
 |  |  |- masks/           #   the matching hand-labeled masks
-|- splits.json            # the grouped, stratified fold assignment
+|- training_data_split.json # the grouped, stratified fold assignment
 |- unlabeled_frames/      # 6 frames from two recordings, no masks, never trained on
 |  |- recording_250530/
 |  |- recording_250616/
@@ -20,7 +20,7 @@ sample_data/
 ```
 
 This mirrors the maintained dataset's layout exactly: one directory per recording
-session, each holding `images/` and `masks/`, and `splits.json` deciding what trains and
+session, each holding `images/` and `masks/`, and `training_data_split.json` deciding what trains and
 what validates. There are no train/validation folders. The session an image belongs to
 is the folder it sits in, so the whole split regenerates from the layout alone.
 
@@ -78,34 +78,20 @@ The committed velocity images are grayscale 148 x 148 outputs from the package's
 
 ## Try training and augmentation
 
-The training utilities keep an editable `DATA_ROOT` near the top of each script. Change it from:
-
-```python
-DATA_ROOT = PROJECT_ROOT
-```
-
-to:
-
-```python
-DATA_ROOT = PROJECT_ROOT / "sample_data"
-```
-
-Then inspect paired augmentation:
+Inspect paired augmentation:
 
 ```powershell
 python training\check_augmentation.py
 ```
 
-Or run the training script with terminal arguments:
+Or run a one-epoch CV smoke test:
 
 ```powershell
-python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
+python training\run_cv.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
 ```
 
-For a direct-run plumbing check, set `DATA_ROOT = PROJECT_ROOT / "sample_data"` and `n_epochs=1` in
-the final `TrainingConfig(...)` block of `training/run_train.py`. The
-best checkpoint, JSON metadata, and log are written to one descriptive run folder under
-`checkpoints_exp/` regardless of score. A model trained on eight images is expected to
+The generated fold checkpoints, JSON metadata, logs, and all-labeled recipe are written under
+`checkpoints_exp/sample_cv/`. A model trained on this small fixture is expected to
 overfit and must not be treated as a useful trained model.
 
 ## Try the grouped, stratified split
@@ -114,11 +100,11 @@ overfit and must not be treated as a useful trained model.
 python training\data_splits.py --labeled_frames_dir sample_data\labeled_frames --show
 ```
 
-prints the per-session census and the per-fold summary. `sample_data/splits.json` is
+prints the per-session census and the per-fold summary. `sample_data/training_data_split.json` is
 committed, so a fresh clone can read the split without running anything. Train one fold with:
 
 ```powershell
-python training\run_train.py --data-root sample_data --split-manifest sample_data\splits.json --fold 0 --epochs 1
+python training\run_cv.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
 ```
 
 See [`../training/data_collection.md`](../training/data_collection.md) for how sessions are
@@ -129,7 +115,7 @@ not to train anything.
 
 - The image/mask pairs were copied unchanged from the project's local labelled pool.
 - The labelme `.json` annotations are not shipped. Nothing reads them: `labelme_json2png.py` skips every one because the masks already exist, and the fixture's session comes from its folder rather than a labelme flag.
-- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `splits.json` and `folds/` are generated from that layout by `training/data_splits.py`.
+- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `training_data_split.json` and `folds/` are generated from that layout by `training/data_splits.py`.
 - The unlabelled frames were copied unchanged from two original recording frame directories. They were briefly named `raw_frames/`.
 - The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
 - The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.

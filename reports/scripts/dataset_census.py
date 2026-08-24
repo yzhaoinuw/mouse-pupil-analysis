@@ -8,7 +8,7 @@ the grouped manifest, and the labelled pairs now live in one flat `labeled_frame
 The leakage section below therefore only prints for a checkout still laid out the old
 way; it is kept because that comparison is the argument for the current design.
 
-    python reports/scripts/dataset_census.py --data-root . --split-manifest splits.json
+    python reports/scripts/dataset_census.py --data-root . --split-manifest training_data_split.json
 
 Sessions are read from the manifest rather than parsed out of filenames, so the census
 and the fold assignment cannot disagree about which recording an image came from. That
@@ -42,7 +42,7 @@ def _load_data_splits():
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=Path.cwd())
-    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
+    parser.add_argument("--split-manifest", type=Path, default=Path("training_data_split.json"))
     parser.add_argument("--tiny-max-diameter", type=float, default=15.0)
     parser.add_argument("--large-min-diameter", type=float, default=80.0)
     args = parser.parse_args(argv)

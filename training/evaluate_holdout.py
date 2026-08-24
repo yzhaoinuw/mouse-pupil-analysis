@@ -9,7 +9,7 @@ schedule, and prediction threshold are frozen should you run::
     python training/evaluate_holdout.py \
         --run-dir checkpoints_exp/final_candidate \
         --data-root . \
-        --split-manifest splits.json \
+        --split-manifest training_data_split.json \
         --confirm-frozen
 
 The command refuses to overwrite ``holdout.json``. If the result causes another model
@@ -158,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT)
-    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
+    parser.add_argument("--split-manifest", type=Path, default=Path("training_data_split.json"))
     parser.add_argument("--device", default="auto")
     parser.add_argument(
         "--confirm-frozen",

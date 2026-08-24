@@ -56,7 +56,7 @@
   <p class="muted">
     Automatic grouping is the starting point. Drag whole sessions between folds or into the
     validation session. Cross-validation ignores the validation session. Save writes
-    <code>splits.json</code> after validation.
+    <code>training_data_split.json</code> after validation.
   </p>
   <div id="notice" aria-live="polite"></div>
   <p id="launch-help" class="error" hidden>
@@ -345,7 +345,7 @@
         return;
       }
       state = payload;
-      notice.textContent = 'Saved validated session assignments to splits.json.';
+      notice.textContent = 'Saved validated session assignments to training_data_split.json.';
       notice.className = '';
       render();
     });

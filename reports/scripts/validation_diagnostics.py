@@ -35,7 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=Path.cwd())
-    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
+    parser.add_argument("--split-manifest", type=Path, default=Path("training_data_split.json"))
     parser.add_argument("--fold", type=int, default=0, help="Fold to score as validation.")
     parser.add_argument(
         "--holdout",

@@ -19,6 +19,7 @@ training_main = TRAINING["main"]
 make_all_labeled_dataset = TRAINING["make_all_labeled_dataset"]
 make_split_datasets = TRAINING["make_split_datasets"]
 all_labeled_training_config = CV["all_labeled_training_config"]
+selected_cv_folds = CV["selected_cv_folds"]
 
 
 def test_grouped_training_defaults_to_macro_iou_selection():
@@ -44,7 +45,7 @@ def test_normal_manifest_run_uses_the_validation_session(monkeypatch, tmp_path):
     train, held_out = make_split_datasets(
         TrainingConfig(
             labeled_frames_dir=tmp_path / "labeled_frames",
-            split_manifest=tmp_path / "splits.json",
+            split_manifest=tmp_path / "training_data_split.json",
         )
     )
 
@@ -61,7 +62,7 @@ def test_all_labeled_dataset_ignores_splits_and_collects_every_session(monkeypat
     for session in ("session_a", "session_b"):
         (labeled_frames_dir / session / "images").mkdir(parents=True)
         (labeled_frames_dir / session / "masks").mkdir()
-    (tmp_path / "splits.json").write_text("not read", encoding="utf-8")
+    (tmp_path / "training_data_split.json").write_text("not read", encoding="utf-8")
     paired = []
 
     def fake_pairs(images_dir, masks_dir):
@@ -131,7 +132,7 @@ def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypat
     output = tmp_path / "runs" / "normal"
     labeled_frames_dir = tmp_path / "labeled_frames"
     labeled_frames_dir.mkdir()
-    (tmp_path / "splits.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "training_data_split.json").write_text("{}", encoding="utf-8")
     monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
 
     assert (
@@ -159,7 +160,7 @@ def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypat
     config = captured[0]
     assert config.labeled_frames_dir == labeled_frames_dir.resolve()
     assert config.checkpoint_dir == output.resolve()
-    assert config.split_manifest == (tmp_path / "splits.json").resolve()
+    assert config.split_manifest == (tmp_path / "training_data_split.json").resolve()
     assert config.finetune_checkpoint == source
     assert config.finetune_learning_rate == pytest.approx(5e-5)
     assert config.max_epochs == 3
@@ -257,3 +258,14 @@ def test_cv_writes_a_complete_all_labeled_training_recipe(tmp_path):
     assert recipe["lr_milestones"] == [55, 82]
     assert recipe["prediction_threshold"] == pytest.approx(0.55)
     assert recipe["sampling"] == "natural"
+
+
+def test_cv_fold_selection_requires_a_complete_run_for_a_production_recipe():
+    assert selected_cv_folds(None, 4) == ([0, 1, 2, 3], True)
+    assert selected_cv_folds([2, 0], 4) == ([0, 2], False)
+    assert selected_cv_folds([2, 0, 3, 1], 4) == ([0, 1, 2, 3], True)
+
+    with pytest.raises(ValueError, match="cannot repeat"):
+        selected_cv_folds([0, 0], 4)
+    with pytest.raises(ValueError, match="invalid"):
+        selected_cv_folds([4], 4)

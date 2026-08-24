@@ -42,7 +42,7 @@ def test_split_paths_uses_the_manifest_beside_labeled_frames(tmp_path: Path):
     data_root, manifest_path = split_paths(tmp_path / "labeled_frames")
 
     assert data_root == tmp_path.resolve()
-    assert manifest_path == tmp_path.resolve() / "splits.json"
+    assert manifest_path == tmp_path.resolve() / "training_data_split.json"
 
 
 def test_html_template_is_a_tracked_ui_asset():

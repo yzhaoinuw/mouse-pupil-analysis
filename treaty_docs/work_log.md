@@ -2,6 +2,20 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-24
+
+### Name the training split record explicitly (Codex, GPT-5)
+
+- Renamed the fixed grouped-split manifest to `training_data_split.json`, including the
+  maintained local record and the tracked sample-data fixture. The split engine owns this
+  filename, so normal training, CV, the split manager, Labelme intake, and supporting reports
+  all use the same sibling file.
+- Updated current training guidance and the split-manager UI to name the record plainly; the
+  all-labeled recipe path remains explicitly independent of it.
+- Simplified cross-validation output names and controls: `--n_folds` creates the split size,
+  `--cv_folds` optionally reruns existing folds, and `--tag` is gone. A complete CV run writes
+  `summary.json` plus `training_config.json`; a partial run writes only `partial_summary.json`.
+
 ## 2026-08-23
 
 ### Compact training and add the CV hand-off recipe (Codex, GPT-5)
