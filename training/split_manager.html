@@ -115,7 +115,7 @@
 
     function label(target) {
       if (target === 'validation_holdout') return 'Validation session';
-      if (target === 'test_holdout') return 'Final-test session';
+      if (target === 'test_holdout') return 'CV-excluded session';
       return `Fold ${target + 1}`;
     }
 
@@ -285,7 +285,7 @@
         const description = target === 'validation_holdout'
           ? `${value.sessions} session(s). Used by normal training; excluded from CV.`
           : target === 'test_holdout'
-            ? `${value.sessions} session(s). Read-only here; reserved for final evaluation.`
+            ? `${value.sessions} session(s). Read-only here; excluded from CV but included by all-labeled training.`
             : `${value.sessions} session(s). Used by cross-validation.`;
         group.append(el('div', 'muted', description));
         value.records.forEach(session => group.append(card(session)));

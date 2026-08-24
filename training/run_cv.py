@@ -8,12 +8,11 @@ instead lets the largest session dominate, and one session currently holds 28% o
 the labelled pool.
 
     python training/data_splits.py
-    python training/run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp/cv
+    python training/run_cv.py
 
 Use this to compare *configurations* -- sampling, loss, augmentation, architecture.
-The validation holdout, when configured, is excluded from every CV fold and is reserved
-for the normal all-development training run. The hard-frame visual check remains a
-separate promotion gate.
+The validation session, when configured, is excluded from every CV fold and is reserved
+for the normal training run. CV also writes a reusable all-labeled training configuration.
 
 Cross-validation narrows sampling noise, not seed noise; repeat with ``--seed`` to
 separate the two. The +/-0.0069 floor in ``reports/2026-08-14-checkpoint-noise-floor.md``
@@ -97,69 +96,85 @@ def per_session_iou(
     return {session: statistics.fmean(scores) for session, scores in grouped.items()}
 
 
+def all_labeled_training_config(summary: Path, results: list[dict], config, trainer) -> dict:
+    """Build the reusable all-labeled recipe from successful CV folds."""
+    selected_epochs = int(round(statistics.median(r["metadata"]["best_epoch"] for r in results)))
+    selected_threshold = float(
+        statistics.median(r["metadata"]["prediction_threshold"] for r in results)
+    )
+    return {
+        "schema_version": 1,
+        "source_cv_summary": str(summary),
+        "source_cv_summary_sha256": trainer.file_sha256(summary),
+        "max_epochs": selected_epochs,
+        "learning_rate": trainer.initial_learning_rate(config),
+        "lr_milestones": sorted(
+            {
+                epoch
+                for epoch in (selected_epochs // 2, (3 * selected_epochs) // 4)
+                if 0 < epoch < selected_epochs
+            }
+        ),
+        "batch_size": config.batch_size,
+        "seed": config.seed,
+        "use_attention": config.use_attention,
+        "sampling": "natural",
+        "prediction_threshold": selected_threshold,
+        "finetune_checkpoint": (
+            None
+            if config.finetune_checkpoint is None
+            else str(config.finetune_checkpoint.resolve())
+        ),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT)
-    parser.add_argument("--split-manifest", type=Path, default=Path("splits.json"))
-    parser.add_argument("--out", type=Path, required=True, help="Directory for run folders.")
+    parser.add_argument(
+        "--labeled_frames_dir",
+        type=Path,
+        default=Path.cwd() / "labeled_frames",
+        help="Folder containing session image/mask pairs (default: ./labeled_frames).",
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=Path,
+        help="Directory for CV run folders and its generated training configuration.",
+    )
     parser.add_argument("--folds", type=int, nargs="+", help="Subset of folds (default: all).")
-    parser.add_argument("--epochs", type=int, default=400)
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--max_epochs", type=int, default=400)
+    parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--tag", default="cv", help="Run-name prefix.")
-    sampling = parser.add_mutually_exclusive_group()
-    sampling.add_argument(
-        "--balance-sizes",
-        action="store_true",
-        help="Sample equal mass from the tiny/medium/large bins. Off by default: natural "
-        "sampling won the paired comparison on this split.",
-    )
-    sampling.add_argument(
-        "--natural-sampling",
-        action="store_true",
-        help="Use the natural size distribution. Now the default; accepted so existing "
-        "commands keep working.",
-    )
     parser.add_argument(
-        "--selection-metric",
-        choices=("balanced_iou", "macro_iou"),
-        default="macro_iou",
-        help="Validation metric deciding the best checkpoint and early stopping. Grouped folds "
-        "can leave a size bin holding one or two images, which makes 'balanced_iou' volatile; "
-        "macro_iou is the default.",
-    )
-    parser.add_argument(
-        "--scheduler-metric",
-        choices=("val_loss", "balanced_iou", "macro_iou"),
-        default="val_loss",
-        help="Plateau signal for the learning-rate scheduler (default: val_loss).",
-    )
-    parser.add_argument(
-        "--selection-threshold",
-        default="0.5",
-        help="Fixed threshold for the per-epoch selection comparison, or 'calibrated' for the "
-        "previous behaviour of selecting on the best candidate (default: 0.5).",
-    )
-    parser.add_argument(
-        "--finetune-checkpoint",
+        "--finetune_checkpoint",
         type=Path,
         help="Fine-tune these weights instead of training fresh. Only valid if the weights "
         "were not themselves trained on this pool, or every fold leaks.",
     )
     args = parser.parse_args(argv)
-    if args.selection_threshold == "calibrated":
-        selection_threshold = None
-    else:
-        try:
-            selection_threshold = float(args.selection_threshold)
-        except ValueError:
-            parser.error("--selection-threshold takes a probability or the word 'calibrated'.")
+    labeled_frames_dir = args.labeled_frames_dir.resolve()
+    if labeled_frames_dir.name != "labeled_frames":
+        parser.error(
+            f"--labeled_frames_dir must name a labeled_frames folder; got {labeled_frames_dir}."
+        )
+    data_root = labeled_frames_dir.parent
+    split_manifest = data_root / "splits.json"
+    checkpoint_dir = (
+        args.checkpoint_dir.resolve()
+        if args.checkpoint_dir is not None
+        else data_root / "checkpoints_exp" / "cv"
+    )
+    if not split_manifest.is_file():
+        parser.error(
+            f"No splits.json beside {labeled_frames_dir}; run training/data_splits.py first."
+        )
 
     trainer = _load("run_train")
     data_splits = _load("data_splits")
 
-    manifest = data_splits.load_manifest(args.split_manifest)
+    manifest = data_splits.load_manifest(split_manifest)
     folds = args.folds if args.folds else list(range(manifest["n_folds"]))
 
     gate = data_splits.holdout_sessions(manifest)
@@ -167,8 +182,8 @@ def main(argv: list[str] | None = None) -> int:
         held = sum(e["n_images"] for e in manifest["sessions"] if e.get("holdout"))
         print(
             f"Holdout excluded from every fold: {len(gate)} session(s), {held} image(s) "
-            f"({', '.join(sorted(gate))}). Refit with run_train.py --final, then score "
-            "once with training/evaluate_holdout.py."
+            f"({', '.join(sorted(gate))}). A generated training config later trains all "
+            "labeled sessions, including these ones."
         )
     validation_holdout = data_splits.validation_holdout_sessions(manifest)
     if validation_holdout:
@@ -187,18 +202,13 @@ def main(argv: list[str] | None = None) -> int:
         name = f"{args.tag}_f{fold}_s{args.seed}"
         print(f"\n===== {name} =====", flush=True)
         config = trainer.TrainingConfig(
-            data_root=args.data_root.resolve(),
-            checkpoint_dir=args.out,
-            run_name=name,
-            split_manifest=args.split_manifest.resolve(),
+            labeled_frames_dir=labeled_frames_dir,
+            checkpoint_dir=checkpoint_dir / name,
+            split_manifest=split_manifest,
             fold=fold,
             finetune_checkpoint=args.finetune_checkpoint,
-            balance_training_sizes=args.balance_sizes,
-            selection_metric=args.selection_metric,
-            scheduler_metric=args.scheduler_metric,
-            selection_threshold=selection_threshold,
             batch_size=args.batch_size,
-            n_epochs=args.epochs,
+            max_epochs=args.max_epochs,
             seed=args.seed,
             device=args.device,
             console_interval=50,
@@ -237,12 +247,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"worst session        : {worst} ({session_scores[worst]:.4f})")
         print(f"image-weighted IoU   : {pooled:.4f}  (comparable to previously reported macro IoU)")
 
-    summary = args.out / f"{args.tag}_s{args.seed}_summary.json"
+    summary = checkpoint_dir / f"{args.tag}_s{args.seed}_summary.json"
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text(
         json.dumps(
             {
-                "split_manifest": str(args.split_manifest),
+                "split_manifest": str(split_manifest),
                 "folds": folds,
                 "seed": args.seed,
                 "per_session_iou": session_scores,
@@ -263,6 +273,12 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     print(f"\nWrote {summary}")
+    training_config = checkpoint_dir / f"{args.tag}_s{args.seed}_training_config.json"
+    training_config.write_text(
+        json.dumps(all_labeled_training_config(summary, results, config, trainer), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Wrote all-labeled training config: {training_config}")
     print(f"Done in {(time.perf_counter() - started) / 60:.0f} min.")
     return 0
 

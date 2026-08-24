@@ -2,6 +2,31 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-23
+
+### Compact training and add the CV hand-off recipe (Codex, GPT-5)
+
+- Replaced `run_train.py`'s split/final-refit flag maze with optional
+  `--labeled_frames_dir`, `--training_config_path`, and an actual per-run
+  `--checkpoint_dir`; retained only practical normal-training controls, all with underscore
+  spelling. `--max_epochs` now names the epoch limit.
+- Normal training reads the sibling `splits.json` and its validation session. A supplied
+  `training_config.json` instead owns the model settings, ignores `splits.json`, and trains every
+  valid pair under `labeled_frames/`; its output records the source-config hash for reproducibility.
+- `run_cv.py` now writes that recipe using the median successful-fold epoch and calibrated
+  threshold, plus a deterministic half/three-quarter learning-rate schedule. Removed the obsolete
+  flat-folder, size-balancing, single-fold CLI, and final-refit training paths; retained historical
+  final-refit evaluation support for existing artifacts.
+- Kept promotion metadata compatible with the fixed natural-sampling policy and excluded the new
+  local labeled-frame and training-config paths from packaged checkpoint metadata.
+- Reframed the former final-test reservation as a CV-excluded session, including the split-manager
+  label; all-labeled training is explicit that it includes those images. Rendered the real
+  split-manager page to verify the updated label.
+- Updated the training and intake guides, active next steps, and workflow tests. Verification:
+  focused workflow, CLI-help, and split tests passed; the full pytest suite passed with a
+  repository-local base temp; repository-wide Ruff passed; Black and `git diff --check` passed
+  (Black emitted only its known unreadable user-cache warning).
+
 ## 2026-08-22
 
 ### Simplify the grouped-split command (Codex, GPT-5)

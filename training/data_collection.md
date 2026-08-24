@@ -247,36 +247,27 @@ padded mean would encode the crop's aspect ratio as if it were lighting. Across 
 session means span 71 to 157 while the spread *within* a session is 1 to 11, which is
 what makes it usable as a lighting axis.
 
-## The holdout gate
+## Cross-validation and all-labeled training
 
-Cross-validation chooses configurations. Because every fold's number feeds that choice,
-none of them is a clean estimate of the final model — leakage and overfitting to the
-selection both push the same way.
-
-A **holdout** is one or more sessions set aside entirely: in no fold, trained on never,
-validated on never.
+Cross-validation chooses a reusable training configuration. It writes a JSON recipe containing
+the median successful-fold epoch and calibrated threshold, together with the fixed learning-rate
+schedule and other training settings. Use that recipe to train a production model on the complete
+labelled pool:
 
 ```bash
-python training/data_splits.py --final_test_session HQL090_sleep251012
-python training/run_train.py --split-manifest splits.json --final \
-    --final-prediction-threshold 0.5 --epochs <frozen epoch count>
-python training/evaluate_holdout.py --run-dir checkpoints_exp/<final run> \
-    --split-manifest splits.json --confirm-frozen
+python training/run_cv.py --checkpoint_dir checkpoints_exp/cv
+python training/run_train.py \
+    --training_config_path checkpoints_exp/cv/cv_s0_training_config.json \
+    --checkpoint_dir checkpoints_exp/all_labeled
 ```
 
-`--final` trains on every non-holdout image without loading the gate. Freeze the epoch
-count, optional learning-rate milestones, and prediction threshold from grouped
-development runs first. `evaluate_holdout.py` then evaluates that frozen checkpoint once,
-at the frozen threshold, and writes a non-overwritable `holdout.json`. That is the only
-number in the project measured against data the training procedure was never tuned on.
+The second command ignores `splits.json` and trains on every valid image/mask pair under
+`labeled_frames/`. It is intentionally a trusted all-data path: inspect the resulting model on
+representative unlabeled recordings before promoting it.
 
-**Choose the holdout by condition, not by animal.** Holding out a mouse tests animal
-generalisation, which the measurements above say is not the axis that breaks this model.
-Hold out a lighting regime, a rig, or a recording day instead.
-
-Note the cost before you do it: at 222 images, two typical sessions is 15–27% of the
-pool, and that data trains nothing. The pool is currently small enough that this is a
-real trade, which is why no holdout is set by default.
+`--final_test_session` remains useful for keeping a difficult condition out of CV while you
+compare configurations. The all-labeled training command deliberately includes it once you decide
+to build the production model, so it is no longer an independent final-test gate.
 
 ## What the split does not protect against
 

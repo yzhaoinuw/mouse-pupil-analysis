@@ -14,9 +14,7 @@ import importlib.util
 import json
 import math
 import random
-import re
 import sys
-from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -25,14 +23,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 
 from mouse_pupil_analysis.augmentation import SegmentationDataset, paired_image_mask_paths
 from mouse_pupil_analysis.pupil_predictions import load_unet_checkpoint
 from mouse_pupil_analysis.unet import UNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = PROJECT_ROOT  # Use PROJECT_ROOT / "sample_data" for the included fixture.
+LABELED_FRAMES_DIR = PROJECT_ROOT / "labeled_frames"
 
 SIZE_BIN_NAMES = ("tiny", "medium", "large")
 DEVICE_CHOICES = ("auto", "cuda", "mps", "cpu")
@@ -82,20 +80,20 @@ def resolve_device(preference: str = "auto") -> torch.device:
 class TrainingConfig:
     """Editable settings for one fresh-training or fine-tuning run."""
 
-    data_root: Path = DATA_ROOT
-    checkpoint_dir: Path = PROJECT_ROOT / "checkpoints_exp"
-    run_name: str | None = None
+    labeled_frames_dir: Path = LABELED_FRAMES_DIR
+    checkpoint_dir: Path | None = None
     finetune_checkpoint: Path | None = None
     split_manifest: Path | None = None
     fold: int | None = None
-    final: bool = False
-    final_prediction_threshold: float | None = None
-    final_lr_milestones: tuple[int, ...] = ()
+    train_all_labeled_frames: bool = False
+    training_config_path: Path | None = None
+    lr_milestones: tuple[int, ...] = ()
+    prediction_threshold: float = 0.5
     use_attention: bool = True
     batch_size: int = 8
     scratch_learning_rate: float = 1e-3
     finetune_learning_rate: float = 1e-4
-    n_epochs: int = 200
+    max_epochs: int = 200
     early_stopping_patience: int = 40
     scheduler_patience: int = 8
     promotion_target_iou: float = 0.85
@@ -120,12 +118,6 @@ class TrainingConfig:
     tiny_max_diameter: float = 15.0
     large_min_diameter: float = 80.0
     low_circularity_cutoff: float = 0.45
-    # Natural sampling won the paired comparison of 2026-08-16 by 0.0354 mean per-session
-    # IoU, at every seed and in 8 of 12 matched fold-seed cells. Equal-mass balancing did
-    # not improve the tiny bin it was added to protect (2-2 across folds, largest gap
-    # favouring natural) while costing large-pupil IoU 0.20 and 0.27 on two folds. The
-    # packaged checkpoint already records sampling: "natural".
-    balance_training_sizes: bool = False
     # ``balanced_iou`` averages the represented size bins equally. Under grouped folds a bin
     # can hold one or two images, so a single noisy image swings a third of the metric;
     # ``macro_iou`` averages over images instead and is what the first grouped sweep showed
@@ -147,30 +139,18 @@ class TrainingConfig:
     def __post_init__(self) -> None:
         if self.device not in DEVICE_CHOICES:
             raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
-        if self.final and self.fold is not None:
-            raise ValueError(
-                "final and fold are alternatives: a fold run holds one fold out for "
-                "validation, a final run holds the gate sessions out instead."
-            )
-        if self.final and self.split_manifest is None:
-            raise ValueError("final needs split_manifest: the holdout is recorded there.")
-        if self.final and self.final_prediction_threshold is None:
-            raise ValueError(
-                "final needs final_prediction_threshold, frozen from development data before "
-                "the holdout is evaluated."
-            )
-        if not self.final and self.final_prediction_threshold is not None:
-            raise ValueError("final_prediction_threshold is only valid for a final refit.")
-        if not self.final and self.final_lr_milestones:
-            raise ValueError("final_lr_milestones is only valid for a final refit.")
-        if not self.final and self.fold is not None and self.split_manifest is None:
+        if self.fold is not None and self.split_manifest is None:
             raise ValueError(
                 "fold needs split_manifest: only a grouped manifest defines development folds."
             )
+        if self.train_all_labeled_frames and (
+            self.split_manifest is not None or self.fold is not None
+        ):
+            raise ValueError("all-labeled training does not use a split manifest or fold.")
         if self.fold is not None and self.fold < 0:
             raise ValueError("fold must be nonnegative.")
-        if self.batch_size <= 0 or self.n_epochs <= 0:
-            raise ValueError("batch_size and n_epochs must be positive.")
+        if self.batch_size <= 0 or self.max_epochs <= 0:
+            raise ValueError("batch_size and max_epochs must be positive.")
         if self.scratch_learning_rate <= 0 or self.finetune_learning_rate <= 0:
             raise ValueError("Learning rates must be positive.")
         if self.early_stopping_patience <= 0 or self.scheduler_patience < 0:
@@ -187,15 +167,12 @@ class TrainingConfig:
             raise ValueError(f"scheduler_metric must be one of {', '.join(SCHEDULER_METRICS)}.")
         if self.selection_threshold is not None and not 0 < self.selection_threshold < 1:
             raise ValueError("selection_threshold must be a probability between 0 and 1.")
-        if (
-            self.final_prediction_threshold is not None
-            and not 0 < self.final_prediction_threshold < 1
-        ):
-            raise ValueError("final_prediction_threshold must be a probability between 0 and 1.")
-        if any(epoch <= 0 or epoch >= self.n_epochs for epoch in self.final_lr_milestones):
-            raise ValueError("final_lr_milestones must fall strictly between 0 and n_epochs.")
-        if tuple(sorted(set(self.final_lr_milestones))) != self.final_lr_milestones:
-            raise ValueError("final_lr_milestones must be sorted and unique.")
+        if not 0 < self.prediction_threshold < 1:
+            raise ValueError("prediction_threshold must be a probability between 0 and 1.")
+        if any(epoch <= 0 or epoch >= self.max_epochs for epoch in self.lr_milestones):
+            raise ValueError("lr_milestones must fall strictly between 0 and max_epochs.")
+        if tuple(sorted(set(self.lr_milestones))) != self.lr_milestones:
+            raise ValueError("lr_milestones must be sorted and unique.")
         if self.tiny_max_diameter >= self.large_min_diameter:
             raise ValueError("tiny_max_diameter must be smaller than large_min_diameter.")
         if not 0 <= self.promotion_target_iou <= 1:
@@ -204,12 +181,11 @@ class TrainingConfig:
             raise ValueError("min_improvement cannot be negative.")
         if self.console_interval <= 0:
             raise ValueError("console_interval must be positive.")
-        if self.run_name is not None and not re.fullmatch(
-            r"[A-Za-z0-9][A-Za-z0-9._-]*", self.run_name
-        ):
-            raise ValueError(
-                "run_name may contain only letters, numbers, dots, dashes, and underscores."
-            )
+
+    @property
+    def data_root(self) -> Path:
+        """Return the project directory containing ``labeled_frames/``."""
+        return Path(self.labeled_frames_dir).parent
 
 
 @dataclass(frozen=True)
@@ -224,61 +200,24 @@ class ValidationReport:
     low_circularity_iou: float | None
 
 
-def make_dataset(image_dir: Path, mask_dir: Path, augment: bool = False) -> SegmentationDataset:
-    """Build a dataset from a stem-paired image and mask directory."""
-    image_paths, mask_paths = paired_image_mask_paths(image_dir, mask_dir)
-    return SegmentationDataset(image_paths, mask_paths, augment=augment)
-
-
 def make_split_datasets(
     config: TrainingConfig,
 ) -> tuple[SegmentationDataset, SegmentationDataset]:
     """Return the ``(train, validation)`` datasets this run's configuration selects.
 
-    With ``split_manifest`` set, both come from the grouped fold assignment in that
-    manifest and no whole session spans the boundary. Without it, the historical fixed
-    ``images_train`` / ``images_validation`` folders are used, which share recordings
-    across the split and therefore measure held-out frames rather than generalisation.
-    Those folders no longer exist in the maintained dataset, whose labelled pairs live
-    in one flat ``labeled_frames`` / ``labeled_masks`` pool, so that path now applies only
-    to a dataset still laid out the old way -- ``sample_data`` among them.
-
-    Final refits deliberately use :func:`make_final_training_dataset` instead. The
-    outer holdout must never become this function's validation dataset, because doing
-    so would let it control the scheduler, early stopping, checkpoint selection, and
-    threshold calibration.
+    Both datasets come from the grouped manifest and no session spans the boundary.
+    ``run_cv.py`` supplies a fold; the ordinary training workflow supplies no fold and
+    therefore uses the manifest's validation session.
     """
     if config.split_manifest is None:
-        if not (config.data_root / "images_train").is_dir():
-            raise FileNotFoundError(
-                f"No images_train/ under {config.data_root}. The labelled pool is one flat "
-                "labeled_frames/ folder now, and splitting it needs the grouped manifest: "
-                "pass --split-manifest splits.json. See training/data_collection.md."
-            )
-        return (
-            make_dataset(
-                config.data_root / "images_train",
-                config.data_root / "masks_train",
-                augment=True,
-            ),
-            make_dataset(
-                config.data_root / "images_validation",
-                config.data_root / "masks_validation",
-                augment=False,
-            ),
-        )
-
-    if config.final:
-        raise ValueError(
-            "A final refit has no validation dataset; use make_final_training_dataset()."
-        )
+        raise ValueError("Validation-backed training requires a split manifest.")
     manifest = data_splits.load_manifest(config.split_manifest)
     if config.fold is None:
         train, validation = data_splits.validation_holdout_paths(manifest, config.data_root)
         if not validation[0]:
             raise ValueError(
-                "The manifest has no validation holdout. Train all development data with the "
-                "fixed all-data workflow instead."
+                "The manifest has no validation session. Add one with training/data_splits.py, "
+                "or run CV and train the generated all-labeled configuration."
             )
     else:
         train, validation = data_splits.fold_paths(manifest, config.fold, config.data_root)
@@ -288,32 +227,37 @@ def make_split_datasets(
     )
 
 
-def make_final_training_dataset(config: TrainingConfig) -> tuple[SegmentationDataset, int]:
-    """Return all non-holdout pairs and the untouched holdout size.
+def make_all_labeled_dataset(config: TrainingConfig) -> SegmentationDataset:
+    """Return every valid image/mask pair beneath ``labeled_frames/``.
 
-    The holdout paths are counted for the run record but are never put in a Dataset or
-    DataLoader here. ``training/evaluate_holdout.py`` is the only workflow that reads
-    those labels, after the refit's weights and prediction threshold are frozen.
+    This is the trusted production-training path selected by a CV-generated training
+    configuration. It intentionally does not read ``splits.json``.
     """
-    if not config.final or config.split_manifest is None:
-        raise ValueError("make_final_training_dataset requires a final configuration.")
-    manifest = data_splits.load_manifest(config.split_manifest)
-    train, holdout = data_splits.final_paths(manifest, config.data_root)
-    return SegmentationDataset(train[0], train[1], augment=True), len(holdout[0])
+    image_paths: list[Path] = []
+    mask_paths: list[Path] = []
+    labeled_frames_dir = Path(config.labeled_frames_dir)
+    for session_dir in sorted(path for path in labeled_frames_dir.iterdir() if path.is_dir()):
+        images_dir = session_dir / "images"
+        masks_dir = session_dir / "masks"
+        if images_dir.is_dir() and masks_dir.is_dir():
+            images, masks = paired_image_mask_paths(images_dir, masks_dir)
+            image_paths.extend(images)
+            mask_paths.extend(masks)
+    if not image_paths:
+        raise FileNotFoundError(f"No paired images and masks found under {labeled_frames_dir}.")
+    return SegmentationDataset(image_paths, mask_paths, augment=True)
 
 
 def split_description(config: TrainingConfig) -> str:
     """Return a one-line description of which split a run used."""
+    if config.train_all_labeled_frames:
+        return (
+            f"all labeled sessions under {Path(config.labeled_frames_dir).name}/ (splits ignored)"
+        )
     if config.split_manifest is None:
-        return "fixed images_train/images_validation folders (recordings shared across split)"
+        raise ValueError("Validation-backed training requires a split manifest.")
     manifest = data_splits.load_manifest(config.split_manifest)
     name = Path(config.split_manifest).name
-    if config.final:
-        gate = data_splits.holdout_sessions(manifest)
-        return (
-            f"{name} final refit: trained on every non-holdout image for a fixed schedule; "
-            f"{len(gate)} untouched holdout session(s) are not loaded: {', '.join(sorted(gate))}"
-        )
     if config.fold is None:
         validation = data_splits.validation_holdout_sessions(manifest)
         test_gate = data_splits.holdout_sessions(manifest)
@@ -325,7 +269,7 @@ def split_description(config: TrainingConfig) -> str:
                 f"{name} validation holdout: {len(validation)} session(s): "
                 f"{', '.join(sorted(validation))}{suffix}"
             )
-        return f"{name} all development sessions, no validation holdout{suffix}"
+        return f"{name} all development sessions, no validation session{suffix}"
     held_out = data_splits.fold_sessions(manifest, config.fold)
     gate = data_splits.holdout_sessions(manifest)
     suffix = f", gate sessions excluded entirely: {', '.join(sorted(gate))}" if gate else ""
@@ -349,38 +293,6 @@ def size_bin_labels(
         ["tiny", "large"],
         default="medium",
     )
-
-
-def size_balanced_sample_weights(labels: np.ndarray) -> np.ndarray:
-    """Give each represented size bin equal total sampling probability."""
-    labels = np.asarray(labels, dtype=str)
-    if labels.size == 0:
-        raise ValueError("Cannot build sampling weights for an empty dataset.")
-    counts = Counter(labels.tolist())
-    weights = np.asarray([1.0 / counts[label] for label in labels], dtype=float)
-    return weights / weights.mean()
-
-
-def make_size_balanced_sampler(
-    dataset: SegmentationDataset,
-    config: TrainingConfig,
-) -> tuple[WeightedRandomSampler, Counter]:
-    """Create a reproducible sampler that balances mask-size bins."""
-    diameters = np.asarray(dataset.mask_equivalent_diameters(), dtype=float)
-    labels = size_bin_labels(
-        diameters,
-        config.tiny_max_diameter,
-        config.large_min_diameter,
-    )
-    weights = size_balanced_sample_weights(labels)
-    generator = torch.Generator().manual_seed(config.seed)
-    sampler = WeightedRandomSampler(
-        torch.as_tensor(weights, dtype=torch.double),
-        num_samples=len(weights),
-        replacement=True,
-        generator=generator,
-    )
-    return sampler, Counter(labels.tolist())
 
 
 def per_image_overlap_scores(
@@ -490,7 +402,13 @@ def _metric_text(value: float | None) -> str:
 
 def _jsonable_config(config: TrainingConfig) -> dict[str, object]:
     values = asdict(config)
-    for key in ("data_root", "checkpoint_dir", "finetune_checkpoint", "split_manifest"):
+    for key in (
+        "labeled_frames_dir",
+        "checkpoint_dir",
+        "finetune_checkpoint",
+        "split_manifest",
+        "training_config_path",
+    ):
         value = values[key]
         values[key] = None if value is None else str(value)
     return values
@@ -538,21 +456,39 @@ def run_header(
     }
 
 
-def default_run_name(config: TrainingConfig) -> str:
-    """Return a concise folder name that captures the important run choices."""
+def _default_checkpoint_dir(config: TrainingConfig) -> Path:
+    """Return a collision-safe default directory for one training run."""
     run_kind = "ft" if config.finetune_checkpoint is not None else "scratch"
-    sampling = "bal" if config.balance_training_sizes else "natural"
     learning_rate = initial_learning_rate(config)
     learning_rate_text = (
         f"{learning_rate:.0e}".replace("e-0", "e-").replace("e+0", "e").replace("e+", "e")
     )
-    name = f"{run_kind}_{sampling}_lr{learning_rate_text}_s{config.seed}"
-    # Cross-validation runs differ only by fold, so the fold has to reach the folder name.
+    name = f"{run_kind}_natural_lr{learning_rate_text}_s{config.seed}"
     if config.fold is not None:
-        return f"{name}_f{config.fold}"
-    # A final run must not be mistaken for a plain whole-pool run: it is the only one
-    # whose validation number was measured against the gate.
-    return f"{name}_final" if config.final else name
+        name = f"{name}_f{config.fold}"
+    elif config.train_all_labeled_frames:
+        name = f"{name}_all_data"
+    candidate = config.data_root / "checkpoints_exp" / name
+    index = 2
+    while candidate.exists():
+        candidate = config.data_root / "checkpoints_exp" / f"{name}_{index}"
+        index += 1
+    return candidate
+
+
+def _prepare_run_dir(config: TrainingConfig) -> Path:
+    """Create the requested empty output directory for one run."""
+    run_dir = (
+        Path(config.checkpoint_dir)
+        if config.checkpoint_dir is not None
+        else _default_checkpoint_dir(config)
+    )
+    if run_dir.exists() and any(run_dir.iterdir()):
+        raise FileExistsError(
+            f"Training checkpoint_dir is not empty: {run_dir}. Choose an empty directory."
+        )
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
 
 
 def _write_metadata(
@@ -644,38 +580,24 @@ def evaluate_checkpoint(
     return val_loss, report
 
 
-def run_final_training(config: TrainingConfig) -> Path:
-    """Refit on all development sessions without loading the outer holdout.
-
-    Cross-validation must freeze ``n_epochs``, the optional deterministic learning-rate
-    milestones, and ``final_prediction_threshold`` before this function is called. The
-    refit therefore has no validation loop, scheduler driven by labels, early stopping,
-    or checkpoint selection. Its output can be scored exactly once with
-    ``training/evaluate_holdout.py``.
-    """
-    if not config.final:
-        raise ValueError("run_final_training requires final=True.")
+def run_all_labeled_training(config: TrainingConfig) -> Path:
+    """Train every labelled session with a CV-generated fixed configuration."""
+    if not config.train_all_labeled_frames:
+        raise ValueError("run_all_labeled_training needs train_all_labeled_frames=True.")
 
     random.seed(config.seed)
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
 
-    train_dataset, holdout_examples = make_final_training_dataset(config)
+    train_dataset = make_all_labeled_dataset(config)
     split = split_description(config)
     print(f"Split: {split}")
-    print(f"Holdout labels not loaded ({holdout_examples} image(s)).")
-
-    sampler = None
-    if config.balance_training_sizes:
-        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
-        print(f"Training target counts by size: {dict(size_counts)}")
 
     device = resolve_device(config.device)
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=sampler is None,
-        sampler=sampler,
+        shuffle=True,
         pin_memory=device.type == "cuda",
     )
     learning_rate = initial_learning_rate(config)
@@ -684,144 +606,7 @@ def run_final_training(config: TrainingConfig) -> Path:
     else:
         model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
 
-    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    run_name = config.run_name or default_run_name(config)
-    run_dir = config.checkpoint_dir / run_name
-    if run_dir.exists() and any(run_dir.iterdir()):
-        raise FileExistsError(
-            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
-            "remove the old experimental run deliberately."
-        )
-    run_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = run_dir / "final.pth"
-    metadata_path = run_dir / "final.json"
-    log_path = run_dir / "train.log"
-    print(f"Run directory: {run_dir}")
-    print(f"Device: {device.type}")
-
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = (
-        optim.lr_scheduler.MultiStepLR(
-            optimizer,
-            milestones=list(config.final_lr_milestones),
-            gamma=0.5,
-        )
-        if config.final_lr_milestones
-        else None
-    )
-
-    with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-        header = run_header(config, len(train_dataset), device) | {
-            "workflow": "final_refit",
-            "holdout_examples": holdout_examples,
-            "holdout_loaded": False,
-        }
-        log_file.write(json.dumps(header, sort_keys=True) + "\n")
-        for epoch in range(1, config.n_epochs + 1):
-            model.train()
-            total_loss = 0.0
-            total_images = 0
-            for images, masks in train_loader:
-                images, masks = images.to(device), masks.to(device)
-                optimizer.zero_grad(set_to_none=True)
-                loss = criterion(model(images), masks)
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item() * len(images)
-                total_images += len(images)
-            if scheduler is not None:
-                scheduler.step()
-            train_loss = total_loss / total_images
-            current_lr = optimizer.param_groups[0]["lr"]
-            log_line = f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | LR: {current_lr:g}"
-            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.n_epochs:
-                print(log_line)
-            log_file.write(log_line + "\n")
-
-    torch.save(model.state_dict(), checkpoint_path)
-    manifest_path = Path(config.split_manifest)
-    manifest = data_splits.load_manifest(manifest_path)
-    payload = {
-        "run_name": run_dir.name,
-        "workflow": "final_refit",
-        "training_mode": training_mode(config),
-        "training_examples": len(train_dataset),
-        "trained_epochs": config.n_epochs,
-        "prediction_threshold": config.final_prediction_threshold,
-        "split": split,
-        "split_manifest_sha256": file_sha256(manifest_path),
-        "holdout_sessions": sorted(data_splits.holdout_sessions(manifest)),
-        "holdout_examples": holdout_examples,
-        "checkpoint_sha256": file_sha256(checkpoint_path),
-        "config": _jsonable_config(config),
-    }
-    metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    print(f"Final refit weights: {checkpoint_path}")
-    print(f"Frozen run metadata: {metadata_path}")
-    print("Holdout remains untouched; evaluate it once with training/evaluate_holdout.py.")
-    return checkpoint_path
-
-
-def _all_data_milestones(n_epochs: int) -> tuple[int, ...]:
-    """Return a simple fixed learning-rate schedule when no validation labels exist."""
-    return tuple(
-        sorted({epoch for epoch in (n_epochs // 2, (3 * n_epochs) // 4) if 0 < epoch < n_epochs})
-    )
-
-
-def run_all_data_training(config: TrainingConfig) -> Path:
-    """Train all development sessions with fixed, non-validation-driven defaults.
-
-    This is the normal fallback when the manifest's validation holdout is empty.
-    It deliberately has no early stopping, threshold calibration, or plateau scheduler:
-    none can be chosen honestly without validation labels.
-    """
-    if config.split_manifest is None or config.fold is not None or config.final:
-        raise ValueError(
-            "run_all_data_training needs a non-final manifest configuration without fold."
-        )
-
-    random.seed(config.seed)
-    np.random.seed(config.seed)
-    torch.manual_seed(config.seed)
-
-    manifest = data_splits.load_manifest(config.split_manifest)
-    train_paths, validation_paths = data_splits.validation_holdout_paths(manifest, config.data_root)
-    if validation_paths[0]:
-        raise ValueError("Validation holdout exists; use the validation-backed training workflow.")
-    train_dataset = SegmentationDataset(train_paths[0], train_paths[1], augment=True)
-    split = split_description(config)
-    print(f"Split: {split}")
-
-    sampler = None
-    if config.balance_training_sizes:
-        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
-        print(f"Training target counts by size: {dict(size_counts)}")
-
-    device = resolve_device(config.device)
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
-        shuffle=sampler is None,
-        sampler=sampler,
-        pin_memory=device.type == "cuda",
-    )
-    learning_rate = initial_learning_rate(config)
-    if config.finetune_checkpoint is None:
-        model = UNet(use_attention=config.use_attention).to(device)
-    else:
-        model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
-
-    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    run_name = config.run_name or default_run_name(config)
-    run_dir = config.checkpoint_dir / run_name
-    if run_dir.exists() and any(run_dir.iterdir()):
-        raise FileExistsError(
-            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
-            "remove the old experimental run deliberately."
-        )
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = _prepare_run_dir(config)
     checkpoint_path = run_dir / "all_data.pth"
     metadata_path = run_dir / "all_data.json"
     log_path = run_dir / "train.log"
@@ -830,23 +615,20 @@ def run_all_data_training(config: TrainingConfig) -> Path:
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    milestones = _all_data_milestones(config.n_epochs)
+    milestones = config.lr_milestones
     scheduler = (
         optim.lr_scheduler.MultiStepLR(optimizer, milestones=list(milestones), gamma=0.5)
         if milestones
         else None
     )
-    threshold = config.selection_threshold or config.threshold_candidates[0]
-
     with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
         header = run_header(config, len(train_dataset), device) | {
-            "workflow": "all_data_no_validation",
-            "validation_examples": 0,
-            "prediction_threshold": threshold,
+            "workflow": "all_labeled_training",
+            "prediction_threshold": config.prediction_threshold,
             "lr_milestones": milestones,
         }
         log_file.write(json.dumps(header, sort_keys=True) + "\n")
-        for epoch in range(1, config.n_epochs + 1):
+        for epoch in range(1, config.max_epochs + 1):
             model.train()
             total_loss = 0.0
             total_images = 0
@@ -863,39 +645,38 @@ def run_all_data_training(config: TrainingConfig) -> Path:
             train_loss = total_loss / total_images
             current_lr = optimizer.param_groups[0]["lr"]
             log_line = f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | LR: {current_lr:g}"
-            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.n_epochs:
+            if epoch == 1 or epoch % config.console_interval == 0 or epoch == config.max_epochs:
                 print(log_line)
             log_file.write(log_line + "\n")
 
     torch.save(model.state_dict(), checkpoint_path)
     payload = {
         "run_name": run_dir.name,
-        "workflow": "all_data_no_validation",
+        "workflow": "all_labeled_training",
         "training_mode": training_mode(config),
         "training_examples": len(train_dataset),
-        "trained_epochs": config.n_epochs,
-        "prediction_threshold": threshold,
+        "trained_epochs": config.max_epochs,
+        "prediction_threshold": config.prediction_threshold,
         "lr_milestones": list(milestones),
         "split": split,
-        "split_manifest_sha256": file_sha256(Path(config.split_manifest)),
+        "training_config_sha256": (
+            file_sha256(config.training_config_path)
+            if config.training_config_path is not None
+            else None
+        ),
         "checkpoint_sha256": file_sha256(checkpoint_path),
         "config": _jsonable_config(config),
     }
     metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    print(f"All-data weights: {checkpoint_path}")
-    print(f"Fixed-schedule metadata: {metadata_path}")
+    print(f"All-labeled weights: {checkpoint_path}")
+    print(f"Training metadata: {metadata_path}")
     return checkpoint_path
 
 
 def run_training(config: TrainingConfig) -> Path:
     """Run training and return the stable path holding the best model weights."""
-    if config.final:
-        return run_final_training(config)
-
-    if config.split_manifest is not None and config.fold is None:
-        manifest = data_splits.load_manifest(config.split_manifest)
-        if not data_splits.validation_holdout_sessions(manifest):
-            return run_all_data_training(config)
+    if config.train_all_labeled_frames:
+        return run_all_labeled_training(config)
 
     random.seed(config.seed)
     np.random.seed(config.seed)
@@ -907,18 +688,12 @@ def run_training(config: TrainingConfig) -> Path:
 
     training_examples = len(train_dataset)
 
-    sampler = None
-    if config.balance_training_sizes:
-        sampler, size_counts = make_size_balanced_sampler(train_dataset, config)
-        print(f"Training target counts by size: {dict(size_counts)}")
-
     device = resolve_device(config.device)
     pin_memory = device.type == "cuda"
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=sampler is None,
-        sampler=sampler,
+        shuffle=True,
         pin_memory=pin_memory,
     )
     val_loader = DataLoader(
@@ -934,15 +709,7 @@ def run_training(config: TrainingConfig) -> Path:
     else:
         model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
 
-    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    run_name = config.run_name or default_run_name(config)
-    run_dir = config.checkpoint_dir / run_name
-    if run_dir.exists() and any(run_dir.iterdir()):
-        raise FileExistsError(
-            f"Training run directory is not empty: {run_dir}. Choose a new run_name or "
-            "remove the old experimental run deliberately."
-        )
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = _prepare_run_dir(config)
     checkpoint_path = run_dir / "best.pth"
     metadata_path = run_dir / "best.json"
     log_path = run_dir / "train.log"
@@ -966,7 +733,7 @@ def run_training(config: TrainingConfig) -> Path:
         log_file.write(
             json.dumps(run_header(config, training_examples, device), sort_keys=True) + "\n"
         )
-        for epoch in range(1, config.n_epochs + 1):
+        for epoch in range(1, config.max_epochs + 1):
             model.train()
             total_train_loss = 0.0
             total_train_images = 0
@@ -1081,8 +848,7 @@ def run_training(config: TrainingConfig) -> Path:
     elif calibrated == high:
         print(
             f"WARNING: calibrated threshold {calibrated:.2f} is the highest candidate, so the "
-            f"calibration is censored by the grid. Widen --threshold-candidates past "
-            f"{calibrated:.2f} to find the optimum."
+            f"calibration is censored by the fixed grid at {calibrated:.2f}."
         )
 
     print(f"Training log: {log_path}")
@@ -1095,182 +861,142 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         description="Train a fresh pupil UNet or fine-tune a compatible checkpoint.",
     )
     parser.add_argument(
-        "--data-root",
+        "--labeled_frames_dir",
         type=Path,
-        default=Path.cwd(),
-        help="Directory holding the image and mask folders, and the root that split-manifest "
-        "paths are resolved against.",
+        default=Path.cwd() / "labeled_frames",
+        help="Folder containing one <session>/images and <session>/masks pair per recording "
+        "(default: ./labeled_frames).",
     )
     parser.add_argument(
-        "--checkpoint-dir",
+        "--training_config_path",
         type=Path,
-        help="Experiment output directory (default: <data-root>/checkpoints_exp).",
+        help="CV-generated JSON recipe. It trains every labeled session and ignores splits.json.",
     )
-    parser.add_argument("--run-name", help="Concise experiment folder name.")
     parser.add_argument(
-        "--finetune-checkpoint",
+        "--checkpoint_dir",
+        type=Path,
+        help="Empty directory for this run's checkpoint and metadata (default: a new directory "
+        "under checkpoints_exp/).",
+    )
+    parser.add_argument(
+        "--finetune_checkpoint",
         type=Path,
         help="Compatible .pth weights to fine-tune; omit for fresh training.",
     )
     parser.add_argument(
-        "--split-manifest",
-        type=Path,
-        help="Grouped split from training/data_splits.py. Without --fold, uses its validation "
-        "holdout when present or trains all development data with a fixed schedule. Without a "
-        "manifest, the fixed images_train/images_validation folders are used where they exist.",
-    )
-    parser.add_argument(
-        "--fold",
-        type=int,
-        help="Development fold held out for one CV-style validation run. Requires --split-manifest.",
-    )
-    parser.add_argument(
-        "--final",
-        action="store_true",
-        help="Final refit: train on every non-holdout image for a fixed schedule without "
-        "loading the holdout. Requires --split-manifest and "
-        "--final-prediction-threshold; excludes --fold.",
-    )
-    parser.add_argument(
-        "--final-prediction-threshold",
-        type=float,
-        help="Prediction threshold frozen from development/CV before a --final refit. The "
-        "outer holdout never calibrates it.",
-    )
-    parser.add_argument(
-        "--final-lr-milestones",
-        type=int,
-        nargs="*",
-        default=(),
-        help="Optional sorted epochs at which a --final refit's learning rate is halved. "
-        "Freeze these from development runs before evaluating the holdout.",
-    )
-    parser.add_argument(
-        "--learning-rate",
+        "--learning_rate",
         type=float,
         help="Override the mode-specific default (1e-4 fine-tuning; 1e-3 fresh training).",
     )
-    parser.add_argument("--epochs", type=int, default=200, help="Maximum training epochs.")
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--early-stopping-patience", type=int, default=40)
-    parser.add_argument("--scheduler-patience", type=int, default=8)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max_epochs", type=int, help="Maximum training epochs (default: 200).")
+    parser.add_argument("--batch_size", type=int, help="Training batch size (default: 8).")
+    parser.add_argument("--seed", type=int, help="Random seed (default: 0).")
     parser.add_argument(
         "--device",
         choices=DEVICE_CHOICES,
         default="auto",
         help="Training device. 'auto' prefers CUDA, then Apple MPS, then CPU.",
     )
-    parser.add_argument(
-        "--selection-metric",
-        choices=SELECTION_METRICS,
-        default="macro_iou",
-        help="Validation metric that decides the best checkpoint and early stopping. "
-        "'balanced_iou' weights the size bins equally, so a bin holding one or two images "
-        "swings a third of it; 'macro_iou' averages over images instead (default).",
-    )
-    parser.add_argument(
-        "--scheduler-metric",
-        choices=SCHEDULER_METRICS,
-        default="val_loss",
-        help="Plateau signal for the learning-rate scheduler (default: val_loss).",
-    )
-    parser.add_argument(
-        "--selection-threshold",
-        default="0.5",
-        help="Fixed threshold for the per-epoch selection comparison, or 'calibrated' to "
-        "select on the best of --threshold-candidates as earlier runs did (default: 0.5). "
-        "The winning epoch's metadata is fully calibrated either way.",
-    )
-    parser.add_argument(
-        "--threshold-candidates",
-        type=float,
-        nargs="+",
-        help="Probability grid to calibrate the reported threshold over.",
-    )
-    sampling = parser.add_mutually_exclusive_group()
-    sampling.add_argument(
-        "--balance-sizes",
-        action="store_true",
-        help="Sample equal mass from the tiny/medium/large bins. Off by default: natural "
-        "sampling measured better on the grouped split and is what the packaged checkpoint "
-        "uses.",
-    )
-    sampling.add_argument(
-        "--natural-sampling",
-        action="store_true",
-        help="Use the natural training-set distribution. This is now the default; the flag is "
-        "accepted so existing commands keep working.",
-    )
-    parser.add_argument(
-        "--no-attention",
-        action="store_true",
-        help="Disable spatial attention for fresh training; fine-tuning detects the architecture.",
-    )
     return parser
+
+
+def _training_config(
+    config_path: Path, labeled_frames_dir: Path, checkpoint_dir: Path | None, device: str
+) -> TrainingConfig:
+    """Load the CV hand-off recipe for trusted all-labeled training."""
+    config_path = Path(config_path).resolve()
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Training configuration not found: {config_path}") from None
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Training configuration is not valid JSON: {config_path}") from error
+    if payload.get("schema_version") != 1:
+        raise ValueError("Training configuration must use schema_version 1.")
+
+    finetune_checkpoint = payload.get("finetune_checkpoint")
+    learning_rate = float(payload["learning_rate"])
+    learning_rate_key = (
+        "finetune_learning_rate" if finetune_checkpoint is not None else "scratch_learning_rate"
+    )
+    return TrainingConfig(
+        labeled_frames_dir=labeled_frames_dir,
+        checkpoint_dir=checkpoint_dir,
+        finetune_checkpoint=None if finetune_checkpoint is None else Path(finetune_checkpoint),
+        train_all_labeled_frames=True,
+        training_config_path=config_path,
+        lr_milestones=tuple(payload["lr_milestones"]),
+        prediction_threshold=float(payload["prediction_threshold"]),
+        use_attention=bool(payload["use_attention"]),
+        batch_size=int(payload["batch_size"]),
+        max_epochs=int(payload["max_epochs"]),
+        seed=int(payload["seed"]),
+        device=device,
+        **{learning_rate_key: learning_rate},
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     """Parse terminal arguments and run training."""
-    args = _build_cli_parser().parse_args(argv)
-    data_root = args.data_root.resolve()
-    checkpoint_dir = (
-        args.checkpoint_dir.resolve()
-        if args.checkpoint_dir is not None
-        else data_root / "checkpoints_exp"
-    )
-    learning_rate_override = {}
-    if args.learning_rate is not None:
-        key = (
-            "finetune_learning_rate"
-            if args.finetune_checkpoint is not None
-            else "scratch_learning_rate"
+    parser = _build_cli_parser()
+    args = parser.parse_args(argv)
+    labeled_frames_dir = args.labeled_frames_dir.resolve()
+    if labeled_frames_dir.name != "labeled_frames":
+        parser.error(
+            f"--labeled_frames_dir must name a labeled_frames folder; got {labeled_frames_dir}."
         )
-        learning_rate_override[key] = args.learning_rate
-
-    if args.selection_threshold == "calibrated":
-        selection_threshold = None
-    else:
-        try:
-            selection_threshold = float(args.selection_threshold)
-        except ValueError:
-            _build_cli_parser().error(
-                "--selection-threshold takes a probability or the word 'calibrated'."
+    checkpoint_dir = args.checkpoint_dir.resolve() if args.checkpoint_dir is not None else None
+    if args.training_config_path is not None:
+        conflicting = [
+            name
+            for name, value in {
+                "--finetune_checkpoint": args.finetune_checkpoint,
+                "--learning_rate": args.learning_rate,
+                "--max_epochs": args.max_epochs,
+                "--batch_size": args.batch_size,
+                "--seed": args.seed,
+            }.items()
+            if value is not None
+        ]
+        if conflicting:
+            parser.error(
+                "--training_config_path owns model and training settings; remove "
+                + ", ".join(conflicting)
+                + "."
             )
-    threshold_override = (
-        {"threshold_candidates": tuple(args.threshold_candidates)}
-        if args.threshold_candidates
-        else {}
-    )
-
-    run_training(
-        TrainingConfig(
-            data_root=data_root,
+        config = _training_config(
+            args.training_config_path,
+            labeled_frames_dir,
+            checkpoint_dir,
+            args.device,
+        )
+    else:
+        learning_rate_override = {}
+        if args.learning_rate is not None:
+            key = (
+                "finetune_learning_rate"
+                if args.finetune_checkpoint is not None
+                else "scratch_learning_rate"
+            )
+            learning_rate_override[key] = args.learning_rate
+        manifest = labeled_frames_dir.parent / "splits.json"
+        if not manifest.is_file():
+            parser.error(
+                f"No splits.json beside {labeled_frames_dir}; create it with training/data_splits.py "
+                "or pass --training_config_path for all-labeled training."
+            )
+        config = TrainingConfig(
+            labeled_frames_dir=labeled_frames_dir,
             checkpoint_dir=checkpoint_dir,
-            run_name=args.run_name,
             finetune_checkpoint=args.finetune_checkpoint,
-            split_manifest=(
-                args.split_manifest.resolve() if args.split_manifest is not None else None
-            ),
-            fold=args.fold,
-            final=args.final,
-            final_prediction_threshold=args.final_prediction_threshold,
-            final_lr_milestones=tuple(args.final_lr_milestones),
-            use_attention=not args.no_attention,
-            batch_size=args.batch_size,
-            n_epochs=args.epochs,
-            early_stopping_patience=args.early_stopping_patience,
-            scheduler_patience=args.scheduler_patience,
-            balance_training_sizes=args.balance_sizes,
-            selection_metric=args.selection_metric,
-            scheduler_metric=args.scheduler_metric,
-            selection_threshold=selection_threshold,
-            seed=args.seed,
+            split_manifest=manifest,
+            batch_size=args.batch_size if args.batch_size is not None else 8,
+            max_epochs=args.max_epochs if args.max_epochs is not None else 200,
+            seed=args.seed if args.seed is not None else 0,
             device=args.device,
             **learning_rate_override,
-            **threshold_override,
         )
-    )
+    run_training(config)
     return 0
 
 
@@ -1289,8 +1015,9 @@ def _run_direct_configuration() -> None:
 
     run_training(
         TrainingConfig(
-            data_root=DATA_ROOT,
+            labeled_frames_dir=LABELED_FRAMES_DIR,
             finetune_checkpoint=finetune_checkpoint,
+            split_manifest=LABELED_FRAMES_DIR.parent / "splits.json",
         )
     )
 

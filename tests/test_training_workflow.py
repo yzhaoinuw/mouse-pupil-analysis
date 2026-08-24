@@ -1,66 +1,31 @@
-"""Focused coverage for fine-tuning-era validation and sampling helpers."""
+"""Focused coverage for the compact training and CV hand-off workflow."""
 
+import json
 import runpy
 from pathlib import Path
+from types import SimpleNamespace
 
-import numpy as np
 import pytest
 import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TRAINING = runpy.run_path(str(PROJECT_ROOT / "training" / "run_train.py"))
+CV = runpy.run_path(str(PROJECT_ROOT / "training" / "run_cv.py"))
 
 evaluate_thresholds = TRAINING["evaluate_thresholds"]
 per_image_overlap_scores = TRAINING["per_image_overlap_scores"]
-size_balanced_sample_weights = TRAINING["size_balanced_sample_weights"]
-default_run_name = TRAINING["default_run_name"]
 TrainingConfig = TRAINING["TrainingConfig"]
 training_main = TRAINING["main"]
-make_final_training_dataset = TRAINING["make_final_training_dataset"]
+make_all_labeled_dataset = TRAINING["make_all_labeled_dataset"]
 make_split_datasets = TRAINING["make_split_datasets"]
-run_training = TRAINING["run_training"]
+all_labeled_training_config = CV["all_labeled_training_config"]
 
 
 def test_grouped_training_defaults_to_macro_iou_selection():
     assert TrainingConfig().selection_metric == "macro_iou"
 
 
-def test_final_refit_requires_a_development_frozen_threshold(tmp_path):
-    with pytest.raises(ValueError, match="final_prediction_threshold"):
-        TrainingConfig(split_manifest=tmp_path / "splits.json", final=True)
-
-
-def test_final_training_dataset_never_constructs_a_dataset_from_holdout_paths(
-    monkeypatch, tmp_path
-):
-    development = ([tmp_path / "dev.png"], [tmp_path / "dev_mask.png"])
-    holdout = ([tmp_path / "gate.png"], [tmp_path / "gate_mask.png"])
-    constructed = []
-
-    class FakeDataset:
-        def __init__(self, images, masks, augment):
-            constructed.append((images, masks, augment))
-
-    data_splits = make_final_training_dataset.__globals__["data_splits"]
-    monkeypatch.setattr(data_splits, "load_manifest", lambda _: {})
-    monkeypatch.setattr(data_splits, "final_paths", lambda *_: (development, holdout))
-    monkeypatch.setitem(make_final_training_dataset.__globals__, "SegmentationDataset", FakeDataset)
-
-    dataset, holdout_count = make_final_training_dataset(
-        TrainingConfig(
-            data_root=tmp_path,
-            split_manifest=tmp_path / "splits.json",
-            final=True,
-            final_prediction_threshold=0.55,
-        )
-    )
-
-    assert isinstance(dataset, FakeDataset)
-    assert constructed == [(development[0], development[1], True)]
-    assert holdout_count == 1
-
-
-def test_normal_manifest_run_uses_the_validation_holdout(monkeypatch, tmp_path):
+def test_normal_manifest_run_uses_the_validation_session(monkeypatch, tmp_path):
     development = ([tmp_path / "dev.png"], [tmp_path / "dev_mask.png"])
     validation = ([tmp_path / "validation.png"], [tmp_path / "validation_mask.png"])
     constructed = []
@@ -77,7 +42,10 @@ def test_normal_manifest_run_uses_the_validation_holdout(monkeypatch, tmp_path):
     monkeypatch.setitem(make_split_datasets.__globals__, "SegmentationDataset", FakeDataset)
 
     train, held_out = make_split_datasets(
-        TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+        TrainingConfig(
+            labeled_frames_dir=tmp_path / "labeled_frames",
+            split_manifest=tmp_path / "splits.json",
+        )
     )
 
     assert isinstance(train, FakeDataset)
@@ -88,22 +56,36 @@ def test_normal_manifest_run_uses_the_validation_holdout(monkeypatch, tmp_path):
     ]
 
 
-def test_manifest_without_fold_is_a_valid_normal_training_configuration(tmp_path):
-    config = TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+def test_all_labeled_dataset_ignores_splits_and_collects_every_session(monkeypatch, tmp_path):
+    labeled_frames_dir = tmp_path / "labeled_frames"
+    for session in ("session_a", "session_b"):
+        (labeled_frames_dir / session / "images").mkdir(parents=True)
+        (labeled_frames_dir / session / "masks").mkdir()
+    (tmp_path / "splits.json").write_text("not read", encoding="utf-8")
+    paired = []
 
-    assert config.fold is None
+    def fake_pairs(images_dir, masks_dir):
+        paired.append((images_dir, masks_dir))
+        return [images_dir / "frame.png"], [masks_dir / "frame.png"]
 
+    class FakeDataset:
+        def __init__(self, images, masks, augment):
+            self.images = images
+            self.masks = masks
+            self.augment = augment
 
-def test_empty_validation_holdout_uses_fixed_all_data_training(monkeypatch, tmp_path):
-    captured = []
-    data_splits = run_training.__globals__["data_splits"]
-    monkeypatch.setattr(data_splits, "load_manifest", lambda _: {})
-    monkeypatch.setattr(data_splits, "validation_holdout_sessions", lambda _: [])
-    monkeypatch.setitem(run_training.__globals__, "run_all_data_training", captured.append)
-    config = TrainingConfig(data_root=tmp_path, split_manifest=tmp_path / "splits.json")
+    monkeypatch.setitem(make_all_labeled_dataset.__globals__, "paired_image_mask_paths", fake_pairs)
+    monkeypatch.setitem(make_all_labeled_dataset.__globals__, "SegmentationDataset", FakeDataset)
+    dataset = make_all_labeled_dataset(
+        TrainingConfig(
+            labeled_frames_dir=labeled_frames_dir,
+            train_all_labeled_frames=True,
+        )
+    )
 
-    assert run_training(config) is None
-    assert captured == [config]
+    assert len(dataset.images) == 2
+    assert dataset.augment
+    assert [path.parent.name for path, _ in paired] == ["session_a", "session_b"]
 
 
 def test_per_image_iou_does_not_let_a_large_mask_hide_a_missed_small_mask():
@@ -143,107 +125,135 @@ def test_threshold_calibration_uses_equal_weighted_size_bins():
     assert report.size_iou == pytest.approx({"tiny": 1.0, "medium": 1.0, "large": 1.0})
 
 
-def test_balanced_sampling_gives_each_size_bin_equal_total_weight():
-    labels = np.asarray(["tiny", "tiny", "medium", "medium", "medium", "large"])
-
-    weights = size_balanced_sample_weights(labels)
-
-    totals = {label: float(weights[labels == label].sum()) for label in set(labels)}
-    assert totals["tiny"] == pytest.approx(totals["medium"])
-    assert totals["tiny"] == pytest.approx(totals["large"])
-
-
-@pytest.mark.parametrize(
-    ("balance_training_sizes", "expected"),
-    [(False, "ft_natural_lr5e-5_s3"), (True, "ft_bal_lr5e-5_s3")],
-)
-def test_default_run_name_is_concise_and_describes_the_main_choices(
-    tmp_path, balance_training_sizes, expected
-):
-    config = TrainingConfig(
-        checkpoint_dir=tmp_path,
-        finetune_checkpoint=tmp_path / "source.pth",
-        finetune_learning_rate=5e-5,
-        balance_training_sizes=balance_training_sizes,
-        seed=3,
-    )
-
-    assert default_run_name(config) == expected
-
-
-def test_run_name_cannot_escape_the_experiment_directory():
-    with pytest.raises(ValueError, match="run_name"):
-        TrainingConfig(run_name="../outside")
-
-
-def test_terminal_entry_point_maps_arguments_to_training_config(monkeypatch, tmp_path):
+def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypatch, tmp_path):
     captured = []
     source = tmp_path / "source.pth"
-    output = tmp_path / "runs"
-    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
-
-    exit_code = training_main(
-        [
-            "--data-root",
-            str(tmp_path),
-            "--checkpoint-dir",
-            str(output),
-            "--run-name",
-            "terminal-smoke",
-            "--finetune-checkpoint",
-            str(source),
-            "--learning-rate",
-            "5e-5",
-            "--epochs",
-            "3",
-            "--natural-sampling",
-            "--seed",
-            "7",
-        ]
-    )
-
-    assert exit_code == 0
-    assert len(captured) == 1
-    config = captured[0]
-    assert config.data_root == tmp_path.resolve()
-    assert config.checkpoint_dir == output.resolve()
-    assert config.run_name == "terminal-smoke"
-    assert config.finetune_checkpoint == source
-    assert config.finetune_learning_rate == pytest.approx(5e-5)
-    assert config.n_epochs == 3
-    assert not config.balance_training_sizes
-    assert config.selection_metric == "macro_iou"
-    assert config.seed == 7
-
-
-def test_terminal_final_refit_maps_only_frozen_choices(monkeypatch, tmp_path):
-    captured = []
-    manifest = tmp_path / "splits.json"
+    output = tmp_path / "runs" / "normal"
+    labeled_frames_dir = tmp_path / "labeled_frames"
+    labeled_frames_dir.mkdir()
+    (tmp_path / "splits.json").write_text("{}", encoding="utf-8")
     monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
 
     assert (
         training_main(
             [
-                "--data-root",
-                str(tmp_path),
-                "--split-manifest",
-                str(manifest),
-                "--final",
-                "--final-prediction-threshold",
-                "0.55",
-                "--final-lr-milestones",
-                "5",
-                "10",
-                "--epochs",
-                "20",
+                "--labeled_frames_dir",
+                str(labeled_frames_dir),
+                "--checkpoint_dir",
+                str(output),
+                "--finetune_checkpoint",
+                str(source),
+                "--learning_rate",
+                "5e-5",
+                "--max_epochs",
+                "3",
+                "--batch_size",
+                "2",
+                "--seed",
+                "7",
             ]
         )
         == 0
     )
 
     config = captured[0]
-    assert config.final
-    assert config.fold is None
-    assert config.final_prediction_threshold == pytest.approx(0.55)
-    assert config.final_lr_milestones == (5, 10)
-    assert config.n_epochs == 20
+    assert config.labeled_frames_dir == labeled_frames_dir.resolve()
+    assert config.checkpoint_dir == output.resolve()
+    assert config.split_manifest == (tmp_path / "splits.json").resolve()
+    assert config.finetune_checkpoint == source
+    assert config.finetune_learning_rate == pytest.approx(5e-5)
+    assert config.max_epochs == 3
+    assert config.batch_size == 2
+    assert config.seed == 7
+
+
+def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tmp_path):
+    captured = []
+    labeled_frames_dir = tmp_path / "labeled_frames"
+    labeled_frames_dir.mkdir()
+    config_path = tmp_path / "training_config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "max_epochs": 115,
+                "learning_rate": 0.001,
+                "lr_milestones": [57, 86],
+                "batch_size": 8,
+                "seed": 0,
+                "use_attention": True,
+                "prediction_threshold": 0.5,
+                "finetune_checkpoint": None,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setitem(training_main.__globals__, "run_training", captured.append)
+
+    assert (
+        training_main(
+            [
+                "--labeled_frames_dir",
+                str(labeled_frames_dir),
+                "--training_config_path",
+                str(config_path),
+            ]
+        )
+        == 0
+    )
+
+    config = captured[0]
+    assert config.train_all_labeled_frames
+    assert config.split_manifest is None
+    assert config.max_epochs == 115
+    assert config.lr_milestones == (57, 86)
+    assert config.prediction_threshold == pytest.approx(0.5)
+
+
+def test_training_config_path_rejects_conflicting_tuning_arguments(tmp_path):
+    labeled_frames_dir = tmp_path / "labeled_frames"
+    labeled_frames_dir.mkdir()
+    config_path = tmp_path / "training_config.json"
+    config_path.write_text('{"schema_version": 1}', encoding="utf-8")
+
+    with pytest.raises(SystemExit):
+        training_main(
+            [
+                "--labeled_frames_dir",
+                str(labeled_frames_dir),
+                "--training_config_path",
+                str(config_path),
+                "--max_epochs",
+                "10",
+            ]
+        )
+
+
+def test_cv_writes_a_complete_all_labeled_training_recipe(tmp_path):
+    summary = tmp_path / "cv_s0_summary.json"
+    summary.write_text("{}", encoding="utf-8")
+    config = SimpleNamespace(
+        batch_size=8,
+        seed=0,
+        use_attention=True,
+        finetune_checkpoint=None,
+    )
+    trainer = SimpleNamespace(
+        initial_learning_rate=lambda _: 0.001,
+        file_sha256=lambda _: "summary-hash",
+    )
+
+    recipe = all_labeled_training_config(
+        summary,
+        [
+            {"metadata": {"best_epoch": 100, "prediction_threshold": 0.5}},
+            {"metadata": {"best_epoch": 120, "prediction_threshold": 0.6}},
+        ],
+        config,
+        trainer,
+    )
+
+    assert recipe["max_epochs"] == 110
+    assert recipe["lr_milestones"] == [55, 82]
+    assert recipe["prediction_threshold"] == pytest.approx(0.55)
+    assert recipe["sampling"] == "natural"

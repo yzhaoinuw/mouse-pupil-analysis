@@ -73,7 +73,13 @@ PACKAGED_TRAINING_KEYS = (
 )
 
 # Absolute local paths in a run folder describe one machine, not the model.
-_LOCAL_ONLY_CONFIG_KEYS = ("data_root", "checkpoint_dir", "split_manifest")
+_LOCAL_ONLY_CONFIG_KEYS = (
+    "data_root",
+    "labeled_frames_dir",
+    "checkpoint_dir",
+    "split_manifest",
+    "training_config_path",
+)
 
 
 def _recorded_basename(path_text: str) -> str:
@@ -138,7 +144,7 @@ def build_packaged_metadata(run_metadata: dict, validation_note: str = "") -> di
                 None if source_checkpoint is None else _recorded_basename(source_checkpoint)
             ),
             "training_examples": int(run_metadata["training_examples"]),
-            "sampling": "balanced" if config["balance_training_sizes"] else "natural",
+            "sampling": "natural",
             "use_attention": bool(config["use_attention"]),
             "batch_size": int(config["batch_size"]),
             # The rate the run started from, not the decayed rate at the best epoch.

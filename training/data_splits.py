@@ -26,7 +26,7 @@ Generate or refresh the manifest::
 
 Then train against the optional validation holdout with::
 
-    python training/run_train.py --split-manifest splits.json
+    python training/run_train.py
 
 Once a session is in the manifest, its fold is frozen there and adding more data cannot
 move it. ``--reassign`` deliberately repacks all sessions, making prior comparisons a
@@ -46,8 +46,8 @@ from pathlib import Path
 from mouse_pupil_analysis.augmentation import image_background_brightness, mask_equivalent_diameter
 
 SCHEMA_VERSION = 2
-# An outer test gate remains distinct from the validation holdout used by the normal
-# all-development training run. Both stay out of cross-validation folds.
+# A CV-excluded session remains distinct from the validation session used by normal training.
+# Both stay out of cross-validation folds; all-labeled training intentionally ignores both.
 HOLDOUT_FOLD = -1
 VALIDATION_HOLDOUT_FOLD = -2
 TINY_MAX_DIAMETER = 15.0
@@ -580,10 +580,10 @@ def final_paths(
     manifest: dict,
     data_root: Path,
 ) -> tuple[tuple[list[Path], list[Path]], tuple[list[Path], list[Path]]]:
-    """Return the development and outer-holdout paths for separate workflows.
+    """Return the development and CV-excluded paths for legacy evaluation workflows.
 
-    Final refitting consumes only the first pair. The separate one-shot evaluator is
-    the only caller allowed to turn the second pair into a Dataset.
+    Retained for existing historical final-refit artifacts. New all-labeled training reads
+    the session folders directly and intentionally ignores this manifest.
     """
     data_root = Path(data_root)
     train: tuple[list[Path], list[Path]] = ([], [])
@@ -603,7 +603,7 @@ def final_paths(
 
 
 def holdout_sessions(manifest: dict) -> list[str]:
-    """Return the session keys set aside as the final gate."""
+    """Return session keys excluded from CV folds."""
     return [entry["session"] for entry in manifest["sessions"] if entry.get("holdout")]
 
 
@@ -682,8 +682,8 @@ def format_census(manifest: dict) -> str:
         images = sum(entry["n_images"] for entry in holdout)
         lines.append("")
         lines.append(
-            f"test holdout: {len(holdout)} session(s), {images} image(s), in no fold. "
-            "Trained on never, validated on never -- this is the final gate."
+            f"CV-excluded session(s): {len(holdout)}, {images} image(s), in no fold. "
+            "They remain out of CV; all-labeled training includes them."
         )
 
     validation_holdout = [
@@ -733,8 +733,9 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         default=[],
         metavar="SESSION",
-        help="Reserve a session for the final test only: it is in no fold and never used "
-        "for training or model choices. Repeatable; choose by condition, not animal.",
+        help="Exclude a session from CV while choosing a configuration. A later "
+        "--training_config_path run deliberately includes it with every labeled session. "
+        "Repeatable; choose by condition, not animal.",
     )
     parser.add_argument(
         "--validation_session",
@@ -742,7 +743,7 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         metavar="SESSION",
         help="Reserve a session for validation-backed development training. It is outside "
-        "CV folds but used by run_train.py when no --fold is supplied. Repeatable.",
+        "CV folds but used by the normal run_train.py workflow. Repeatable.",
     )
     parser.add_argument(
         "--show",

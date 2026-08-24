@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 516 images; CV and the 512-image all-in refit are trained, with one CV legacy-session regression to resolve.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 516 images; use CV's generated training configuration for trusted all-labeled production training, with one CV legacy-session regression to resolve.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
@@ -83,10 +83,10 @@ Then:
 - Diagnose or repeat fold 1 before promotion. `250616_5120_Purple_sleep_trial_1` regressed
   0.7304 -> 0.2585 and predicts 0.218x the labelled area, despite large gains on the two old
   aperture-confusion sessions.
-- The 512-image final refit is trained under `checkpoints_exp/final_516_nat_macro_s0` with a frozen
-  115-epoch schedule and threshold 0.5. Do not consume trial5 yet; first inspect this checkpoint on
-  more unlabeled recordings and resolve whether the fold-1 regression appears in practice, then
-  score trial5 exactly once with `training/evaluate_holdout.py` if it is still a useful gate.
+- `checkpoints_exp/final_516_nat_macro_s0` is a historical 512-image refit with a frozen 115-epoch
+  schedule and threshold 0.5. New production runs instead consume `run_cv.py`'s generated
+  `training_config.json`, train every labelled session, and are inspected on representative
+  unlabeled recordings.
 
 ## Improving Cross-Recording Generalization
 

@@ -83,7 +83,7 @@ choose a smaller count once, for example `--folds 3`.
 `--labeled_frames_dir` names the `labeled_frames/` folder itself when it is outside the
 repository; its parent always receives `splits.json`. `--validation_session <session>`
 reserves a session for choosing a normal training run, while `--final_test_session <session>`
-reserves an untouched session for one final evaluation only.
+keeps a session out of cross-validation until an all-labeled production run is built.
 
 Review the assignment without writing changes when needed:
 
@@ -119,40 +119,35 @@ The local server stops automatically shortly after every split-manager tab is cl
 stops if no browser tab connects after launch.
 
 Folds are used only by cross-validation. The validation session is excluded from CV and is used
-by the normal training command below. It may be empty.
+by the normal training command below. Assign one before starting a validation-backed run.
 
 ### 4. Train and validate
 
 This trains from scratch using the validation session configured in `splits.json`:
 
 ```powershell
-python training\run_train.py `
-    --data-root . `
-    --split-manifest splits.json `
-    --run-name scratch
+python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 ```
 
 When the validation session contains sessions, they control early stopping, learning-rate
 scheduling, checkpoint selection, and prediction-threshold calibration. All folds train the
-model. When it is empty, the trainer uses all non-holdout sessions with its fixed
-default epoch schedule, fixed learning-rate milestones, and fixed prediction threshold; it does
-not pretend to auto-tune without validation labels.
+model. `run_train.py` finds `labeled_frames/` and its sibling `splits.json` automatically; pass
+`--labeled_frames_dir <folder>` only when the labelled pool lives elsewhere.
 
-Use `python training\run_train.py --help` to set the epoch limit, batch size, learning rate,
-seed, sampling mode, architecture, or output directory. CUDA is selected automatically when
-available.
+Use `python training\run_train.py --help` to set the maximum epochs, batch size, learning rate,
+seed, device, or output directory. CUDA is selected automatically when available.
 
 ### 5. Use the experimental checkpoint
 
-Each run writes a new folder under `checkpoints_exp/<run-name>/`; an existing run folder is
-never overwritten.
+Each run writes to the specified checkpoint directory. Without `--checkpoint_dir`, the trainer
+creates a collision-safe directory under `checkpoints_exp/`.
 
 - `best.pth` — selected model weights.
 - `best.json` — selected threshold, validation metrics, epoch, and full configuration.
 - `train.log` — per-epoch training and validation record.
 
-An all-data run with no validation session writes `all_data.pth` and `all_data.json` instead of
-`best.*`; its metadata records the fixed schedule and threshold used.
+All-labeled training from a CV configuration writes `all_data.pth` and `all_data.json` instead
+of `best.*`; its metadata records the recipe used.
 
 Treat this folder as experimental output. Test the checkpoint on representative recordings
 before replacing the package's default model.
@@ -166,11 +161,9 @@ existing labelled pool. It uses the same held-out-fold validation workflow:
 
 ```powershell
 python training\run_train.py `
-    --data-root . `
-    --split-manifest splits.json `
-    --finetune-checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
-    --learning-rate 1e-4 `
-    --run-name ft
+    --finetune_checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
+    --learning_rate 1e-4 `
+    --checkpoint_dir checkpoints_exp\ft
 ```
 
 Fine-tuning loads model weights but starts a new optimizer, scheduler, and training log. Keep
@@ -225,32 +218,25 @@ result is to the held-out session group. It takes turns holding out each fold an
 never loads the validation session:
 
 ```powershell
-python training\run_cv.py --data-root . --split-manifest splits.json --out checkpoints_exp\cv
+python training\run_cv.py --checkpoint_dir checkpoints_exp\cv
 ```
 
-Use its per-session results to compare candidate settings. It is not a prerequisite for the
-single-fold training command above.
-
-### Advanced evaluation and promotion
-
-<details>
-<summary>Hold out sessions for a one-time final evaluation</summary>
-
-Use an untouched session only when you need a stricter final performance gate. Set it aside
-while building the split manifest, train a fixed all-development refit, and evaluate it once:
+Use its per-session results to compare candidate settings. It also writes
+`cv_s0_training_config.json`, a complete all-labeled training recipe based on the median
+successful-fold epoch and calibrated threshold. Train the production model from it with:
 
 ```powershell
-python training\data_splits.py --final_test_session <session>
-python training\run_train.py --split-manifest splits.json --final `
-    --final-prediction-threshold <threshold> --epochs <fixed-epoch-count>
-python training\evaluate_holdout.py --run-dir checkpoints_exp\<final-run> `
-    --split-manifest splits.json --confirm-frozen
+python training\run_train.py `
+    --training_config_path checkpoints_exp\cv\cv_s0_training_config.json `
+    --checkpoint_dir checkpoints_exp\all_labeled
 ```
 
-The final-test session is never loaded while training. Do not use its score to tune another run; it has
-then become development data.
+That command deliberately reads every valid image/mask pair under `labeled_frames/` and ignores
+`splits.json`, including any session formerly reserved as a final test. Use it when you are ready
+to trust the CV-selected recipe and inspect the resulting model on representative unlabeled
+recordings.
 
-</details>
+### Advanced evaluation and promotion
 
 <details>
 <summary>Promote an accepted checkpoint into the installed package</summary>
