@@ -92,8 +92,6 @@ def main(argv: list[str] | None = None) -> int:
         default=PROJECT_ROOT,
         help="Folder containing labeled_frames/ (default: repository root).",
     )
-    parser.add_argument("--samples", type=int, default=20, help="Number of source frames to show.")
-    parser.add_argument("--augmentations", type=int, default=2, help="Variants per source frame.")
     args = parser.parse_args(argv)
     image_paths, mask_paths = paired_image_mask_paths(*_first_session(args.data_root.resolve()))
     dataset = SegmentationDataset(
@@ -104,8 +102,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     show_augmented_samples(
         dataset,
-        n_samples=args.samples,
-        n_augs_per_sample=args.augmentations,
+        n_samples=20,
+        n_augs_per_sample=2,
         overlay_mask=True,
     )
     return 0

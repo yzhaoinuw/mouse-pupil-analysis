@@ -239,29 +239,15 @@ def stop_when_browser_closes(server: ThreadingHTTPServer, lifecycle: BrowserLife
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--labeled_frames_dir",
-        type=Path,
-        default=Path.cwd() / data_splits.LABELLED_ROOT,
-        help="Folder containing one <session>/images and <session>/masks pair per recording "
-        "(default: ./labeled_frames). Its parent always contains "
-        f"{data_splits.TRAINING_DATA_SPLIT_FILENAME}.",
-    )
-    parser.add_argument("--n_folds", type=int, help="Used only when creating the first manifest.")
-    parser.add_argument(
-        "--refresh",
-        action="store_true",
-        help="Refresh source data with automatic grouping before opening the page.",
-    )
-    parser.add_argument(
-        "--no_open", action="store_true", help="Do not open the browser automatically."
-    )
-    args = parser.parse_args(argv)
-    _, manifest_path = split_paths(args.labeled_frames_dir)
-    if args.refresh or not manifest_path.exists():
-        manifest = refresh_manifest(args.labeled_frames_dir, args.n_folds)
-    else:
-        manifest = data_splits.load_manifest(manifest_path)
+    parser.parse_args(argv)
+    labeled_frames_dir = Path.cwd() / data_splits.LABELLED_ROOT
+    _, manifest_path = split_paths(labeled_frames_dir)
+    if not manifest_path.exists():
+        parser.error(
+            f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
+            "run training/prepare_splits.py first."
+        )
+    manifest = data_splits.load_manifest(manifest_path)
     print(
         f"Loaded {manifest['n_sessions']} sessions into {manifest['n_folds']} folds; "
         f"{manifest.get('n_validation_holdout_sessions', 0)} validation session(s)."
@@ -271,8 +257,7 @@ def main(argv: list[str] | None = None) -> int:
     server.daemon_threads = True
     url = f"http://{HOST}:{server.server_port}/"
     print(f"Split manager: {url}\nThe server stops after the last browser tab closes.")
-    if not args.no_open:
-        webbrowser.open(url)
+    webbrowser.open(url)
     threading.Thread(
         target=stop_when_browser_closes,
         args=(server, lifecycle),

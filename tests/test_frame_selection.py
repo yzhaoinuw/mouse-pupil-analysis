@@ -118,18 +118,6 @@ def test_spread_picks_fills_the_budget_when_constraints_cannot_be_met():
     assert len(recommend.spread_picks([0, 1, 2, 3], budget=3, min_gap=99)) == 3
 
 
-def test_force_cleanup_removes_only_generated_files(tmp_path):
-    (tmp_path / "old.png").write_bytes(b"old")
-    (tmp_path / "selection.csv").write_text("old", encoding="utf-8")
-    (tmp_path / "notes.txt").write_text("keep", encoding="utf-8")
-
-    recommend.clear_generated_png_outputs(tmp_path, include_manifest=True)
-
-    assert not (tmp_path / "old.png").exists()
-    assert not (tmp_path / "selection.csv").exists()
-    assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "keep"
-
-
 def test_committee_checkpoints_reads_fold_runs_from_one_directory(tmp_path):
     for fold in ("fold_0", "fold_1"):
         run_dir = tmp_path / fold
@@ -154,7 +142,6 @@ def test_video_outputs_default_to_frames_to_label():
     args = SimpleNamespace(
         video=PROJECT_ROOT / "videos" / "HQL095_sleep260324_010_eye.avi",
         frames=None,
-        output_dir=None,
     )
 
     frames_dir, recommended_dir, name = recommend.resolve_output_dirs(args)
@@ -165,27 +152,12 @@ def test_video_outputs_default_to_frames_to_label():
     assert recommended_dir == session_dir / "recommended"
 
 
-def test_output_dir_replaces_the_default_root(tmp_path):
-    custom_root = tmp_path / "label_queue"
-    args = SimpleNamespace(
-        video=Path("videos/new_session.avi"),
-        frames=None,
-        output_dir=custom_root,
-    )
-
-    frames_dir, recommended_dir, _ = recommend.resolve_output_dirs(args)
-
-    assert frames_dir == custom_root / "new_session" / "extracted_frames"
-    assert recommended_dir == custom_root / "new_session" / "recommended"
-
-
-def test_existing_frames_stay_in_place_while_recommendations_use_output_root(tmp_path):
+def test_existing_frames_stay_in_place_while_recommendations_use_default_root(tmp_path):
     frames = tmp_path / "source" / "extracted_frames"
-    output_root = tmp_path / "recommendations"
-    args = SimpleNamespace(video=None, frames=frames, output_dir=output_root)
+    args = SimpleNamespace(video=None, frames=frames)
 
     frames_dir, recommended_dir, name = recommend.resolve_output_dirs(args)
 
     assert name == "source"
     assert frames_dir == frames
-    assert recommended_dir == output_root / "source" / "recommended"
+    assert recommended_dir == PROJECT_ROOT / "frames_to_label" / "source" / "recommended"

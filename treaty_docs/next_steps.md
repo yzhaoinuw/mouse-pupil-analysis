@@ -140,7 +140,8 @@ What the diagnosis actually supports, in order:
 
 Status: shipped and validated; the current four-member committee is under
 `checkpoints_exp/cv516_nat_macro_20260819`. Pass that complete directory to
-`training/recommend_frames.py --checkpoint_dir`; private scoring remains in
+`training/recommend_frames.py --checkpoint_dir`; the only other recommender choice is
+the optional frame `--budget`. Private scoring remains in
 `training/_frame_scoring.py`, with the harness in `reports/scripts/validate_frame_selection.py`.
 
 The first real recommendation batch is complete: 20 picks each from HQL090, HQL097, and HQL103,

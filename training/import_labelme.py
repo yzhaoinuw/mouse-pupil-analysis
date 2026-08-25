@@ -259,7 +259,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, required=True, help="Folder holding Labelme JSONs.")
     parser.add_argument("--session", required=True, help="New recording-session folder name.")
-    parser.add_argument("--data-root", type=Path, default=PROJECT_ROOT)
     parser.add_argument(
         "--apply",
         action="store_true",
@@ -267,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    plan = build_import_plan(args.source, args.data_root, args.session)
+    plan = build_import_plan(args.source, PROJECT_ROOT, args.session)
     counts = Counter(entry.kind for entry in plan)
     trainable = len(plan) - counts[UNCERTAIN_LABEL]
     print(f"Session: {args.session}")
@@ -282,13 +281,13 @@ def main(argv: list[str] | None = None) -> int:
         print("Dry run only; pass --apply to import this new session.")
         return 0
 
-    target = apply_import(plan, args.data_root, args.session)
+    target = apply_import(plan, PROJECT_ROOT, args.session)
     print(f"Imported {trainable} image/mask pair(s) into {target}.")
     if counts[UNCERTAIN_LABEL]:
         print(
             f"Archived {counts[UNCERTAIN_LABEL]} uncertain annotation(s) in {target / 'uncertain'}."
         )
-    return refresh_split_manifest(args.data_root)
+    return refresh_split_manifest(PROJECT_ROOT)
 
 
 if __name__ == "__main__":

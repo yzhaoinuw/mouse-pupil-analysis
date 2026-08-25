@@ -147,14 +147,6 @@ def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypat
                 str(output),
                 "--finetune_checkpoint",
                 str(source),
-                "--learning_rate",
-                "5e-5",
-                "--max_epochs",
-                "3",
-                "--batch_size",
-                "2",
-                "--seed",
-                "7",
             ]
         )
         == 0
@@ -165,10 +157,10 @@ def test_terminal_entry_point_maps_normal_arguments_to_training_config(monkeypat
     assert config.checkpoint_dir == output.resolve()
     assert config.split_manifest == (tmp_path / "training_data_split.json").resolve()
     assert config.finetune_checkpoint == source
-    assert config.finetune_learning_rate == pytest.approx(5e-5)
-    assert config.max_epochs == 3
-    assert config.batch_size == 2
-    assert config.seed == 7
+    assert config.finetune_learning_rate == pytest.approx(1e-4)
+    assert config.max_epochs == 200
+    assert config.batch_size == 8
+    assert config.seed == 0
 
 
 def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tmp_path):
@@ -227,8 +219,8 @@ def test_training_config_path_rejects_conflicting_tuning_arguments(tmp_path):
                 str(labeled_frames_dir),
                 "--training_config_path",
                 str(config_path),
-                "--max_epochs",
-                "10",
+                "--finetune_checkpoint",
+                "source.pth",
             ]
         )
 

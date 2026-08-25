@@ -16,11 +16,8 @@ From a video it writes a session folder under ``frames_to_label/``::
             extracted_frames/     every extracted frame
             recommended/          the recommended ones, plus selection.csv
 
-Pass ``--output_dir`` to replace the ``frames_to_label/`` root.
-
-Extraction samples at ``--extraction-fps`` but never exceeds ``--max-extracted``,
-falling back to that many equally spaced frames across the whole recording. The
-default caps a recording of any length at 2000 frames.
+Extraction samples at 5 FPS and never exceeds 2,000 frames, falling back to equally
+spaced frames across the whole recording.
 
 Scoring is implemented privately in ``training/_frame_scoring.py``; the evidence that it beats picking at
 random is in ``reports/scripts/validate_frame_selection.py``, which measured 89% of
@@ -99,7 +96,7 @@ def spread_picks(
 
 def resolve_output_dirs(args) -> tuple[Path, Path, str]:
     """Return (frames_dir, recommended_dir, name) for either input mode."""
-    output_root = args.output_dir or DEFAULT_OUTPUT_DIR
+    output_root = DEFAULT_OUTPUT_DIR
     if args.video is not None:
         stem = args.video.stem
         frames_dir = output_root / stem / "extracted_frames"
@@ -110,18 +107,6 @@ def resolve_output_dirs(args) -> tuple[Path, Path, str]:
         )
     recommended_dir = output_root / stem / "recommended"
     return frames_dir, recommended_dir, stem
-
-
-def clear_generated_png_outputs(directory: Path, include_manifest: bool = False) -> None:
-    """Remove only files this command generates, leaving unrelated files untouched."""
-    if not directory.is_dir():
-        return
-    for path in directory.glob("*.png"):
-        path.unlink()
-    if include_manifest:
-        manifest = directory / "selection.csv"
-        if manifest.is_file():
-            manifest.unlink()
 
 
 def committee_checkpoints(checkpoint_dir: Path) -> list[Path]:
@@ -147,18 +132,6 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--frames", type=Path, help="Directory of already-extracted PNGs.")
     parser.add_argument("--budget", type=int, default=20, help="How many frames to recommend.")
     parser.add_argument(
-        "--extraction-fps",
-        type=float,
-        default=5.0,
-        help="Sampling rate for video input, capped by --max-extracted (default: 5).",
-    )
-    parser.add_argument(
-        "--max-extracted",
-        type=int,
-        default=2000,
-        help="Ceiling on extracted frames; equally spaced across the recording.",
-    )
-    parser.add_argument(
         "--checkpoint_dir",
         type=Path,
         required=True,
@@ -168,34 +141,6 @@ def main(argv: list[str] | None = None) -> int:
             "must each contain best.pth."
         ),
     )
-    parser.add_argument("--threshold", type=float, default=0.5)
-    parser.add_argument(
-        "--min-gap",
-        type=int,
-        help="Minimum spacing between picks, in extracted-frame positions. "
-        "Default spreads the budget over the whole recording.",
-    )
-    parser.add_argument(
-        "--temporal-weight",
-        type=float,
-        default=0.0,
-        help="Weight for the frame-to-frame consistency signal. Off by default: it needs "
-        "consecutive frames, so it could not be validated on the sparsely sampled pool.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=Path,
-        help="Root for <session>/extracted_frames and <session>/recommended. "
-        "Default: frames_to_label under the project root.",
-    )
-    parser.add_argument("--device", default="auto")
-    parser.add_argument(
-        "--no-dedup",
-        action="store_true",
-        help="Keep near-identical frames. By default a resting animal's repeated frames "
-        "are collapsed so the budget is not spent on one posture.",
-    )
-    parser.add_argument("--force", action="store_true", help="Overwrite a non-empty output folder.")
     args = parser.parse_args(argv)
 
     trainer = training_core
@@ -223,22 +168,18 @@ def main(argv: list[str] | None = None) -> int:
     # Check both destinations before extracting or scoring anything: on a long recording
     # the committee pass takes minutes, and refusing to overwrite only at the end wastes
     # all of it.
-    if recommended_dir.exists() and any(recommended_dir.iterdir()) and not args.force:
-        parser.error(f"{recommended_dir} is not empty. Pass --force to overwrite.")
-    if args.force:
-        clear_generated_png_outputs(recommended_dir, include_manifest=True)
+    if recommended_dir.exists() and any(recommended_dir.iterdir()):
+        parser.error(f"{recommended_dir} is not empty. Remove it before rerunning the recommender.")
 
     if args.video is not None:
-        if frames_dir.exists() and any(frames_dir.iterdir()) and not args.force:
-            parser.error(f"{frames_dir} is not empty. Pass --force to overwrite.")
-        if args.force:
-            clear_generated_png_outputs(frames_dir)
+        if frames_dir.exists() and any(frames_dir.iterdir()):
+            parser.error(f"{frames_dir} is not empty. Remove it before rerunning the recommender.")
         print(f"Extracting from {args.video.name} -> {frames_dir}")
         extract_selected_frames(
             args.video,
             frames_dir,
-            extraction_fps=args.extraction_fps,
-            max_frames=args.max_extracted,
+            extraction_fps=5.0,
+            max_frames=2000,
             show_progress=True,
         )
 
@@ -248,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     paths = [frame.image_path for frame in extracted]
     print(f"Scoring {len(paths)} frames with a {len(checkpoints)}-model committee")
 
-    device = trainer.resolve_device(args.device)
+    device = trainer.resolve_device("auto")
     members = [load_unet_checkpoint(Path(c), device) for c in checkpoints]
 
     # InferenceDataset applies the same resize-and-pad the trainer uses, and takes no
@@ -258,17 +199,17 @@ def main(argv: list[str] | None = None) -> int:
     for index in range(len(dataset)):
         image, _ = dataset[index]
         thumbnails.append(selection.thumbnail(image))
-        masks = [selection.predict_masks(m, image, device, args.threshold) for m in members]
+        masks = [selection.predict_masks(m, image, device, 0.5) for m in members]
         committee_masks.append(masks)
         areas = [float(m.sum()) for m in masks]
         diameters.append(2.0 * float(np.sqrt(np.mean(areas) / np.pi)))
 
     scored = selection.score_frames(committee_masks, paths, diameters=diameters)
-    weights = dict(selection.DEFAULT_WEIGHTS) | {"temporal": args.temporal_weight}
+    weights = selection.DEFAULT_WEIGHTS
     values = [s.combined(weights) for s in scored]
 
-    min_gap = args.min_gap if args.min_gap is not None else max(1, len(paths) // (args.budget * 2))
-    cutoff = 0.0 if args.no_dedup else selection.duplicate_cutoff(thumbnails)
+    min_gap = max(1, len(paths) // (args.budget * 2))
+    cutoff = selection.duplicate_cutoff(thumbnails)
     order = sorted(range(len(scored)), key=lambda i: values[i], reverse=True)
     picked = sorted(spread_picks(order, min(args.budget, len(paths)), min_gap, thumbnails, cutoff))
 

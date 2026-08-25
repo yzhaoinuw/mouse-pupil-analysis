@@ -4,6 +4,20 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-24
 
+### Reduce training command options to workflow choices (Codex, GPT-5)
+
+- Standardized every multiword training option on underscore spelling and removed per-run
+  tuning knobs for epochs, batch size, seed, device, extraction, thresholds, output roots, and
+  deduplication. The commands now expose only workflow choices such as the labelled pool,
+  checkpoint destination, CV run directory, fold selection, and explicit fine-tuning source.
+- Removed public overwrite flags. Recommendation reruns require removing their generated output
+  folders first; checkpoint packaging requires removing or archiving a same-name packaged asset.
+- Added bold-titled folded argument references for every training command shown in the guide.
+  They list flags only, without argparse value placeholders such as `FPS`; the descriptions say
+  what values each option accepts.
+- Verification: all eight command help pages, the full 143-test suite, repository-wide Ruff,
+  Black, and whitespace checks passed. Black emitted its known inaccessible global-cache warning.
+
 ### Make recommender committees explicit (Codex, GPT-5)
 
 - Replaced the stale hard-coded CV checkpoint glob with required `--checkpoint_dir` input.

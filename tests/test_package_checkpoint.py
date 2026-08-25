@@ -205,7 +205,7 @@ def test_packaging_writes_the_three_files_and_refuses_to_clobber(tmp_path):
     assert resolve_prediction_threshold(targets["weights"]) == 0.4
     assert "yzhao" not in targets["log"].read_text(encoding="utf-8")
 
-    with pytest.raises(FileExistsError, match="--force"):
+    with pytest.raises(FileExistsError, match="Remove or archive"):
         package_checkpoint(run_dir, checkpoints_dir=packaged_dir)
 
 

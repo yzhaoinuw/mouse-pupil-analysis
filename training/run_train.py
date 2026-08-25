@@ -52,25 +52,11 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Compatible .pth weights to fine-tune; omit for fresh training.",
     )
-    parser.add_argument(
-        "--learning_rate",
-        type=float,
-        help="Override the mode-specific default (1e-4 fine-tuning; 1e-3 fresh training).",
-    )
-    parser.add_argument("--max_epochs", type=int, help="Maximum training epochs (default: 200).")
-    parser.add_argument("--batch_size", type=int, help="Training batch size (default: 8).")
-    parser.add_argument("--seed", type=int, help="Random seed (default: 0).")
-    parser.add_argument(
-        "--device",
-        choices=trainer.DEVICE_CHOICES,
-        default="auto",
-        help="Training device. 'auto' prefers CUDA, then Apple MPS, then CPU.",
-    )
     return parser
 
 
 def _training_config(
-    config_path: Path, labeled_frames_dir: Path, checkpoint_dir: Path | None, device: str
+    config_path: Path, labeled_frames_dir: Path, checkpoint_dir: Path | None
 ) -> trainer.TrainingConfig:
     """Load the cross-validation hand-off recipe for all-labeled training."""
     config_path = Path(config_path).resolve()
@@ -100,7 +86,6 @@ def _training_config(
         batch_size=int(payload["batch_size"]),
         max_epochs=int(payload["max_epochs"]),
         seed=int(payload["seed"]),
-        device=device,
         **{learning_rate_key: learning_rate},
     )
 
@@ -120,10 +105,6 @@ def main(argv: list[str] | None = None) -> int:
             name
             for name, value in {
                 "--finetune_checkpoint": args.finetune_checkpoint,
-                "--learning_rate": args.learning_rate,
-                "--max_epochs": args.max_epochs,
-                "--batch_size": args.batch_size,
-                "--seed": args.seed,
             }.items()
             if value is not None
         ]
@@ -137,17 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             args.training_config_path,
             labeled_frames_dir,
             checkpoint_dir,
-            args.device,
         )
     else:
-        learning_rate_override = {}
-        if args.learning_rate is not None:
-            key = (
-                "finetune_learning_rate"
-                if args.finetune_checkpoint is not None
-                else "scratch_learning_rate"
-            )
-            learning_rate_override[key] = args.learning_rate
         manifest = labeled_frames_dir.parent / prepare_splits.TRAINING_DATA_SPLIT_FILENAME
         if not manifest.is_file():
             parser.error(
@@ -160,11 +132,6 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_dir=checkpoint_dir,
             finetune_checkpoint=args.finetune_checkpoint,
             split_manifest=manifest,
-            batch_size=args.batch_size if args.batch_size is not None else 8,
-            max_epochs=args.max_epochs if args.max_epochs is not None else 200,
-            seed=args.seed if args.seed is not None else 0,
-            device=args.device,
-            **learning_rate_override,
         )
     trainer.run_training(config)
     return 0

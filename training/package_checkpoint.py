@@ -17,8 +17,8 @@ packaged checkpoints yourself; this script never deletes anything.
 
 Typical use, from the repository root:
 
-    python training/package_checkpoint.py --run-dir checkpoints_exp/ft_natural_lr1e-4_s0 \
-        --validation-note "Validation shares recording groups with training."
+    python training/package_checkpoint.py --run_dir checkpoints_exp/ft_natural_lr1e-4_s0 \
+        --validation_note "Validation shares recording groups with training."
 """
 
 from __future__ import annotations
@@ -196,7 +196,6 @@ def package_checkpoint(
     run_dir: Path,
     checkpoints_dir: Path = PACKAGED_CHECKPOINT_DIR,
     validation_note: str = "",
-    force: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Path]:
     """Copy one run folder into `checkpoints_dir` under the packaged naming pattern."""
@@ -212,11 +211,11 @@ def package_checkpoint(
     }
 
     existing = [path for path in targets.values() if path.exists()]
-    if existing and not force:
+    if existing:
         raise FileExistsError(
             "Refusing to overwrite "
             + ", ".join(path.name for path in existing)
-            + ". Pass --force if you intend to replace them."
+            + ". Remove or archive the existing package files before packaging again."
         )
 
     superseded = sorted(
@@ -249,19 +248,13 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Package a selected checkpoints_exp run as installed checkpoint data.",
     )
     parser.add_argument(
-        "--run-dir",
+        "--run_dir",
         type=Path,
         required=True,
         help="Validation-selected development run containing best.pth, best.json, and train.log.",
     )
     parser.add_argument(
-        "--checkpoints-dir",
-        type=Path,
-        default=PACKAGED_CHECKPOINT_DIR,
-        help="Packaged checkpoint directory (default: mouse_pupil_analysis/checkpoints).",
-    )
-    parser.add_argument(
-        "--validation-note",
+        "--validation_note",
         default="",
         help=(
             "One sentence on the scope of the reported metrics, stored in the packaged "
@@ -269,12 +262,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite packaged files that already use the same names.",
-    )
-    parser.add_argument(
-        "--dry-run",
+        "--dry_run",
         action="store_true",
         help="Print the planned filenames without writing anything.",
     )
@@ -286,9 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     package_checkpoint(
         run_dir=args.run_dir,
-        checkpoints_dir=args.checkpoints_dir,
         validation_note=args.validation_note,
-        force=args.force,
         dry_run=args.dry_run,
     )
     return 0

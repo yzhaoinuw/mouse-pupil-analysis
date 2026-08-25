@@ -33,16 +33,12 @@ def _mixed_batch(source: Path) -> None:
     _annotation(source, "session_a_00003", "uncertain")
 
 
-def test_dry_run_validates_without_writing(tmp_path):
+def test_dry_run_validates_without_writing(tmp_path, monkeypatch):
     source = tmp_path / "annotations"
     _mixed_batch(source)
+    monkeypatch.setattr(import_labelme, "PROJECT_ROOT", tmp_path)
 
-    assert (
-        import_labelme.main(
-            ["--source", str(source), "--session", "session_a", "--data-root", str(tmp_path)]
-        )
-        == 0
-    )
+    assert import_labelme.main(["--source", str(source), "--session", "session_a"]) == 0
     assert not (tmp_path / "labeled_frames/session_a").exists()
 
 
@@ -99,6 +95,7 @@ def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
         "refresh_split_manifest",
         lambda data_root: refreshed.append(Path(data_root)) or 0,
     )
+    monkeypatch.setattr(import_labelme, "PROJECT_ROOT", tmp_path)
 
     assert (
         import_labelme.main(
@@ -107,8 +104,6 @@ def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
                 str(source),
                 "--session",
                 "session_a",
-                "--data-root",
-                str(tmp_path),
                 "--apply",
             ]
         )

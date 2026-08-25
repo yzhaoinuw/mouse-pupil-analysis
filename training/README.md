@@ -91,6 +91,20 @@ Review the assignment without writing changes when needed:
 python training\prepare_splits.py --show
 ```
 
+<details>
+<summary><strong>prepare_splits.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--labeled_frames_dir` | `./labeled_frames` | Use a labelled pool outside the repository. Its parent receives the split record. |
+| `--n_folds` | Existing count, otherwise `5` | Set the number of CV folds when first creating the split. |
+| `--final_test_session` | None | Repeat for each session to exclude from CV while comparing configurations. |
+| `--validation_session` | None | Repeat for each session reserved for normal validation-backed training. |
+| `--show` | Off | Print the proposed census without writing the split record. |
+| `--reassign` | Off | Deliberately repack every session and invalidate comparisons to earlier assignments. |
+
+</details>
+
 The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
 size and lighting summaries across folds. Existing assignments are preserved when
 new labels arrive.
@@ -120,6 +134,14 @@ asset; `review_splits.py` provides its local manifest API.
 The local server stops automatically shortly after every split-manager tab is closed. It also
 stops if no browser tab connects after launch.
 
+<details>
+<summary><strong>review_splits.py arguments</strong></summary>
+
+This command has no command-line arguments. It opens the current repository's
+`training_data_split.json`; run `prepare_splits.py` first if that record does not exist.
+
+</details>
+
 Folds are used only by cross-validation. The validation session is excluded from CV and is used
 by the normal training command below. Assign one before starting a validation-backed run.
 
@@ -138,8 +160,20 @@ model. `run_train.py` finds `labeled_frames/` and its sibling
 `training_data_split.json` automatically; pass
 `--labeled_frames_dir <folder>` only when the labelled pool lives elsewhere.
 
-Use `python training\run_train.py --help` to set the maximum epochs, batch size, learning rate,
-seed, device, or output directory. CUDA is selected automatically when available.
+CUDA is selected automatically when available. Normal runs use the project defaults for learning
+rate, batch size, epoch limit, and seed; configuration comparison belongs in cross-validation.
+
+<details>
+<summary><strong>run_train.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--labeled_frames_dir` | `./labeled_frames` | Train from a labelled pool outside the repository. |
+| `--checkpoint_dir` | A new directory under `checkpoints_exp/` | Choose where this run writes its checkpoint and metadata. |
+| `--finetune_checkpoint` | Fresh training | Start normal validation-backed training from compatible weights. |
+| `--training_config_path` | Normal training | Use the all-labelled recipe emitted by cross-validation. It owns model settings and ignores the split record. |
+
+</details>
 
 ### 5. Use the experimental checkpoint
 
@@ -166,7 +200,6 @@ existing labelled pool. It uses the same held-out-fold validation workflow:
 ```powershell
 python training\run_train.py `
     --finetune_checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
-    --learning_rate 1e-4 `
     --checkpoint_dir checkpoints_exp\ft
 ```
 
@@ -189,6 +222,17 @@ then refreshes the split manifest. Use `pupil` for a visible pupil polygon,
 `no_visible_pupil` for a confident true-negative frame, and `uncertain` for a frame that
 should be retained but excluded from segmentation loss. See [data_collection.md](data_collection.md)
 for the detailed annotation policy.
+
+<details>
+<summary><strong>import_labelme.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--source` | Required | Folder containing Labelme JSON files and their source images. |
+| `--session` | Required | New recording-session name under this repository's `labeled_frames/`. |
+| `--apply` | Off | Write the imported pairs and refresh the split record. Without it, preview only. |
+
+</details>
 
 ### Choose frames to label
 
@@ -217,20 +261,14 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 `prepare_splits.py`.
 
 <details>
-<summary>Optional recommender arguments</summary>
+<summary><strong>recommend_frames.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
-| `--budget N` | `20` | Number of frames to recommend. |
-| `--extraction-fps FPS` | `5` | Sampling rate for video input before the extraction cap applies. |
-| `--max-extracted N` | `2000` | Maximum frames extracted from a video; excess recordings are sampled evenly. |
-| `--threshold P` | `0.5` | Pixel-probability threshold used while scoring committee masks. |
-| `--min-gap N` | Automatic | Minimum spacing between recommended frames, measured in extracted-frame positions. |
-| `--temporal-weight W` | `0` | Weight for the consecutive-frame consistency signal. |
-| `--output_dir DIR` | `frames_to_label/` | Root for the session's `extracted_frames/` and `recommended/` folders. |
-| `--device DEVICE` | `auto` | Inference device, such as `cpu` or `cuda`. |
-| `--no-dedup` | Off | Keep visually near-identical frames instead of collapsing them. |
-| `--force` | Off | Replace generated PNGs and `selection.csv` in an existing output folder. |
+| `--video` | One of `--video` or `--frames` | Video to sample and score. |
+| `--frames` | One of `--video` or `--frames` | Directory of already-extracted PNG frames to score. |
+| `--checkpoint_dir` | Required | Complete CV-run directory containing fold subdirectories with `best.pth`. |
+| `--budget` | `20` | Number of frames to recommend. |
 
 </details>
 
@@ -244,6 +282,15 @@ python training\preview_augmentation.py
 
 It renders augmented image/mask pairs so you can check that the pupil remains aligned and the
 transforms look plausible.
+
+<details>
+<summary><strong>preview_augmentation.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--data_root` | Repository root | Use a different repository-style root containing `labeled_frames/`. |
+
+</details>
 
 ### Cross-validate a configuration
 
@@ -274,22 +321,40 @@ To rerun only specific existing folds, use `--cv_folds`, for example `--cv_folds
 That writes `partial_summary.json` only; it deliberately does not create a production training
 configuration.
 
+<details>
+<summary><strong>run_cross_validation.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--labeled_frames_dir` | `./labeled_frames` | Cross-validate a labelled pool outside the repository. |
+| `--checkpoint_dir` | `checkpoints_exp/cv` beside the data root | Directory that receives one fold folder per CV split. |
+| `--cv_folds` | Every fold | Rerun only selected existing fold indices; this writes a partial summary only. |
+| `--finetune_checkpoint` | Fresh training | Evaluate a compatible starting checkpoint, provided it was not trained on this pool. |
+
+</details>
+
 ### Package an accepted checkpoint
 
 <details>
-<summary>Package an accepted checkpoint into the installed application</summary>
+<summary><strong>Package an accepted checkpoint into the installed application</strong></summary>
 
 Packaging is a package/release change, not a normal training step. After checking overlays and
 downstream tracking on representative recordings, preview then package a validation-selected run:
 
 ```powershell
-python training\package_checkpoint.py --run-dir checkpoints_exp\<run-name> --dry-run
-python training\package_checkpoint.py --run-dir checkpoints_exp\<run-name> `
-    --validation-note "Held-out session validation; see best.json."
+python training\package_checkpoint.py --run_dir checkpoints_exp\<run-name> --dry_run
+python training\package_checkpoint.py --run_dir checkpoints_exp\<run-name> `
+    --validation_note "Held-out session validation; see best.json."
 ```
 
 Update `CHANGELOG.md`, run the repository checks in `AGENTS.md`, and verify the checkpoint,
 metadata, and log are included in both package distributions.
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--run_dir` | Required | Validation-selected run folder containing `best.pth`, `best.json`, and `train.log`. |
+| `--validation_note` | Empty | Scope note saved with the packaged metadata. |
+| `--dry_run` | Off | Print intended packaged filenames without writing files. |
 
 </details>
 

@@ -14,9 +14,9 @@ Use this to compare *configurations* -- sampling, loss, augmentation, architectu
 The validation session, when configured, is excluded from every CV fold and is reserved
 for the normal training run. CV also writes a reusable all-labeled training configuration.
 
-Cross-validation narrows sampling noise, not seed noise; repeat with ``--seed`` to
-separate the two. The +/-0.0069 floor in ``reports/2026-08-14-checkpoint-noise-floor.md``
-was measured on the old leaky split and understates this one. On the grouped split,
+Cross-validation narrows sampling noise, not seed noise. The +/-0.0069 floor in
+``reports/2026-08-14-checkpoint-noise-floor.md`` was measured on the old leaky split and
+understates this one. On the grouped split,
 three seeds put the sd at 0.0273 for the mean per-session IoU and as high as 0.0873
 for a single fold, so treat differences below roughly 0.05 on one fold as noise
 (``reports/2026-08-16-selection-metric-repair.md``).
@@ -154,10 +154,6 @@ def main(argv: list[str] | None = None) -> int:
         nargs="+",
         help="Existing fold indices to rerun (default: every fold).",
     )
-    parser.add_argument("--max_epochs", type=int, default=400)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--device", default="auto")
     parser.add_argument(
         "--finetune_checkpoint",
         type=Path,
@@ -214,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     session_scores: dict[str, float] = {}
     for fold in folds:
-        name = f"fold_{fold}_seed_{args.seed}"
+        name = f"fold_{fold}"
         print(f"\n===== {name} =====", flush=True)
         config = trainer.TrainingConfig(
             labeled_frames_dir=labeled_frames_dir,
@@ -222,10 +218,10 @@ def main(argv: list[str] | None = None) -> int:
             split_manifest=split_manifest,
             fold=fold,
             finetune_checkpoint=args.finetune_checkpoint,
-            batch_size=args.batch_size,
-            max_epochs=args.max_epochs,
-            seed=args.seed,
-            device=args.device,
+            batch_size=8,
+            max_epochs=400,
+            seed=0,
+            device="auto",
             console_interval=50,
         )
         checkpoint = trainer.run_training(config)
@@ -270,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
                 "split_manifest": str(split_manifest),
                 "folds": folds,
                 "complete_cv": complete_cv,
-                "seed": args.seed,
+                "seed": 0,
                 "per_session_iou": session_scores,
                 "per_fold": [
                     {
