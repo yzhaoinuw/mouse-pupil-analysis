@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 566 images; a complete 200-cap/20-patience CV run selected a 64-epoch all-data refit. Inspect the new model on representative recordings before considering promotion; the legacy Purple-sleep regression remains unresolved.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 566 images; a complete 200-cap/20-patience CV run selected a 100-epoch all-data refit after rounding the 64-epoch median up to the next 100. Inspect the new model on representative recordings before considering promotion; the legacy Purple-sleep regression remains unresolved.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool; an opt-in centre-favoured component selector now offers a practical inference-time guard for off-centre artifacts and needs cross-session evaluation.
@@ -235,7 +235,7 @@ Remaining work:
 
 - Keep trial5 untouched until the final schedule and prediction threshold are frozen from CV.
 - Record the session at intake for every future batch, per `training/data_collection.md`.
-- Resolve the expanded-pool fold-1 regression before refitting or promoting a checkpoint.
+- Resolve the expanded-pool fold-1 regression before promoting a checkpoint.
 
 ## Training Sampling Default
 

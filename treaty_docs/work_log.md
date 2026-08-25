@@ -17,6 +17,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - CV recipes record their sibling `summary.json` by portable relative filename and round their
   all-data epoch budget up to the next full 100-epoch block. `checkpoints_exp/cv` is now the
   default committee for frame recommendation.
+- Trained `checkpoints_exp/all_566_cv100_nat_macro_s0/all_data.pth` once from that corrected
+  recipe: 566 all-labelled pairs, 100 epochs, natural sampling, threshold 0.5, and milestones
+  50/75. SHA-256: `25decc4becc2f30e17413a090506167e1e7b2e8d0ca3d4f85db9d0fd808741ef`.
 - Verified this change with Ruff, Black, and the full Pytest suite. Pytest reported one existing
   source-import deprecation warning and 345 existing Pillow deprecation warnings, and used a
   repository-local temporary directory because the Windows system pytest temp directory is denied
