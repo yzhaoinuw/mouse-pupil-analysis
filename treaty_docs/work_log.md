@@ -4,6 +4,36 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-25
 
+### Bound cross-validation model selection (Codex, GPT-5)
+
+- Set the grouped-CV selection budget to 200 epochs with 20 validation epochs of patience. The
+  completed run still selects each fold's best epoch and derives the all-data schedule from their
+  median; 200 is a ceiling, not a fixed refit duration.
+- Completed `checkpoints_exp/cv` over 566 images, 24 sessions, and four
+  grouped folds. The selected epochs were 67/54/73/62, fold macro IoUs were
+  0.6842/0.4254/0.6364/0.6859, mean per-session IoU was 0.6530, and image-weighted IoU was
+  0.5995. The generated recipe selects threshold 0.5 and rounds the 64-epoch fold median up to
+  100 epochs, with LR milestones 50/75.
+- CV recipes record their sibling `summary.json` by portable relative filename and round their
+  all-data epoch budget up to the next full 100-epoch block. `checkpoints_exp/cv` is now the
+  default committee for frame recommendation.
+- Verified this change with Ruff, Black, and the full Pytest suite. Pytest reported one existing
+  source-import deprecation warning and 345 existing Pillow deprecation warnings, and used a
+  repository-local temporary directory because the Windows system pytest temp directory is denied
+  to the sandbox account.
+
+### Add an opt-in centre-favoured component selector (Codex, GPT-5)
+
+- Added `--prefer_central_component` to the analysis CLI and API, defaulting to off. After normal
+  thresholding it scores connected components using confidence, a saturating area term, and a soft
+  image-centre preference; it applies no circularity or shape gate, so eyelid-occluded pupil
+  crescents remain eligible.
+- On `260812_3582_Purple_trial5_2026-08-12T15-46-08.054-1` frame 09158, the selector retained
+  the real lower pupil and removed the separate upper dark-region false positive. Three local
+  overlay previews are in the ignored `images_test/central_component_preview_...` directory.
+- Verification: focused central-component, overlay, tracking, and end-to-end tests; Ruff, Black,
+  and whitespace checks.
+
 ### Import the Purple trial-5 recording and retrain all labelled data (Codex, GPT-5)
 
 - Imported 20 verified Labelme pairs from the `15-05-55.154-1` Purple recording into its own

@@ -42,6 +42,7 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "frames_to_label"
+DEFAULT_COMMITTEE_DIR = PROJECT_ROOT / "checkpoints_exp" / "cv"
 
 if __package__:
     from . import _frame_scoring as frame_scoring
@@ -125,7 +126,8 @@ def committee_checkpoints(checkpoint_dir: Path) -> list[Path]:
     return checkpoints
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Build the command-line parser for direct use and test coverage."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--video", type=Path, help="Video to extract frames from.")
@@ -134,13 +136,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--checkpoint_dir",
         type=Path,
-        required=True,
+        default=DEFAULT_COMMITTEE_DIR,
         metavar="DIR",
         help=(
             "Complete cross-validation run directory. Its immediate fold subdirectories "
-            "must each contain best.pth."
+            "must each contain best.pth. Defaults to checkpoints_exp/cv."
         ),
     )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
     args = parser.parse_args(argv)
 
     trainer = training_core

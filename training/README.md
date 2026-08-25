@@ -259,19 +259,18 @@ when you want help prioritising a larger recording:
 ```powershell
 python training\recommend_frames.py `
     --video D:\data\recording.avi `
-    --budget 20 `
-    --checkpoint_dir checkpoints_exp\cv516_nat_macro_20260819
+    --budget 20
 
 python training\recommend_frames.py `
     --frames D:\data\already_extracted `
-    --budget 20 `
-    --checkpoint_dir checkpoints_exp\cv516_nat_macro_20260819
+    --budget 20
 ```
 
-`--checkpoint_dir` is the complete directory from one cross-validation run, not an
-individual model folder. The recommender discovers every immediate `*/best.pth` fold
-checkpoint inside it and uses their disagreement to rank frames. Use a committee whose
-models did not train on the recording you are selecting from.
+The recommender uses the current completed CV run at `checkpoints_exp/cv` by default.
+`--checkpoint_dir` optionally selects another complete cross-validation run, not an individual
+model folder. The recommender discovers every immediate `*/best.pth` fold checkpoint inside it
+and uses their disagreement to rank frames. Use a committee whose models did not train on the
+recording you are selecting from.
 
 By default, its outputs go under `frames_to_label/<session>/`. After labelling, put the
 resulting image/mask pairs in `labeled_frames/<session>/` by any supported method and run
@@ -284,7 +283,7 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 | --- | --- | --- |
 | `--video` | One of `--video` or `--frames` | Video to sample and score. |
 | `--frames` | One of `--video` or `--frames` | Directory of already-extracted PNG frames to score. |
-| `--checkpoint_dir` | Required | Complete CV-run directory containing fold subdirectories with `best.pth`. |
+| `--checkpoint_dir` | `checkpoints_exp/cv` | Optional complete CV-run directory containing fold subdirectories with `best.pth`. |
 | `--budget` | `20` | Number of frames to recommend. |
 
 </details>
@@ -319,9 +318,11 @@ never loads the validation session:
 python training\run_cross_validation.py --checkpoint_dir checkpoints_exp\cv
 ```
 
-Use its per-session results to compare candidate settings. It also writes
-`training_config.json`, a complete all-labeled training recipe based on the median
-successful-fold epoch and calibrated threshold. The repository also tracks
+Each fold has a 200-epoch ceiling and stops after 20 non-improving validation epochs; these are
+selection bounds, not a claimed final-training duration. Use its per-session results to compare
+candidate settings. It also writes `training_config.json`, a complete all-labeled training recipe
+using the median successful-fold epoch rounded up to the next 100, its calibrated threshold, and a
+portable `summary.json` provenance reference. The repository also tracks
 `training/default_all_labeled_training_config.json`, the fixed settings used for the 516-pair
 all-data baseline, for repeatable expansion of that baseline. Train the production model from
 either recipe with:

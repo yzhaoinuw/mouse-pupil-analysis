@@ -4,10 +4,10 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 536 images; the fixed all-data recipe has been rerun, with one CV legacy-session regression still to resolve.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 566 images; a complete 200-cap/20-patience CV run selected a 64-epoch all-data refit. Inspect the new model on representative recordings before considering promotion; the legacy Purple-sleep regression remains unresolved.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
-- [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
+- [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool; an opt-in centre-favoured component selector now offers a practical inference-time guard for off-centre artifacts and needs cross-session evaluation.
 - [New labels and experiment sequencing](#new-labels-and-experiment-sequencing) - HQL095/HQL096 are integrated and the 4-frame holdout remains untouched.
 - [Frame recommendation](#frame-recommendation) - all four recommended sessions are integrated; refresh the local default committee only after the expanded-pool regression is resolved.
 - [Sampling rate and pupil dynamics](#sampling-rate-and-pupil-dynamics) - size needs 10-30 Hz, position needs the 97 Hz rig; measure a real PLR constriction velocity to set the bound.
@@ -139,9 +139,9 @@ What the diagnosis actually supports, in order:
 ## Frame Recommendation
 
 Status: shipped and validated; the current four-member committee is under
-`checkpoints_exp/cv516_nat_macro_20260819`. Pass that complete directory to
-`training/recommend_frames.py --checkpoint_dir`; the only other recommender choice is
-the optional frame `--budget`. Private scoring remains in
+`checkpoints_exp/cv` and is the default for `training/recommend_frames.py`. Use
+`--checkpoint_dir` only to select a different complete CV committee; the only other recommender
+choice is the optional frame `--budget`. Private scoring remains in
 `training/_frame_scoring.py`, with the harness in `reports/scripts/validate_frame_selection.py`.
 
 The first real recommendation batch is complete: 20 picks each from HQL090, HQL097, and HQL103,

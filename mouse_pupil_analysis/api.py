@@ -44,6 +44,7 @@ class AnalysisConfig:
     output_mask_dir: Path | None = None
     batch_size: int = 32
     pred_thresh: float | None = None
+    prefer_central_component: bool = False
     mask_transparency: float = 0.1
     extraction_fps: float = 5.0
     max_frames: int = 10000
@@ -187,6 +188,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         pred_thresh=prediction_threshold,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
+        prefer_central_component=config.prefer_central_component,
         show_progress=config.show_progress,
     ):
         results.append(

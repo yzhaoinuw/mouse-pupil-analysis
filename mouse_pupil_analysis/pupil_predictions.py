@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pandas as pd
 import torch
@@ -44,6 +45,49 @@ DEFAULT_PREDICTION_THRESHOLD = 0.7
 # A binary mask gives pupil area; the reported diameter is that of the circle with
 # the same area, so diameter = sqrt(4 / pi * area).
 _EQUIVALENT_CIRCLE_FACTOR = 4.0 / math.pi
+
+
+def select_central_component(
+    probability_map: np.ndarray,
+    binary_mask: np.ndarray,
+) -> np.ndarray:
+    """Select one confidence-weighted, centre-favoured foreground component.
+
+    This is deliberately a soft spatial prior, not a shape gate: an eyelid-occluded
+    pupil may be crescent-shaped. Component area saturates quickly so a large distant
+    artifact cannot automatically beat a compact, central pupil.
+    """
+    probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
+    mask = np.asarray(binary_mask, dtype=bool).squeeze()
+    if probabilities.ndim != 2 or mask.ndim != 2 or probabilities.shape != mask.shape:
+        raise ValueError("Probability map and binary mask must be matching two-dimensional arrays.")
+
+    component_count, labels, stats, centers = cv2.connectedComponentsWithStats(
+        mask.astype(np.uint8),
+        connectivity=8,
+    )
+    if component_count <= 2:
+        return mask
+
+    height, width = mask.shape
+    image_center_x = (width - 1) / 2
+    image_center_y = (height - 1) / 2
+    max_center_distance = math.hypot(image_center_x, image_center_y)
+    best_label = 0
+    best_score = -math.inf
+    for label in range(1, component_count):
+        component = labels == label
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        center_x, center_y = centers[label]
+        distance = math.hypot(center_x - image_center_x, center_y - image_center_y)
+        centrality = max(0.0, 1.0 - distance / max_center_distance)
+        confidence = float(probabilities[component].mean())
+        area_support = 1.0 - math.exp(-area / 64.0)
+        score = confidence * area_support * (0.5 + centrality)
+        if score > best_score:
+            best_score = score
+            best_label = label
+    return labels == best_label
 
 
 def default_num_workers() -> int:
@@ -229,6 +273,7 @@ def frames_from_image_directory(image_dir: Path) -> list[ExtractedFrame]:
 def _encode_thresholded_confidence(
     probability_map: np.ndarray,
     pred_thresh: float,
+    binary_mask: np.ndarray | None = None,
 ) -> np.ndarray:
     """Encode threshold-passing confidence from yellow (low) to red (high)."""
     probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
@@ -238,6 +283,11 @@ def _encode_thresholded_confidence(
         raise ValueError("Prediction threshold must be between 0 and 1.")
 
     passed = probabilities > pred_thresh
+    if binary_mask is not None:
+        selected = np.asarray(binary_mask, dtype=bool).squeeze()
+        if selected.shape != probabilities.shape:
+            raise ValueError("Binary mask must match the probability map shape.")
+        passed &= selected
     encoded = np.zeros(probabilities.shape, dtype=np.uint8)
     normalized = (probabilities[passed] - pred_thresh) / (1.0 - pred_thresh)
     encoded[passed] = np.clip(np.rint(normalized * 254.0) + 1.0, 1.0, 255.0).astype(np.uint8)
@@ -351,6 +401,7 @@ class MaskOverlayAccumulator:
         self.confidence_maps[prediction.image_name] = _encode_thresholded_confidence(
             prediction.probability_map,
             self.pred_thresh,
+            prediction.binary_mask,
         )
 
     def save(
@@ -374,6 +425,7 @@ def iter_pupil_predictions(
     pred_thresh: float | None = None,
     batch_size: int = 32,
     num_workers: int | None = None,
+    prefer_central_component: bool = False,
     show_progress: bool = False,
 ) -> Iterator[PupilPrediction]:
     """Yield predictions from one model pass without retaining float maps.
@@ -423,14 +475,19 @@ def iter_pupil_predictions(
                 images = images.to(device)
                 probabilities = torch.sigmoid(model(images)).cpu().numpy()
                 batch_binary_masks = probabilities > pred_thresh
-                pupil_areas = np.sum(batch_binary_masks, axis=(1, 2, 3))
-                pupil_diameters = np.sqrt(pupil_areas * _EQUIVALENT_CIRCLE_FACTOR)
-
-                for index, (name, diameter) in enumerate(zip(names, pupil_diameters)):
+                for index, name in enumerate(names):
+                    binary_mask = batch_binary_masks[index].squeeze()
+                    if prefer_central_component:
+                        binary_mask = select_central_component(
+                            probabilities[index].squeeze(),
+                            binary_mask,
+                        )
+                    area = int(binary_mask.sum())
+                    diameter = math.sqrt(area * _EQUIVALENT_CIRCLE_FACTOR)
                     yield PupilPrediction(
                         frame=frame_by_name[name],
                         probability_map=probabilities[index].squeeze(),
-                        binary_mask=batch_binary_masks[index].squeeze(),
+                        binary_mask=binary_mask,
                         estimated_pupil_diameter=float(diameter),
                         original_size=size_by_name[name],
                     )
@@ -446,6 +503,7 @@ def generate_pupil_predictions(
     pred_thresh: float | None = None,
     batch_size: int = 32,
     mask_transparency: float = 0.1,
+    prefer_central_component: bool = False,
     show_progress: bool = False,
 ) -> list[tuple[str, float]]:
     """Generate diameter results and optional overlays without tracking."""
@@ -464,6 +522,7 @@ def generate_pupil_predictions(
         image_frames,
         pred_thresh=pred_thresh,
         batch_size=batch_size,
+        prefer_central_component=prefer_central_component,
         show_progress=show_progress,
     ):
         diameter_results.append((prediction.image_name, prediction.estimated_pupil_diameter))
@@ -482,6 +541,7 @@ def generate_pupil_mask_prediction(
     pred_thresh: float | None = None,
     batch_size: int = 32,
     mask_transparency: float = 0.1,
+    prefer_central_component: bool = False,
 ) -> list[tuple[str, float]]:
     """Deprecated. Prefer :func:`mouse_pupil_analysis.analyze_frames`.
 
@@ -504,6 +564,7 @@ def generate_pupil_mask_prediction(
         pred_thresh=pred_thresh,
         batch_size=batch_size,
         mask_transparency=mask_transparency,
+        prefer_central_component=prefer_central_component,
     )
 
 
@@ -516,6 +577,7 @@ if __name__ == "__main__":
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.
     batch_size = 32
     mask_transparency = 0.1
+    prefer_central_component = False  # Keep one centre-favoured component when needed.
 
     image_frames = frames_from_image_directory(image_dir)
     predictions = generate_pupil_predictions(
@@ -525,5 +587,6 @@ if __name__ == "__main__":
         pred_thresh=pred_thresh,
         batch_size=batch_size,
         mask_transparency=mask_transparency,
+        prefer_central_component=prefer_central_component,
     )
     logger.info("Generated predictions for %d images.", len(predictions))

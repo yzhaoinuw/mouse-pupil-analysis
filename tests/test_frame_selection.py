@@ -27,6 +27,12 @@ selection = _load("_frame_scoring")
 recommend = _load("recommend_frames")
 
 
+def test_recommender_defaults_to_the_current_cv_committee():
+    args = recommend.build_parser().parse_args(["--frames", "some_frames"])
+
+    assert args.checkpoint_dir == PROJECT_ROOT / "checkpoints_exp" / "cv"
+
+
 def disc(size: int, radius: int, centre=None) -> np.ndarray:
     centre = centre or (size // 2, size // 2)
     yy, xx = np.ogrid[:size, :size]

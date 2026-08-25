@@ -36,6 +36,8 @@ import torch
 from torch.utils.data import DataLoader
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CV_MAX_EPOCHS = 200
+CV_EARLY_STOPPING_PATIENCE = 20
 
 if __package__:
     from . import _trainer as training_core
@@ -92,20 +94,23 @@ def per_session_iou(
 def all_labeled_training_config(summary: Path, results: list[dict], config, trainer) -> dict:
     """Build the reusable all-labeled recipe from successful CV folds."""
     selected_epochs = int(round(statistics.median(r["metadata"]["best_epoch"] for r in results)))
+    # Give the all-data refit a full, human-readable 100-epoch block of headroom.
+    # This is deliberately a ceiling, rather than merely a 100-epoch minimum.
+    all_data_epochs = ((selected_epochs + 99) // 100) * 100
     selected_threshold = float(
         statistics.median(r["metadata"]["prediction_threshold"] for r in results)
     )
     return {
         "schema_version": 1,
-        "source_cv_summary": str(summary),
+        "source_cv_summary": summary.name,
         "source_cv_summary_sha256": trainer.file_sha256(summary),
-        "max_epochs": selected_epochs,
+        "max_epochs": all_data_epochs,
         "learning_rate": trainer.initial_learning_rate(config),
         "lr_milestones": sorted(
             {
                 epoch
-                for epoch in (selected_epochs // 2, (3 * selected_epochs) // 4)
-                if 0 < epoch < selected_epochs
+                for epoch in (all_data_epochs // 2, (3 * all_data_epochs) // 4)
+                if 0 < epoch < all_data_epochs
             }
         ),
         "batch_size": config.batch_size,
@@ -219,7 +224,8 @@ def main(argv: list[str] | None = None) -> int:
             fold=fold,
             finetune_checkpoint=args.finetune_checkpoint,
             batch_size=8,
-            max_epochs=400,
+            max_epochs=CV_MAX_EPOCHS,
+            early_stopping_patience=CV_EARLY_STOPPING_PATIENCE,
             seed=0,
             device="auto",
             console_interval=50,

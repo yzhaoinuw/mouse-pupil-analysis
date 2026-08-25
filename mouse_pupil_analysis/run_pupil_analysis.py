@@ -77,6 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Defaults to checkpoint metadata or its filename, then 0.7."
         ),
     )
+    parser.add_argument(
+        "--prefer_central_component",
+        action="store_true",
+        help="Keep the confidence-weighted component nearest the image center. Off by default.",
+    )
     parser.add_argument("--mask_transparency", type=float, default=0.1)
     parser.add_argument("--extraction_fps", type=float, default=5)
     parser.add_argument("--max_frames", type=int, default=10000)
@@ -112,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pred_thresh=args.pred_thresh,
+        prefer_central_component=args.prefer_central_component,
         mask_transparency=args.mask_transparency,
         extraction_fps=args.extraction_fps,
         max_frames=args.max_frames,
@@ -146,6 +152,7 @@ if __name__ == "__main__":
     batch_size = 32
     num_workers = None
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.
+    prefer_central_component = False  # Keep one centre-favoured component when needed.
     mask_transparency = 0.05
     extraction_fps = 5.0
     max_frames = 10000
@@ -163,6 +170,7 @@ if __name__ == "__main__":
             batch_size=batch_size,
             num_workers=num_workers,
             pred_thresh=pred_thresh,
+            prefer_central_component=prefer_central_component,
             mask_transparency=mask_transparency,
             extraction_fps=extraction_fps,
             max_frames=max_frames,

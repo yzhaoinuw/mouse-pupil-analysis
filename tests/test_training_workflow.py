@@ -274,10 +274,34 @@ def test_cv_writes_a_complete_all_labeled_training_recipe(tmp_path):
         trainer,
     )
 
-    assert recipe["max_epochs"] == 110
-    assert recipe["lr_milestones"] == [55, 82]
+    assert recipe["max_epochs"] == 200
+    assert recipe["lr_milestones"] == [100, 150]
     assert recipe["prediction_threshold"] == pytest.approx(0.55)
     assert recipe["sampling"] == "natural"
+    assert recipe["source_cv_summary"] == "cv_s0_summary.json"
+
+
+def test_cv_recipe_rounds_epoch_budget_up_to_the_next_hundred(tmp_path):
+    summary = tmp_path / "summary.json"
+    summary.write_text("{}", encoding="utf-8")
+    config = SimpleNamespace(batch_size=8, seed=0, use_attention=True, finetune_checkpoint=None)
+    trainer = SimpleNamespace(
+        initial_learning_rate=lambda _: 0.001,
+        file_sha256=lambda _: "summary-hash",
+    )
+
+    recipe = all_labeled_training_config(
+        summary,
+        [
+            {"metadata": {"best_epoch": 54, "prediction_threshold": 0.5}},
+            {"metadata": {"best_epoch": 67, "prediction_threshold": 0.55}},
+        ],
+        config,
+        trainer,
+    )
+
+    assert recipe["max_epochs"] == 100
+    assert recipe["lr_milestones"] == [50, 75]
 
 
 def test_cv_fold_selection_requires_a_complete_run_for_a_production_recipe():
@@ -289,3 +313,8 @@ def test_cv_fold_selection_requires_a_complete_run_for_a_production_recipe():
         selected_cv_folds([0, 0], 4)
     with pytest.raises(ValueError, match="invalid"):
         selected_cv_folds([4], 4)
+
+
+def test_cross_validation_uses_a_bounded_selection_budget():
+    assert CV["CV_MAX_EPOCHS"] == 200
+    assert CV["CV_EARLY_STOPPING_PATIENCE"] == 20

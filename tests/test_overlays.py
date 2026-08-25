@@ -50,3 +50,20 @@ def test_confidence_heatmap_and_center_marker_remain_translucent(tmp_path: Path)
     np.testing.assert_array_equal(overlay[70, 72], [115, 90, 90])
     assert not np.array_equal(overlay[74, 74], [100, 100, 100])
     assert not np.array_equal(overlay[74, 74], [0, 255, 255])
+
+
+def test_confidence_heatmap_can_be_limited_to_a_selected_component():
+    probability_map = np.zeros((10, 10), dtype=np.float32)
+    probability_map[2, 2] = 0.9
+    probability_map[7, 7] = 0.9
+    selected_component = np.zeros((10, 10), dtype=bool)
+    selected_component[7, 7] = True
+
+    confidence_map = _encode_thresholded_confidence(
+        probability_map,
+        pred_thresh=0.7,
+        binary_mask=selected_component,
+    )
+
+    assert confidence_map[2, 2] == 0
+    assert confidence_map[7, 7] > 0

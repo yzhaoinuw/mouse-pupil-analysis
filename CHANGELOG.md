@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Cross-validation now has a 200-epoch selection ceiling and a 20-epoch validation patience,
+  replacing the unnecessarily loose 400-epoch ceiling.
+- CV-generated all-data recipes now round their selected epoch budget up to the next 100 and
+  record their source summary by a portable relative filename.
 - Pytest now adds the repository root to its import path, so tests for the source-only
   `training/` utilities run when CI invokes the `pytest` console script.
 - The console-script smoke test now resolves its executable from the active Python environment,
@@ -16,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in `--prefer_central_component` postprocessing for analysis. It keeps one
+  confidence-weighted foreground component with a gentle preference for the image centre, helping
+  reject separate off-centre dark structures without imposing a circularity requirement.
 - `training/split_manager.py` provides a local drag-and-drop view of automatic session grouping,
   a live stacked pupil-size chart with background-brightness quartiles and median for the folds,
   and a selectable session chart. The local server stops automatically after its browser tabs
