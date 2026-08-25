@@ -2,7 +2,33 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-25
+
+### Import the Purple trial-5 recording and retrain all labelled data (Codex, GPT-5)
+
+- Imported 20 verified Labelme pairs from the `15-05-55.154-1` Purple recording into its own
+  session directory. The pre-existing four-image `260812_3582_Purple_trial5` holdout was not
+  changed; the refreshed manifest contains 536 pairs across 23 sessions and assigns the new
+  20-pair session to CV fold 3.
+- Added `training/default_all_labeled_training_config.json`, a tracked reference implementation
+  of the fixed natural-sampling recipe used for the 516-pair refit: attention U-Net, seed 0,
+  batch size 8, learning rate 0.001, 115 epochs, threshold 0.5, and milestones 25/51/62/71/82.
+- Trained `checkpoints_exp/all_536_nat_macro_s0/all_data.pth` on all 536 pairs. Its SHA-256 is
+  `fffcfcc0078be95a65d37c5b57b7df82d80a329a56cecfb17ba7f801bf8ffd2c`.
+
 ## 2026-08-24
+
+### Restore the Labelme intake name and make session separation explicit (Codex, GPT-5)
+
+- Restored the intake command name to `training/labelme_json2png.py`; it remains the single
+  two-argument Labelme importer, including validation, polygon rasterization, atomic new-session
+  creation, and split refresh. A successful validation now imports directly rather than requiring
+  a separate `--apply` confirmation.
+- Clarified the Labelme instructions with a concrete recommended-frame example and the essential
+  rule: a shared partial label such as `Purple_trial5` does not establish that recordings are one
+  session. A new recording uses a distinct `--session`; the importer refuses to merge with an
+  existing session directory.
+- Verification: the real 20-annotation Purple recording queue completed a dry run with no writes.
 
 ### Reduce training command options to workflow choices (Codex, GPT-5)
 

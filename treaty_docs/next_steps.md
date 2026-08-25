@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 516 images; use CV's generated training configuration for trusted all-labeled production training, with one CV legacy-session regression to resolve.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 536 images; the fixed all-data recipe has been rerun, with one CV legacy-session regression still to resolve.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool and has been withdrawn.
@@ -204,7 +204,7 @@ Remaining work:
 
 Status: HQL095, HQL096, HQL097, and HQL103 integrated; outer holdout still frozen (2026-08-19)
 
-The pool is now 516 pairs across 22 sessions: 512 development pairs and the same 4-image outer
+The pool is now 536 pairs across 23 sessions: 532 development pairs and the same 4-image outer
 holdout. HQL095 contributed 38 visible-pupil pairs. HQL096 contributed 102 trainable pairs (84
 visible pupils and 18 explicit empty-mask negatives); its 5 uncertain annotations are preserved
 separately and carry no segmentation mask. All 376 earlier assignments remained frozen.
@@ -222,9 +222,14 @@ filenames use the compact `frame_<five-digit-source-index>` form. HQL097's gener
 copies were removed after verification; the source annotations and six uncertain records remain
 available outside the paired training directories.
 
-New Labelme batches now enter through `training/import_labelme.py`: preview first, then
-apply with `--apply`, which also refreshes the split. The importer keeps uncertainty as metadata
+New Labelme batches now enter through `training/labelme_json2png.py`, which validates then
+imports a new session and refreshes the split. The importer keeps uncertainty as metadata
 outside segmentation training rather than inventing an "uncertain mask."
+
+The new `260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1` recording
+contributed 20 development pairs as its own session; it is not merged with the four-image
+`260812_3582_Purple_trial5` holdout. `checkpoints_exp/all_536_nat_macro_s0` trained all 536
+pairs with the tracked fixed 115-epoch natural-sampling reference recipe.
 
 Remaining work:
 

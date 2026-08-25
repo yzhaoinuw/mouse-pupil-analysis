@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from training import import_labelme
+from training import labelme_json2png
 
 
 def _annotation(source: Path, stem: str, label: str) -> None:
@@ -33,21 +33,28 @@ def _mixed_batch(source: Path) -> None:
     _annotation(source, "session_a_00003", "uncertain")
 
 
-def test_dry_run_validates_without_writing(tmp_path, monkeypatch):
+def test_cli_imports_new_session_and_refreshes_splits(tmp_path, monkeypatch):
     source = tmp_path / "annotations"
     _mixed_batch(source)
-    monkeypatch.setattr(import_labelme, "PROJECT_ROOT", tmp_path)
+    refreshed = []
+    monkeypatch.setattr(
+        labelme_json2png,
+        "refresh_split_manifest",
+        lambda data_root: refreshed.append(Path(data_root)) or 0,
+    )
+    monkeypatch.setattr(labelme_json2png, "PROJECT_ROOT", tmp_path)
 
-    assert import_labelme.main(["--source", str(source), "--session", "session_a"]) == 0
-    assert not (tmp_path / "labeled_frames/session_a").exists()
+    assert labelme_json2png.main(["--source", str(source), "--session", "session_a"]) == 0
+    assert (tmp_path / "labeled_frames/session_a/images/frame_00001.png").is_file()
+    assert refreshed == [tmp_path]
 
 
 def test_apply_imports_masks_and_archives_uncertain_annotation(tmp_path):
     source = tmp_path / "annotations"
     _mixed_batch(source)
-    plan = import_labelme.build_import_plan(source, tmp_path, "session_a")
+    plan = labelme_json2png.build_import_plan(source, tmp_path, "session_a")
 
-    target = import_labelme.apply_import(plan, tmp_path, "session_a")
+    target = labelme_json2png.apply_import(plan, tmp_path, "session_a")
 
     assert {path.name for path in (target / "images").glob("*.png")} == {
         "frame_00001.png",
@@ -75,7 +82,7 @@ def test_existing_session_is_rejected_before_writing(tmp_path):
     (tmp_path / "labeled_frames/session_a").mkdir(parents=True)
 
     with pytest.raises(FileExistsError, match="existing session"):
-        import_labelme.build_import_plan(source, tmp_path, "session_a")
+        labelme_json2png.build_import_plan(source, tmp_path, "session_a")
 
 
 def test_all_uncertain_batch_stays_outside_labelled_pool(tmp_path):
@@ -83,30 +90,4 @@ def test_all_uncertain_batch_stays_outside_labelled_pool(tmp_path):
     _annotation(source, "session_a_00001", "uncertain")
 
     with pytest.raises(ValueError, match="only uncertain"):
-        import_labelme.build_import_plan(source, tmp_path, "session_a")
-
-
-def test_apply_refreshes_splits_after_successful_import(tmp_path, monkeypatch):
-    source = tmp_path / "annotations"
-    _mixed_batch(source)
-    refreshed = []
-    monkeypatch.setattr(
-        import_labelme,
-        "refresh_split_manifest",
-        lambda data_root: refreshed.append(Path(data_root)) or 0,
-    )
-    monkeypatch.setattr(import_labelme, "PROJECT_ROOT", tmp_path)
-
-    assert (
-        import_labelme.main(
-            [
-                "--source",
-                str(source),
-                "--session",
-                "session_a",
-                "--apply",
-            ]
-        )
-        == 0
-    )
-    assert refreshed == [tmp_path]
+        labelme_json2png.build_import_plan(source, tmp_path, "session_a")

@@ -148,7 +148,7 @@ mouse-pupil-analysis/
 |  |- _frame_scoring.py      (private recommender implementation)
 |  |- provenance.py
 |  |- data_collection.md
-|  |- import_labelme.py
+|  |- labelme_json2png.py
 |  |- preview_augmentation.py
 |- media/
 |  |- README.md
@@ -210,7 +210,7 @@ Active local/developer scripts:
 - `training/run_cross_validation.py`
 - `training/prepare_splits.py`
 - `training/review_splits.py`
-- `training/import_labelme.py`
+- `training/labelme_json2png.py`
 - `training/preview_augmentation.py`
 - `media/make_gif.py`
 

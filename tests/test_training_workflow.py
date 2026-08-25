@@ -206,6 +206,31 @@ def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tm
     assert config.prediction_threshold == pytest.approx(0.5)
 
 
+def test_tracked_default_all_labeled_recipe_loads(monkeypatch, tmp_path):
+    captured = []
+    labeled_frames_dir = tmp_path / "labeled_frames"
+    labeled_frames_dir.mkdir()
+    monkeypatch.setattr(RUN_TRAIN["trainer"], "run_training", captured.append)
+
+    assert (
+        training_main(
+            [
+                "--labeled_frames_dir",
+                str(labeled_frames_dir),
+                "--training_config_path",
+                str(PROJECT_ROOT / "training" / "default_all_labeled_training_config.json"),
+            ]
+        )
+        == 0
+    )
+
+    config = captured[0]
+    assert config.train_all_labeled_frames
+    assert config.max_epochs == 115
+    assert config.lr_milestones == (25, 51, 62, 71, 82)
+    assert config.scratch_learning_rate == pytest.approx(0.001)
+
+
 def test_training_config_path_rejects_conflicting_tuning_arguments(tmp_path):
     labeled_frames_dir = tmp_path / "labeled_frames"
     labeled_frames_dir.mkdir()

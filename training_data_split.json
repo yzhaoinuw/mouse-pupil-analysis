@@ -1,29 +1,20 @@
 {
   "schema": 2,
-  "generated": "2026-08-19",
+  "generated": "2026-08-25",
   "grouping": "session recorded at intake (one animal, one date, one condition)",
   "stratified_by": [
     "median_diameter",
     "median_brightness"
   ],
   "n_folds": 4,
-  "n_images": 516,
-  "n_sessions": 22,
+  "n_images": 536,
+  "n_sessions": 23,
   "n_holdout_sessions": 1,
-  "pool": [
-    [
-      "images_train",
-      "masks_train"
-    ],
-    [
-      "images_validation",
-      "masks_validation"
-    ]
-  ],
+  "n_validation_holdout_sessions": 0,
   "tiny_max_diameter": 15.0,
   "stratum_cutpoints": {
     "diameter": [
-      18.09,
+      17.95,
       53.05
     ],
     "brightness": [
@@ -36,6 +27,7 @@
       "session": "260812_3582_Purple_trial5",
       "fold": -1,
       "holdout": true,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b1",
       "n_images": 4,
@@ -47,6 +39,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b1",
       "n_images": 62,
@@ -58,6 +51,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b1",
       "n_images": 11,
@@ -69,6 +63,7 @@
       "session": "HQL086_sleep250912",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b1",
       "n_images": 3,
@@ -80,6 +75,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b2",
       "n_images": 38,
@@ -91,6 +87,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b2",
       "n_images": 32,
@@ -102,6 +99,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b0",
       "n_images": 13,
@@ -113,8 +111,9 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
-      "stratum": "d0b2",
+      "stratum": "d1b2",
       "n_images": 13,
       "n_tiny": 2,
       "median_diameter": 17.95,
@@ -124,6 +123,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b2",
       "n_images": 102,
@@ -135,6 +135,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b1",
       "n_images": 29,
@@ -146,6 +147,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b0",
       "n_images": 18,
@@ -157,6 +159,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b0",
       "n_images": 13,
@@ -168,6 +171,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b1",
       "n_images": 12,
@@ -179,6 +183,7 @@
       "session": "HQL088_sleep250929",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b2",
       "n_images": 1,
@@ -190,6 +195,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b2",
       "n_images": 61,
@@ -201,6 +207,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b0",
       "n_images": 5,
@@ -209,9 +216,22 @@
       "median_brightness": 85.52
     },
     {
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "source": "folder",
+      "stratum": "d0b1",
+      "n_images": 20,
+      "n_tiny": 8,
+      "median_diameter": 15.12,
+      "median_brightness": 105.8
+    },
+    {
       "session": "HQL073_whisker250623",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d1b0",
       "n_images": 2,
@@ -223,6 +243,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b0",
       "n_images": 17,
@@ -234,6 +255,7 @@
       "session": "HQL085_whiskerb250916",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b2",
       "n_images": 4,
@@ -245,6 +267,7 @@
       "session": "HQL088_whiskerb251006",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b0",
       "n_images": 1,
@@ -256,6 +279,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d2b2",
       "n_images": 15,
@@ -267,6 +291,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "source": "folder",
       "stratum": "d0b1",
       "n_images": 60,
@@ -283,6 +308,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 107.91,
       "brightness": 80.57
     },
@@ -293,6 +319,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 97.27,
       "brightness": 87.25
     },
@@ -303,6 +330,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 92.33,
       "brightness": 77.53
     },
@@ -313,6 +341,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 92.01,
       "brightness": 80.54
     },
@@ -323,6 +352,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 74.38,
       "brightness": 70.89
     },
@@ -333,6 +363,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 64.36,
       "brightness": 69.94
     },
@@ -343,6 +374,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 57.14,
       "brightness": 70.17
     },
@@ -353,6 +385,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 53.62,
       "brightness": 70.28
     },
@@ -363,6 +396,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.63,
       "brightness": 90.66
     },
@@ -373,6 +407,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.48,
       "brightness": 72.62
     },
@@ -383,6 +418,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 46.89,
       "brightness": 74.02
     },
@@ -393,6 +429,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 70.19,
       "brightness": 74.52
     },
@@ -403,6 +440,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.81,
       "brightness": 69.76
     },
@@ -413,6 +451,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.32,
       "brightness": 72.91
     },
@@ -423,6 +462,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.96,
       "brightness": 71.31
     },
@@ -433,6 +473,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 39.04,
       "brightness": 75.21
     },
@@ -443,6 +484,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 69.33,
       "brightness": 94.4
     },
@@ -453,6 +495,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.34,
       "brightness": 92.13
     },
@@ -463,6 +506,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 44.04,
       "brightness": 77.24
     },
@@ -473,6 +517,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 49.98,
       "brightness": 85.56
     },
@@ -483,6 +528,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 50.42,
       "brightness": 83.59
     },
@@ -493,6 +539,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 89.37,
       "brightness": 75.86
     },
@@ -503,6 +550,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 99.94,
       "brightness": 125.16
     },
@@ -513,6 +561,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 99.18,
       "brightness": 122.69
     },
@@ -523,6 +572,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 101.31,
       "brightness": 124.74
     },
@@ -533,6 +583,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 59.68,
       "brightness": 105.52
     },
@@ -543,6 +594,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 99.5,
       "brightness": 118.21
     },
@@ -553,6 +605,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 39.78,
       "brightness": 99.71
     },
@@ -563,6 +616,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.54,
       "brightness": 99.38
     },
@@ -573,6 +627,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.86,
       "brightness": 99.75
     },
@@ -583,6 +638,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.26,
       "brightness": 100.1
     },
@@ -593,6 +649,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.11,
       "brightness": 100.57
     },
@@ -603,6 +660,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 51.19,
       "brightness": 100.22
     },
@@ -613,6 +671,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.41,
       "brightness": 115.18
     },
@@ -623,6 +682,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 78.74,
       "brightness": 118.2
     },
@@ -633,6 +693,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 70.58,
       "brightness": 102.37
     },
@@ -643,6 +704,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 93.03,
       "brightness": 121.86
     },
@@ -653,6 +715,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 94.51,
       "brightness": 104.4
     },
@@ -663,6 +726,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.74,
       "brightness": 128.35
     },
@@ -673,6 +737,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 61.01,
       "brightness": 126.26
     },
@@ -683,6 +748,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.65,
       "brightness": 130.28
     },
@@ -693,6 +759,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 66.36,
       "brightness": 91.24
     },
@@ -703,6 +770,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 42.74,
       "brightness": 124.72
     },
@@ -713,6 +781,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.08,
       "brightness": 118.9
     },
@@ -723,6 +792,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 40.64,
       "brightness": 117.58
     },
@@ -733,6 +803,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 109.73,
       "brightness": 112.57
     },
@@ -743,6 +814,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 103.6,
       "brightness": 120.83
     },
@@ -753,6 +825,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.51,
       "brightness": 99.19
     },
@@ -763,6 +836,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 79.07,
       "brightness": 126.9
     },
@@ -773,6 +847,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.39,
       "brightness": 100.82
     },
@@ -783,6 +858,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 36.27,
       "brightness": 105.83
     },
@@ -793,6 +869,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 46.14,
       "brightness": 108.03
     },
@@ -803,6 +880,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.38,
       "brightness": 105.96
     },
@@ -813,6 +891,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.58,
       "brightness": 112.61
     },
@@ -823,6 +902,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 19.41,
       "brightness": 123.69
     },
@@ -833,6 +913,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.72,
       "brightness": 116.36
     },
@@ -843,6 +924,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.37,
       "brightness": 110.25
     },
@@ -853,6 +935,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.49,
       "brightness": 131.95
     },
@@ -863,6 +946,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 68.31,
       "brightness": 127.49
     },
@@ -873,6 +957,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.3,
       "brightness": 122.52
     },
@@ -883,6 +968,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 30.45,
       "brightness": 124.01
     },
@@ -893,6 +979,7 @@
       "session": "250530_5003_Green_Training_very_dm_light",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.23,
       "brightness": 123.86
     },
@@ -903,6 +990,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.62,
       "brightness": 143.02
     },
@@ -913,6 +1001,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.37,
       "brightness": 142.31
     },
@@ -923,6 +1012,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 19.15,
       "brightness": 142.75
     },
@@ -933,6 +1023,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.32,
       "brightness": 143.76
     },
@@ -943,6 +1034,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.81,
       "brightness": 141.98
     },
@@ -953,6 +1045,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.96,
       "brightness": 134.26
     },
@@ -963,6 +1056,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 66.05,
       "brightness": 162.79
     },
@@ -973,6 +1067,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 70.23,
       "brightness": 160.78
     },
@@ -983,6 +1078,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 65.82,
       "brightness": 165.97
     },
@@ -993,6 +1089,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 66.44,
       "brightness": 165.75
     },
@@ -1003,6 +1100,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.9,
       "brightness": 162.27
     },
@@ -1013,6 +1111,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.67,
       "brightness": 160.83
     },
@@ -1023,6 +1122,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 43.95,
       "brightness": 157.88
     },
@@ -1033,6 +1133,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 41.37,
       "brightness": 155.56
     },
@@ -1043,6 +1144,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.28,
       "brightness": 152.07
     },
@@ -1053,6 +1155,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 76.16,
       "brightness": 158.27
     },
@@ -1063,6 +1166,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 73.51,
       "brightness": 161.51
     },
@@ -1073,6 +1177,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.82,
       "brightness": 162.4
     },
@@ -1083,6 +1188,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 95.21,
       "brightness": 148.06
     },
@@ -1093,6 +1199,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 90.52,
       "brightness": 156.17
     },
@@ -1103,6 +1210,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 91.94,
       "brightness": 163.08
     },
@@ -1113,6 +1221,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 89.93,
       "brightness": 163.77
     },
@@ -1123,6 +1232,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 95.57,
       "brightness": 162.88
     },
@@ -1133,6 +1243,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 87.14,
       "brightness": 164.53
     },
@@ -1143,6 +1254,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 87.22,
       "brightness": 166.52
     },
@@ -1153,6 +1265,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 68.77,
       "brightness": 172.4
     },
@@ -1163,6 +1276,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 62.32,
       "brightness": 165.67
     },
@@ -1173,6 +1287,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 53.19,
       "brightness": 163.63
     },
@@ -1183,6 +1298,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 30.36,
       "brightness": 156.99
     },
@@ -1193,6 +1309,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 45.74,
       "brightness": 156.11
     },
@@ -1203,6 +1320,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 71.54,
       "brightness": 160.23
     },
@@ -1213,6 +1331,7 @@
       "session": "250616_5120_Purple_sleep_trial_1",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 101.37,
       "brightness": 148.33
     },
@@ -1223,6 +1342,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.16,
       "brightness": 82.51
     },
@@ -1233,6 +1353,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.84,
       "brightness": 83.68
     },
@@ -1243,6 +1364,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 41.75,
       "brightness": 83.8
     },
@@ -1253,6 +1375,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 56.78,
       "brightness": 89.4
     },
@@ -1263,6 +1386,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 60.65,
       "brightness": 90.7
     },
@@ -1273,6 +1397,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.73,
       "brightness": 80.93
     },
@@ -1283,6 +1408,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 26.32,
       "brightness": 81.65
     },
@@ -1293,6 +1419,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 42.02,
       "brightness": 83.42
     },
@@ -1303,6 +1430,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.03,
       "brightness": 80.96
     },
@@ -1313,6 +1441,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.66,
       "brightness": 80.84
     },
@@ -1323,6 +1452,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.44,
       "brightness": 81.83
     },
@@ -1333,6 +1463,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 42.57,
       "brightness": 82.27
     },
@@ -1343,6 +1474,7 @@
       "session": "251016_5212_purple_Day10",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.36,
       "brightness": 86.88
     },
@@ -1353,6 +1485,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.38,
       "brightness": 83.34
     },
@@ -1363,6 +1496,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.97,
       "brightness": 82.17
     },
@@ -1373,6 +1507,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 29.64,
       "brightness": 85.52
     },
@@ -1383,6 +1518,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 46.76,
       "brightness": 86.19
     },
@@ -1393,6 +1529,7 @@
       "session": "251018_5213_Purple_awake",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 44.97,
       "brightness": 87.76
     },
@@ -1403,6 +1540,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.62,
       "brightness": 115.35
     },
@@ -1413,6 +1551,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.73,
       "brightness": 114.47
     },
@@ -1423,6 +1562,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.11,
       "brightness": 115.4
     },
@@ -1433,6 +1573,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.59,
       "brightness": 116.24
     },
@@ -1443,6 +1584,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.28,
       "brightness": 115.67
     },
@@ -1453,6 +1595,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.84,
       "brightness": 116.32
     },
@@ -1463,6 +1606,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.17,
       "brightness": 114.66
     },
@@ -1473,6 +1617,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.7,
       "brightness": 115.74
     },
@@ -1483,6 +1628,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.01,
       "brightness": 116.65
     },
@@ -1493,6 +1639,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.43,
       "brightness": 115.96
     },
@@ -1503,6 +1650,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.05,
       "brightness": 115.67
     },
@@ -1513,6 +1661,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.1,
       "brightness": 116.19
     },
@@ -1523,6 +1672,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.29,
       "brightness": 114.09
     },
@@ -1533,6 +1683,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.06,
       "brightness": 117.03
     },
@@ -1543,6 +1694,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.12,
       "brightness": 116.76
     },
@@ -1553,6 +1705,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.95,
       "brightness": 116.15
     },
@@ -1563,6 +1716,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.45,
       "brightness": 114.56
     },
@@ -1573,6 +1727,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 41.27,
       "brightness": 116.93
     },
@@ -1583,6 +1738,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 39.83,
       "brightness": 117.92
     },
@@ -1593,6 +1749,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.97,
       "brightness": 115.06
     },
@@ -1603,6 +1760,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.08,
       "brightness": 115.51
     },
@@ -1613,6 +1771,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.38,
       "brightness": 114.08
     },
@@ -1623,6 +1782,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.09,
       "brightness": 114.97
     },
@@ -1633,6 +1793,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.51,
       "brightness": 113.76
     },
@@ -1643,6 +1804,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.77,
       "brightness": 114.36
     },
@@ -1653,6 +1815,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.47,
       "brightness": 114.18
     },
@@ -1663,6 +1826,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.87,
       "brightness": 114.24
     },
@@ -1673,6 +1837,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.73,
       "brightness": 113.56
     },
@@ -1683,6 +1848,7 @@
       "session": "260807_3582_Purple_trial3",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.01,
       "brightness": 113.27
     },
@@ -1693,6 +1859,7 @@
       "session": "260812_3582_Purple_trial5",
       "fold": -1,
       "holdout": true,
+      "validation_holdout": false,
       "diameter": 7.31,
       "brightness": 112.53
     },
@@ -1703,6 +1870,7 @@
       "session": "260812_3582_Purple_trial5",
       "fold": -1,
       "holdout": true,
+      "validation_holdout": false,
       "diameter": 6.08,
       "brightness": 112.11
     },
@@ -1713,6 +1881,7 @@
       "session": "260812_3582_Purple_trial5",
       "fold": -1,
       "holdout": true,
+      "validation_holdout": false,
       "diameter": 6.28,
       "brightness": 112.72
     },
@@ -1723,8 +1892,229 @@
       "session": "260812_3582_Purple_trial5",
       "fold": -1,
       "holdout": true,
+      "validation_holdout": false,
       "diameter": 5.29,
       "brightness": 112.14
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00015",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00015.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00015.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 14.63,
+      "brightness": 105.49
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00036",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00036.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00036.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 14.54,
+      "brightness": 105.76
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00071",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00071.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00071.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.1,
+      "brightness": 105.13
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00092",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00092.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00092.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.88,
+      "brightness": 105.57
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00127",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00127.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00127.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 14.45,
+      "brightness": 106.41
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00163",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00163.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00163.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.55,
+      "brightness": 106.3
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00184",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00184.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00184.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.26,
+      "brightness": 106.11
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00205",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00205.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00205.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 13.91,
+      "brightness": 106.46
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00226",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00226.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00226.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 13.63,
+      "brightness": 106.29
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00247",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00247.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00247.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.43,
+      "brightness": 106.26
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00290",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00290.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00290.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.05,
+      "brightness": 105.86
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00311",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00311.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00311.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 13.73,
+      "brightness": 105.77
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00332",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00332.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00332.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 14.27,
+      "brightness": 105.77
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00353",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00353.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00353.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.14,
+      "brightness": 105.83
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00388",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00388.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00388.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 16.08,
+      "brightness": 105.99
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00410",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00410.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00410.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 14.88,
+      "brightness": 105.61
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00452",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00452.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00452.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.22,
+      "brightness": 105.78
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00473",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00473.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00473.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 17.0,
+      "brightness": 105.88
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00558",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00558.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00558.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 15.68,
+      "brightness": 104.97
+    },
+    {
+      "key": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/frame_00593",
+      "image": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/images/frame_00593.png",
+      "mask": "labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/masks/frame_00593.png",
+      "session": "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1",
+      "fold": 3,
+      "holdout": false,
+      "validation_holdout": false,
+      "diameter": 16.39,
+      "brightness": 105.7
     },
     {
       "key": "HQL073_250515/frame_00384",
@@ -1733,6 +2123,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.56,
       "brightness": 72.32
     },
@@ -1743,6 +2134,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.65,
       "brightness": 73.58
     },
@@ -1753,6 +2145,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 42.98,
       "brightness": 69.66
     },
@@ -1763,6 +2156,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 48.16,
       "brightness": 69.01
     },
@@ -1773,6 +2167,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 46.39,
       "brightness": 72.51
     },
@@ -1783,6 +2178,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.66,
       "brightness": 70.28
     },
@@ -1793,6 +2189,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.25,
       "brightness": 71.11
     },
@@ -1803,6 +2200,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 36.96,
       "brightness": 70.36
     },
@@ -1813,6 +2211,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.85,
       "brightness": 73.89
     },
@@ -1823,6 +2222,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.67,
       "brightness": 73.87
     },
@@ -1833,6 +2233,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.78,
       "brightness": 73.95
     },
@@ -1843,6 +2244,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.85,
       "brightness": 71.51
     },
@@ -1853,6 +2255,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.61,
       "brightness": 72.81
     },
@@ -1863,6 +2266,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.33,
       "brightness": 73.82
     },
@@ -1873,6 +2277,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 32.39,
       "brightness": 71.5
     },
@@ -1883,6 +2288,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.41,
       "brightness": 71.68
     },
@@ -1893,6 +2299,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.7,
       "brightness": 72.04
     },
@@ -1903,6 +2310,7 @@
       "session": "HQL073_250515",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.75,
       "brightness": 72.11
     },
@@ -1913,6 +2321,7 @@
       "session": "HQL073_whisker250623",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.27,
       "brightness": 72.0
     },
@@ -1923,6 +2332,7 @@
       "session": "HQL073_whisker250623",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.09,
       "brightness": 70.45
     },
@@ -1933,6 +2343,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 63.97,
       "brightness": 76.05
     },
@@ -1943,6 +2354,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.84,
       "brightness": 72.11
     },
@@ -1953,6 +2365,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.07,
       "brightness": 78.95
     },
@@ -1963,6 +2376,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.89,
       "brightness": 72.53
     },
@@ -1973,6 +2387,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.72,
       "brightness": 72.57
     },
@@ -1983,6 +2398,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 58.48,
       "brightness": 88.54
     },
@@ -1993,6 +2409,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.0,
       "brightness": 73.82
     },
@@ -2003,6 +2420,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.82,
       "brightness": 74.72
     },
@@ -2013,6 +2431,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.78,
       "brightness": 75.35
     },
@@ -2023,6 +2442,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.7,
       "brightness": 75.68
     },
@@ -2033,6 +2453,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.4,
       "brightness": 75.56
     },
@@ -2043,6 +2464,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.59,
       "brightness": 75.52
     },
@@ -2053,6 +2475,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.81,
       "brightness": 75.59
     },
@@ -2063,6 +2486,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 67.35,
       "brightness": 87.7
     },
@@ -2073,6 +2497,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.04,
       "brightness": 80.85
     },
@@ -2083,6 +2508,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 71.46,
       "brightness": 88.25
     },
@@ -2093,6 +2519,7 @@
       "session": "HQL080_sleep250625",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 41.55,
       "brightness": 73.69
     },
@@ -2103,6 +2530,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 49.98,
       "brightness": 86.18
     },
@@ -2113,6 +2541,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.31,
       "brightness": 83.92
     },
@@ -2123,6 +2552,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.11,
       "brightness": 92.01
     },
@@ -2133,6 +2563,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.47,
       "brightness": 88.3
     },
@@ -2143,6 +2574,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.28,
       "brightness": 83.15
     },
@@ -2153,6 +2585,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 47.55,
       "brightness": 88.43
     },
@@ -2163,6 +2596,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.68,
       "brightness": 83.64
     },
@@ -2173,6 +2607,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.81,
       "brightness": 82.22
     },
@@ -2183,6 +2618,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 32.99,
       "brightness": 93.15
     },
@@ -2193,6 +2629,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.44,
       "brightness": 82.95
     },
@@ -2203,6 +2640,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 30.63,
       "brightness": 84.16
     },
@@ -2213,6 +2651,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.99,
       "brightness": 81.97
     },
@@ -2223,6 +2662,7 @@
       "session": "HQL080_whiskerb_250722",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.77,
       "brightness": 81.32
     },
@@ -2233,6 +2673,7 @@
       "session": "HQL085_whiskerb250916",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 89.11,
       "brightness": 93.68
     },
@@ -2243,6 +2684,7 @@
       "session": "HQL085_whiskerb250916",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 62.06,
       "brightness": 120.35
     },
@@ -2253,6 +2695,7 @@
       "session": "HQL085_whiskerb250916",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.38,
       "brightness": 123.2
     },
@@ -2263,6 +2706,7 @@
       "session": "HQL085_whiskerb250916",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 62.85,
       "brightness": 130.26
     },
@@ -2273,6 +2717,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 80.94,
       "brightness": 112.74
     },
@@ -2283,6 +2728,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.4,
       "brightness": 100.34
     },
@@ -2293,6 +2739,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.31,
       "brightness": 105.17
     },
@@ -2303,6 +2750,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.66,
       "brightness": 113.23
     },
@@ -2313,6 +2761,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.23,
       "brightness": 121.92
     },
@@ -2323,6 +2772,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.73,
       "brightness": 118.21
     },
@@ -2333,6 +2783,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 64.18,
       "brightness": 124.45
     },
@@ -2343,6 +2794,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.0,
       "brightness": 107.84
     },
@@ -2353,6 +2805,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.39,
       "brightness": 108.38
     },
@@ -2363,6 +2816,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.45,
       "brightness": 112.59
     },
@@ -2373,6 +2827,7 @@
       "session": "HQL086_sleep250909",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 82.75,
       "brightness": 113.71
     },
@@ -2383,6 +2838,7 @@
       "session": "HQL086_sleep250912",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 89.23,
       "brightness": 103.02
     },
@@ -2393,6 +2849,7 @@
       "session": "HQL086_sleep250912",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 77.74,
       "brightness": 102.58
     },
@@ -2403,6 +2860,7 @@
       "session": "HQL086_sleep250912",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.68,
       "brightness": 88.81
     },
@@ -2413,6 +2871,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 94.76,
       "brightness": 108.47
     },
@@ -2423,6 +2882,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 96.47,
       "brightness": 86.12
     },
@@ -2433,6 +2893,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 98.83,
       "brightness": 96.13
     },
@@ -2443,6 +2904,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 62.97,
       "brightness": 97.74
     },
@@ -2453,6 +2915,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 99.03,
       "brightness": 90.43
     },
@@ -2463,6 +2926,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 102.03,
       "brightness": 92.25
     },
@@ -2473,6 +2937,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 88.04,
       "brightness": 103.1
     },
@@ -2483,6 +2948,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 96.35,
       "brightness": 101.52
     },
@@ -2493,6 +2959,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 60.11,
       "brightness": 125.28
     },
@@ -2503,6 +2970,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 91.49,
       "brightness": 106.93
     },
@@ -2513,6 +2981,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 80.69,
       "brightness": 106.19
     },
@@ -2523,6 +2992,7 @@
       "session": "HQL086_whiskerb250923",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 95.06,
       "brightness": 104.88
     },
@@ -2533,6 +3003,7 @@
       "session": "HQL088_sleep250929",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 70.57,
       "brightness": 131.82
     },
@@ -2543,6 +3014,7 @@
       "session": "HQL088_whiskerb251006",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 107.33,
       "brightness": 99.21
     },
@@ -2553,6 +3025,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.57,
       "brightness": 121.07
     },
@@ -2563,6 +3036,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.32,
       "brightness": 120.46
     },
@@ -2573,6 +3047,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.12,
       "brightness": 120.77
     },
@@ -2583,6 +3058,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.95,
       "brightness": 118.73
     },
@@ -2593,6 +3069,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.59,
       "brightness": 126.85
     },
@@ -2603,6 +3080,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.39,
       "brightness": 118.43
     },
@@ -2613,6 +3091,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.96,
       "brightness": 114.75
     },
@@ -2623,6 +3102,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.66,
       "brightness": 114.22
     },
@@ -2633,6 +3113,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 53.9,
       "brightness": 131.34
     },
@@ -2643,6 +3124,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 29.98,
       "brightness": 95.92
     },
@@ -2653,6 +3135,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.82,
       "brightness": 111.09
     },
@@ -2663,6 +3146,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.28,
       "brightness": 111.3
     },
@@ -2673,6 +3157,7 @@
       "session": "HQL090_sleep251012",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.66,
       "brightness": 90.57
     },
@@ -2683,6 +3168,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 75.69,
       "brightness": 99.82
     },
@@ -2693,6 +3179,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 82.22,
       "brightness": 130.39
     },
@@ -2703,6 +3190,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 79.56,
       "brightness": 124.42
     },
@@ -2713,6 +3201,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 96.34,
       "brightness": 116.52
     },
@@ -2723,6 +3212,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 87.66,
       "brightness": 117.03
     },
@@ -2733,6 +3223,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 68.99,
       "brightness": 133.33
     },
@@ -2743,6 +3234,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 100.44,
       "brightness": 105.07
     },
@@ -2753,6 +3245,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 69.78,
       "brightness": 135.11
     },
@@ -2763,6 +3256,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 85.24,
       "brightness": 124.71
     },
@@ -2773,6 +3267,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 62.63,
       "brightness": 136.08
     },
@@ -2783,6 +3278,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 55.59,
       "brightness": 134.51
     },
@@ -2793,6 +3289,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 65.07,
       "brightness": 136.79
     },
@@ -2803,6 +3300,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 87.61,
       "brightness": 127.61
     },
@@ -2813,6 +3311,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 51.1,
       "brightness": 113.4
     },
@@ -2823,6 +3322,7 @@
       "session": "HQL090_whiskerb251020",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 88.68,
       "brightness": 111.25
     },
@@ -2833,6 +3333,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.07,
       "brightness": 108.38
     },
@@ -2843,6 +3344,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 32.13,
       "brightness": 109.01
     },
@@ -2853,6 +3355,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.3,
       "brightness": 109.5
     },
@@ -2863,6 +3366,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.58,
       "brightness": 118.33
     },
@@ -2873,6 +3377,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.33,
       "brightness": 118.74
     },
@@ -2883,6 +3388,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.84,
       "brightness": 116.82
     },
@@ -2893,6 +3399,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.23,
       "brightness": 121.49
     },
@@ -2903,6 +3410,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.59,
       "brightness": 122.15
     },
@@ -2913,6 +3421,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.21,
       "brightness": 119.54
     },
@@ -2923,6 +3432,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 68.41,
       "brightness": 121.12
     },
@@ -2933,6 +3443,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 26.34,
       "brightness": 111.87
     },
@@ -2943,6 +3454,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.46,
       "brightness": 115.94
     },
@@ -2953,6 +3465,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.39,
       "brightness": 118.11
     },
@@ -2963,6 +3476,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.66,
       "brightness": 119.98
     },
@@ -2973,6 +3487,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.51,
       "brightness": 119.42
     },
@@ -2983,6 +3498,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.0,
       "brightness": 117.83
     },
@@ -2993,6 +3509,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.15,
       "brightness": 120.33
     },
@@ -3003,6 +3520,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.71,
       "brightness": 120.2
     },
@@ -3013,6 +3531,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.31,
       "brightness": 116.28
     },
@@ -3023,6 +3542,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.71,
       "brightness": 113.83
     },
@@ -3033,6 +3553,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.19,
       "brightness": 113.26
     },
@@ -3043,6 +3564,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.65,
       "brightness": 116.07
     },
@@ -3053,6 +3575,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.63,
       "brightness": 115.13
     },
@@ -3063,6 +3586,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.31,
       "brightness": 116.71
     },
@@ -3073,6 +3597,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.93,
       "brightness": 117.59
     },
@@ -3083,6 +3608,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.33,
       "brightness": 118.82
     },
@@ -3093,6 +3619,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.71,
       "brightness": 121.46
     },
@@ -3103,6 +3630,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.23,
       "brightness": 119.38
     },
@@ -3113,6 +3641,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.49,
       "brightness": 120.75
     },
@@ -3123,6 +3652,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.88,
       "brightness": 120.92
     },
@@ -3133,6 +3663,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.67,
       "brightness": 122.09
     },
@@ -3143,6 +3674,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.88,
       "brightness": 121.51
     },
@@ -3153,6 +3685,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.67,
       "brightness": 122.56
     },
@@ -3163,6 +3696,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.63,
       "brightness": 123.1
     },
@@ -3173,6 +3707,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.27,
       "brightness": 122.97
     },
@@ -3183,6 +3718,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.8,
       "brightness": 123.76
     },
@@ -3193,6 +3729,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 30.13,
       "brightness": 111.47
     },
@@ -3203,6 +3740,7 @@
       "session": "HQL095_sleep260324_010",
       "fold": 0,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.64,
       "brightness": 109.21
     },
@@ -3213,6 +3751,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.62,
       "brightness": 117.23
     },
@@ -3223,6 +3762,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.12,
       "brightness": 108.4
     },
@@ -3233,6 +3773,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.55,
       "brightness": 110.59
     },
@@ -3243,6 +3784,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.67,
       "brightness": 112.01
     },
@@ -3253,6 +3795,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.45,
       "brightness": 112.22
     },
@@ -3263,6 +3806,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.17,
       "brightness": 112.31
     },
@@ -3273,6 +3817,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.7,
       "brightness": 113.08
     },
@@ -3283,6 +3828,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.26,
       "brightness": 112.34
     },
@@ -3293,6 +3839,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.18,
       "brightness": 111.62
     },
@@ -3303,6 +3850,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.0,
       "brightness": 114.23
     },
@@ -3313,6 +3861,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.22,
       "brightness": 114.22
     },
@@ -3323,6 +3872,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.74,
       "brightness": 117.18
     },
@@ -3333,6 +3883,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.27,
       "brightness": 116.35
     },
@@ -3343,6 +3894,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.0,
       "brightness": 116.46
     },
@@ -3353,6 +3905,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.97,
       "brightness": 115.23
     },
@@ -3363,6 +3916,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 29.1,
       "brightness": 115.01
     },
@@ -3373,6 +3927,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.04,
       "brightness": 116.17
     },
@@ -3383,6 +3938,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.71,
       "brightness": 118.04
     },
@@ -3393,6 +3949,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.87,
       "brightness": 117.99
     },
@@ -3403,6 +3960,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.63,
       "brightness": 117.75
     },
@@ -3413,6 +3971,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.67,
       "brightness": 118.79
     },
@@ -3423,6 +3982,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.44,
       "brightness": 119.88
     },
@@ -3433,6 +3993,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.51,
       "brightness": 118.98
     },
@@ -3443,6 +4004,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 19.41,
       "brightness": 116.07
     },
@@ -3453,6 +4015,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 30.92,
       "brightness": 122.91
     },
@@ -3463,6 +4026,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.03,
       "brightness": 124.13
     },
@@ -3473,6 +4037,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.19,
       "brightness": 124.01
     },
@@ -3483,6 +4048,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.63,
       "brightness": 121.69
     },
@@ -3493,6 +4059,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 26.15,
       "brightness": 118.96
     },
@@ -3503,6 +4070,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 23.1,
       "brightness": 116.3
     },
@@ -3513,6 +4081,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.51,
       "brightness": 117.15
     },
@@ -3523,6 +4092,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.44,
       "brightness": 116.69
     },
@@ -3533,6 +4103,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.96,
       "brightness": 115.3
     },
@@ -3543,6 +4114,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.56,
       "brightness": 115.57
     },
@@ -3553,6 +4125,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.79,
       "brightness": 118.46
     },
@@ -3563,6 +4136,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.37,
       "brightness": 117.24
     },
@@ -3573,6 +4147,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.64,
       "brightness": 117.79
     },
@@ -3583,6 +4158,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.56,
       "brightness": 116.54
     },
@@ -3593,6 +4169,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 29.51,
       "brightness": 117.65
     },
@@ -3603,6 +4180,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.82,
       "brightness": 123.04
     },
@@ -3613,6 +4191,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.38,
       "brightness": 118.96
     },
@@ -3623,6 +4202,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 133.76
     },
@@ -3633,6 +4213,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.39,
       "brightness": 119.99
     },
@@ -3643,6 +4224,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.94,
       "brightness": 120.1
     },
@@ -3653,6 +4235,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.1,
       "brightness": 119.57
     },
@@ -3663,6 +4246,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.26,
       "brightness": 119.47
     },
@@ -3673,6 +4257,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.16,
       "brightness": 120.12
     },
@@ -3683,6 +4268,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.82,
       "brightness": 120.7
     },
@@ -3693,6 +4279,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.05,
       "brightness": 121.47
     },
@@ -3703,6 +4290,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.99,
       "brightness": 121.3
     },
@@ -3713,6 +4301,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.94,
       "brightness": 121.38
     },
@@ -3723,6 +4312,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.15,
       "brightness": 121.16
     },
@@ -3733,6 +4323,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.77,
       "brightness": 120.31
     },
@@ -3743,6 +4334,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.93,
       "brightness": 120.92
     },
@@ -3753,6 +4345,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.77,
       "brightness": 121.27
     },
@@ -3763,6 +4356,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.34,
       "brightness": 120.46
     },
@@ -3773,6 +4367,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.94,
       "brightness": 120.95
     },
@@ -3783,6 +4378,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 41.69,
       "brightness": 122.47
     },
@@ -3793,6 +4389,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.38,
       "brightness": 119.83
     },
@@ -3803,6 +4400,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.0,
       "brightness": 119.87
     },
@@ -3813,6 +4411,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.87,
       "brightness": 119.08
     },
@@ -3823,6 +4422,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.83,
       "brightness": 119.79
     },
@@ -3833,6 +4433,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.11,
       "brightness": 119.52
     },
@@ -3843,6 +4444,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.49,
       "brightness": 119.03
     },
@@ -3853,6 +4455,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.64,
       "brightness": 119.52
     },
@@ -3863,6 +4466,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.49,
       "brightness": 119.36
     },
@@ -3873,6 +4477,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 36.93,
       "brightness": 117.82
     },
@@ -3883,6 +4488,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 42.89,
       "brightness": 122.49
     },
@@ -3893,6 +4499,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.02,
       "brightness": 120.38
     },
@@ -3903,6 +4510,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.39,
       "brightness": 120.31
     },
@@ -3913,6 +4521,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.26,
       "brightness": 120.01
     },
@@ -3923,6 +4532,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.57,
       "brightness": 120.07
     },
@@ -3933,6 +4543,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.96,
       "brightness": 118.46
     },
@@ -3943,6 +4554,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.51,
       "brightness": 118.04
     },
@@ -3953,6 +4565,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 7.98,
       "brightness": 119.24
     },
@@ -3963,6 +4576,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 119.0
     },
@@ -3973,6 +4587,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 118.89
     },
@@ -3983,6 +4598,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 119.11
     },
@@ -3993,6 +4609,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 119.58
     },
@@ -4003,6 +4620,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 119.62
     },
@@ -4013,6 +4631,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.3,
       "brightness": 121.88
     },
@@ -4023,6 +4642,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 120.96
     },
@@ -4033,6 +4653,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 120.92
     },
@@ -4043,6 +4664,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 120.96
     },
@@ -4053,6 +4675,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.04
     },
@@ -4063,6 +4686,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.13
     },
@@ -4073,6 +4697,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.18
     },
@@ -4083,6 +4708,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.66
     },
@@ -4093,6 +4719,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 7.57,
       "brightness": 120.04
     },
@@ -4103,6 +4730,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.99,
       "brightness": 119.97
     },
@@ -4113,6 +4741,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 120.5
     },
@@ -4123,6 +4752,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 120.62
     },
@@ -4133,6 +4763,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.42
     },
@@ -4143,6 +4774,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 121.33
     },
@@ -4153,6 +4785,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 136.09
     },
@@ -4163,6 +4796,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 35.47,
       "brightness": 121.55
     },
@@ -4173,6 +4807,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 34.56,
       "brightness": 123.02
     },
@@ -4183,6 +4818,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.64,
       "brightness": 124.24
     },
@@ -4193,6 +4829,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.35,
       "brightness": 124.41
     },
@@ -4203,6 +4840,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.93,
       "brightness": 124.57
     },
@@ -4213,6 +4851,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.7,
       "brightness": 123.13
     },
@@ -4223,6 +4862,7 @@
       "session": "HQL096_sleep260320_007",
       "fold": 1,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.34,
       "brightness": 124.82
     },
@@ -4233,6 +4873,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.97,
       "brightness": 134.77
     },
@@ -4243,6 +4884,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.67,
       "brightness": 133.41
     },
@@ -4253,6 +4895,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.34,
       "brightness": 141.53
     },
@@ -4263,6 +4906,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.27,
       "brightness": 144.99
     },
@@ -4273,6 +4917,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.91,
       "brightness": 147.7
     },
@@ -4283,6 +4928,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.97,
       "brightness": 145.41
     },
@@ -4293,6 +4939,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.11,
       "brightness": 147.11
     },
@@ -4303,6 +4950,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 149.78
     },
@@ -4313,6 +4961,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 38.96,
       "brightness": 149.38
     },
@@ -4323,6 +4972,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.75,
       "brightness": 145.58
     },
@@ -4333,6 +4983,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.2,
       "brightness": 143.65
     },
@@ -4343,6 +4994,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 48.13,
       "brightness": 137.03
     },
@@ -4353,6 +5005,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 21.73,
       "brightness": 127.74
     },
@@ -4363,6 +5016,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 39.33,
       "brightness": 139.64
     },
@@ -4373,6 +5027,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 22.03,
       "brightness": 135.71
     },
@@ -4383,6 +5038,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.76,
       "brightness": 136.5
     },
@@ -4393,6 +5049,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.1,
       "brightness": 136.35
     },
@@ -4403,6 +5060,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.26,
       "brightness": 136.98
     },
@@ -4413,6 +5071,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 40.42,
       "brightness": 141.3
     },
@@ -4423,6 +5082,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.45,
       "brightness": 135.35
     },
@@ -4433,6 +5093,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.05,
       "brightness": 135.95
     },
@@ -4443,6 +5104,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.46,
       "brightness": 142.07
     },
@@ -4453,6 +5115,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 29.51,
       "brightness": 151.36
     },
@@ -4463,6 +5126,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 24.49,
       "brightness": 151.14
     },
@@ -4473,6 +5137,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.08,
       "brightness": 150.54
     },
@@ -4483,6 +5148,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.27,
       "brightness": 149.38
     },
@@ -4493,6 +5159,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 151.61
     },
@@ -4503,6 +5170,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.1
     },
@@ -4513,6 +5181,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.07
     },
@@ -4523,6 +5192,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.04,
       "brightness": 147.84
     },
@@ -4533,6 +5203,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.66,
       "brightness": 150.11
     },
@@ -4543,6 +5214,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 19.51,
       "brightness": 138.95
     },
@@ -4553,6 +5225,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.68,
       "brightness": 141.18
     },
@@ -4563,6 +5236,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.01,
       "brightness": 134.71
     },
@@ -4573,6 +5247,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.82,
       "brightness": 135.31
     },
@@ -4583,6 +5258,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.59,
       "brightness": 142.99
     },
@@ -4593,6 +5269,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.4,
       "brightness": 142.89
     },
@@ -4603,6 +5280,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.39,
       "brightness": 141.07
     },
@@ -4613,6 +5291,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.91,
       "brightness": 144.65
     },
@@ -4623,6 +5302,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.15,
       "brightness": 149.38
     },
@@ -4633,6 +5313,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.22,
       "brightness": 137.98
     },
@@ -4643,6 +5324,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 27.69,
       "brightness": 147.8
     },
@@ -4653,6 +5335,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.23,
       "brightness": 138.5
     },
@@ -4663,6 +5346,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 151.27
     },
@@ -4673,6 +5357,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 154.09
     },
@@ -4683,6 +5368,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.92
     },
@@ -4693,6 +5379,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.74
     },
@@ -4703,6 +5390,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 154.15
     },
@@ -4713,6 +5401,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.86
     },
@@ -4723,6 +5412,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 152.28
     },
@@ -4733,6 +5423,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.32
     },
@@ -4743,6 +5434,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 153.5
     },
@@ -4753,6 +5445,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.43,
       "brightness": 149.42
     },
@@ -4763,6 +5456,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.51,
       "brightness": 145.42
     },
@@ -4773,6 +5467,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.77,
       "brightness": 145.3
     },
@@ -4783,6 +5478,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 28.23,
       "brightness": 149.65
     },
@@ -4793,6 +5489,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.33,
       "brightness": 148.6
     },
@@ -4803,6 +5500,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.47,
       "brightness": 146.58
     },
@@ -4813,6 +5511,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 26.84,
       "brightness": 147.62
     },
@@ -4823,6 +5522,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.76,
       "brightness": 147.48
     },
@@ -4833,6 +5533,7 @@
       "session": "HQL097_sleep260321_010",
       "fold": 2,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 152.51
     },
@@ -4843,6 +5544,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.19,
       "brightness": 83.77
     },
@@ -4853,6 +5555,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.95,
       "brightness": 85.52
     },
@@ -4863,6 +5566,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.35,
       "brightness": 86.27
     },
@@ -4873,6 +5577,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.67,
       "brightness": 90.55
     },
@@ -4883,6 +5588,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.1,
       "brightness": 91.63
     },
@@ -4893,6 +5599,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 36.16,
       "brightness": 115.63
     },
@@ -4903,6 +5610,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.41,
       "brightness": 101.94
     },
@@ -4913,6 +5621,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.7,
       "brightness": 96.65
     },
@@ -4923,6 +5632,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.4,
       "brightness": 94.89
     },
@@ -4933,6 +5643,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.01,
       "brightness": 88.92
     },
@@ -4943,6 +5654,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.11,
       "brightness": 118.35
     },
@@ -4953,6 +5665,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 26.0,
       "brightness": 119.44
     },
@@ -4963,6 +5676,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.94,
       "brightness": 104.96
     },
@@ -4973,6 +5687,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.43,
       "brightness": 103.94
     },
@@ -4983,6 +5698,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 25.13,
       "brightness": 100.23
     },
@@ -4993,6 +5709,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 18.85,
       "brightness": 108.01
     },
@@ -5003,6 +5720,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.96,
       "brightness": 124.08
     },
@@ -5013,6 +5731,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.14,
       "brightness": 111.25
     },
@@ -5023,6 +5742,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.26,
       "brightness": 103.69
     },
@@ -5033,6 +5753,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.06,
       "brightness": 103.58
     },
@@ -5043,6 +5764,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 12.91,
       "brightness": 104.42
     },
@@ -5053,6 +5775,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 37.37,
       "brightness": 106.22
     },
@@ -5063,6 +5786,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 31.53,
       "brightness": 106.74
     },
@@ -5073,6 +5797,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.0,
       "brightness": 105.8
     },
@@ -5083,6 +5808,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.67,
       "brightness": 105.01
     },
@@ -5093,6 +5819,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 11.17,
       "brightness": 105.83
     },
@@ -5103,6 +5830,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.06,
       "brightness": 108.61
     },
@@ -5113,6 +5841,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.35,
       "brightness": 102.05
     },
@@ -5123,6 +5852,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 16.08,
       "brightness": 82.12
     },
@@ -5133,6 +5863,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 20.81,
       "brightness": 79.24
     },
@@ -5143,6 +5874,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.96,
       "brightness": 87.44
     },
@@ -5153,6 +5885,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 52.71,
       "brightness": 92.03
     },
@@ -5163,6 +5896,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 14.63,
       "brightness": 95.06
     },
@@ -5173,6 +5907,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 134.11
     },
@@ -5183,6 +5918,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 132.29
     },
@@ -5193,6 +5929,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 132.38
     },
@@ -5203,6 +5940,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 130.44
     },
@@ -5213,6 +5951,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 134.96
     },
@@ -5223,6 +5962,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 137.11
     },
@@ -5233,6 +5973,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 134.14
     },
@@ -5243,6 +5984,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 132.89
     },
@@ -5253,6 +5995,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.59,
       "brightness": 109.49
     },
@@ -5263,6 +6006,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.57,
       "brightness": 107.57
     },
@@ -5273,6 +6017,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.26,
       "brightness": 105.6
     },
@@ -5283,6 +6028,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 15.51,
       "brightness": 105.71
     },
@@ -5293,6 +6039,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 17.08,
       "brightness": 105.39
     },
@@ -5303,6 +6050,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 13.3,
       "brightness": 104.75
     },
@@ -5313,6 +6061,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.88,
       "brightness": 103.37
     },
@@ -5323,6 +6072,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 7.31,
       "brightness": 114.21
     },
@@ -5333,6 +6083,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 6.77,
       "brightness": 104.12
     },
@@ -5343,6 +6094,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.29,
       "brightness": 104.31
     },
@@ -5353,6 +6105,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.94,
       "brightness": 106.32
     },
@@ -5363,6 +6116,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 10.82,
       "brightness": 97.55
     },
@@ -5373,6 +6127,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 7.57,
       "brightness": 97.62
     },
@@ -5383,6 +6138,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 7.14,
       "brightness": 97.55
     },
@@ -5393,6 +6149,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 9.17,
       "brightness": 101.43
     },
@@ -5403,6 +6160,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 8.74,
       "brightness": 101.88
     },
@@ -5413,6 +6171,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 0.0,
       "brightness": 133.09
     },
@@ -5423,6 +6182,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 33.89,
       "brightness": 106.3
     },
@@ -5433,6 +6193,7 @@
       "session": "HQL103_sleep260521_010",
       "fold": 3,
       "holdout": false,
+      "validation_holdout": false,
       "diameter": 63.29,
       "brightness": 89.5
     }

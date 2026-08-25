@@ -210,11 +210,14 @@ forgetting.
 ### Label a batch with Labelme
 
 Labelme is one supported intake route, not a requirement. If you use it, save the annotated
-JSON files beside their source images, then preview and import the complete batch:
+JSON files beside their source images. Give every genuinely new recording session its own
+session name; matching text such as `Purple_trial5` is not proof that two recordings belong
+together. The importer never merges into an existing session directory.
+
+Import the complete batch:
 
 ```powershell
-python training\import_labelme.py --source <annotation-folder> --session <new-session>
-python training\import_labelme.py --source <annotation-folder> --session <new-session> --apply
+python training\labelme_json2png.py --source <annotation-folder> --session <new-session>
 ```
 
 The importer creates the session's `images/`, `masks/`, and optional `uncertain/` folders,
@@ -223,14 +226,28 @@ then refreshes the split manifest. Use `pupil` for a visible pupil polygon,
 should be retained but excluded from segmentation loss. See [data_collection.md](data_collection.md)
 for the detailed annotation policy.
 
+For example, a Labelme-reviewed recommendation queue for one recording can become a separate
+training session without touching any other `Purple_trial5` folder:
+
+```powershell
+python training\labelme_json2png.py `
+    --source "frames_to_label\260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1\recommended" `
+    --session "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1"
+
+```
+
+This command writes only to
+`labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/`
+and refreshes `training_data_split.json`; it cannot overwrite or add frames to
+`labeled_frames/260812_3582_Purple_trial5/`.
+
 <details>
-<summary><strong>import_labelme.py arguments</strong></summary>
+<summary><strong>labelme_json2png.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
 | `--source` | Required | Folder containing Labelme JSON files and their source images. |
 | `--session` | Required | New recording-session name under this repository's `labeled_frames/`. |
-| `--apply` | Off | Write the imported pairs and refresh the split record. Without it, preview only. |
 
 </details>
 
@@ -304,11 +321,14 @@ python training\run_cross_validation.py --checkpoint_dir checkpoints_exp\cv
 
 Use its per-session results to compare candidate settings. It also writes
 `training_config.json`, a complete all-labeled training recipe based on the median
-successful-fold epoch and calibrated threshold. Train the production model from it with:
+successful-fold epoch and calibrated threshold. The repository also tracks
+`training/default_all_labeled_training_config.json`, the fixed settings used for the 516-pair
+all-data baseline, for repeatable expansion of that baseline. Train the production model from
+either recipe with:
 
 ```powershell
 python training\run_train.py `
-    --training_config_path checkpoints_exp\cv\training_config.json `
+    --training_config_path training\default_all_labeled_training_config.json `
     --checkpoint_dir checkpoints_exp\all_labeled
 ```
 

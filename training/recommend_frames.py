@@ -259,8 +259,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nScore of picks {np.mean([values[i] for i in picked]):.3f} vs {median:.3f} median.")
     print(f"Wrote {manifest}")
     print(
-        "\nLabel source frames in Labelme, then preview and apply the batch with "
-        "training/import_labelme.py per training/data_collection.md."
+        "\nLabel source frames in Labelme, then import the batch with "
+        "training/labelme_json2png.py per training/data_collection.md."
     )
     return 0
 

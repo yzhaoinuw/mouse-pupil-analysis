@@ -38,8 +38,8 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--training_config_path",
         type=Path,
-        help="Cross-validation-generated JSON recipe. It trains every labeled session and "
-        "ignores training_data_split.json.",
+        help="Fixed all-labeled JSON recipe. It trains every labeled session and ignores "
+        "training_data_split.json.",
     )
     parser.add_argument(
         "--checkpoint_dir",

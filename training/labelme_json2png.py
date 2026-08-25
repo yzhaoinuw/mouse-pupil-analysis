@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 """Import one reviewed Labelme batch into the session-grouped training pool.
 
-The command validates the whole batch before writing anything. Visible-pupil polygons
+The command validates the whole batch before writing anything, then imports it as a new
+session. Visible-pupil polygons
 and explicit ``no_visible_pupil`` negatives become compact image/mask pairs under
 ``labeled_frames/<session>/images|masks``. ``uncertain`` annotations are preserved under
 ``labeled_frames/<session>/uncertain`` and never enter segmentation training.
 
-Preview, then apply and refresh the frozen split::
+Import a labelled batch and refresh the frozen split::
 
-    python training/import_labelme.py --source path/to/annotations --session SESSION
-    python training/import_labelme.py --source path/to/annotations --session SESSION \
-        --apply
+    python training/labelme_json2png.py --source path/to/annotations --session SESSION
 """
 
 from __future__ import annotations
@@ -259,11 +258,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, required=True, help="Folder holding Labelme JSONs.")
     parser.add_argument("--session", required=True, help="New recording-session folder name.")
-    parser.add_argument(
-        "--apply",
-        action="store_true",
-        help="Import the session and refresh training_data_split.json.",
-    )
     args = parser.parse_args(argv)
 
     plan = build_import_plan(args.source, PROJECT_ROOT, args.session)
@@ -276,10 +270,6 @@ def main(argv: list[str] | None = None) -> int:
         f"({counts['pupil']} pupil, {counts['no_visible_pupil']} no-visible-pupil); "
         f"{counts[UNCERTAIN_LABEL]} uncertain archived outside training."
     )
-
-    if not args.apply:
-        print("Dry run only; pass --apply to import this new session.")
-        return 0
 
     target = apply_import(plan, PROJECT_ROOT, args.session)
     print(f"Imported {trainable} image/mask pair(s) into {target}.")

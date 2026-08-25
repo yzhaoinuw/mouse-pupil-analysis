@@ -87,7 +87,7 @@ large pupil only when its boundary is visible in the target frame. Never fill th
 aperture merely because it could represent maximal dilation.
 
 In Labelme, mark that explicit negative with one small `no_visible_pupil` shape; its geometry is
-ignored by `import_labelme.py`. If a pupil may be present but low contrast or occlusion makes
+ignored by `labelme_json2png.py`. If a pupil may be present but low contrast or occlusion makes
 the boundary unreliable, use one `uncertain` shape instead. An uncertain annotation creates no
 segmentation mask and must remain outside the session's training `images/` directory. Do not turn
 annotation uncertainty into an all-black target: that would teach a confident false negative.
@@ -147,6 +147,11 @@ folder, so provenance is a consequence of where the file goes rather than a conv
 anyone has to remember, and the grouping can never disagree with the directory it sits in.
 It asks nothing of how files are named.
 
+**Do not infer a shared session from a partial filename.** For example, two paths that both
+contain `Purple_trial5` may still be different recordings. Give them distinct session names
+unless the intake record establishes that they are one session. The importer deliberately
+refuses to merge a batch into an existing session directory.
+
 **Filenames need not be unique between sessions.** Two recordings may each contain a
 `frame_0001.png`, which is what per-recording exports usually produce. An image is
 identified by `<session>/<filename>` — `HQL091_sleep260820/frame_0001` — so the session
@@ -159,20 +164,14 @@ split input: sort it into its recording-session directory before importing it.
 
 ## Adding a labelled batch to the split
 
-1. Keep each Labelme JSON beside its source image. Preview the intake before it writes:
+1. Keep each Labelme JSON beside its source image, then import the new session:
 
    ```bash
-   python training/import_labelme.py --source <annotation-folder> --session <session>
+   python training/labelme_json2png.py --source <annotation-folder> --session <new-session>
    ```
 
-   It validates all labels, image references, frame indices, and destinations together and
-   refuses to overwrite an existing session.
-2. Apply the import and refresh the frozen split in one command:
-
-   ```bash
-   python training/import_labelme.py --source <annotation-folder> --session <session> --apply
-   ```
-
+   It validates all labels, image references, frame indices, and destinations together before
+   writing. It refuses to overwrite an existing session, then refreshes the frozen split.
    `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON
    pairs are archived under the session's `uncertain/` directory, outside the segmentation
    pool, and receive no mask or current training loss. Every image already in
@@ -180,9 +179,9 @@ split input: sort it into its recording-session directory before importing it.
    keeps its fold; only the genuinely new session is packed. There are no train/validation
    source folders: the manifest decides what trains and validates, so re-splitting moves no
    labelled file.
-3. Read the census it prints before training. Check that the new session landed in
+2. Read the census it prints before training. Check that the new session landed in
    sensible folds and that fold sizes and strata are still roughly even.
-4. Re-run cross-validation ([`README.md`](README.md#5-cross-validate-a-configuration)).
+3. Re-run cross-validation ([`README.md`](README.md#5-cross-validate-a-configuration)).
 
 **Never pass `--reassign` casually.** It repacks every session from scratch, which
 invalidates comparison against every previously recorded run. It is correct only when
