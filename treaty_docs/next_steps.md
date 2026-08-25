@@ -138,9 +138,10 @@ What the diagnosis actually supports, in order:
 
 ## Frame Recommendation
 
-Status: shipped and validated; fresh four-member committee trained 2026-08-17 under
-`checkpoints_exp/cv255_nat_macro_20260817`. `training/recommend_frames.py`, with private scoring
-in `training/_frame_scoring.py`, harness in `reports/scripts/validate_frame_selection.py`.
+Status: shipped and validated; the current four-member committee is under
+`checkpoints_exp/cv516_nat_macro_20260819`. Pass that complete directory to
+`training/recommend_frames.py --checkpoint_dir`; private scoring remains in
+`training/_frame_scoring.py`, with the harness in `reports/scripts/validate_frame_selection.py`.
 
 The first real recommendation batch is complete: 20 picks each from HQL090, HQL097, and HQL103,
 stored under `frames_to_label/`. HQL090 reused an already-labeled session, so it used three

@@ -4,6 +4,16 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-24
 
+### Make recommender committees explicit (Codex, GPT-5)
+
+- Replaced the stale hard-coded CV checkpoint glob with required `--checkpoint_dir` input.
+  The recommender now discovers the `best.pth` files from one complete CV-run directory and
+  rejects incomplete directories, so it cannot silently mix unrelated experiments.
+- Updated the frame-selection guide with the one-directory invocation and a folded table of
+  every optional recommender argument.
+- Verification: focused frame-selection tests (19 passed) plus repository-wide Ruff, Black, and
+  whitespace checks passed. Black could not read its global Windows cache but completed the check.
+
 ### Make the training command surface explicit (Codex, GPT-5)
 
 - Replaced noun- and abbreviation-based command names with action names:

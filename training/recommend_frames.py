@@ -4,8 +4,10 @@
 Takes a video or a folder of frames, scores every frame without using any label, and
 copies the highest-scoring ones into a folder ready for Labelme.
 
-    python training/recommend_frames.py --video /data/HQL091_sleep251103.avi --budget 20
-    python training/recommend_frames.py --frames /data/some_frames --budget 20
+    python training/recommend_frames.py --video /data/HQL091_sleep251103.avi --budget 20 \
+        --checkpoint_dir checkpoints_exp/cv
+    python training/recommend_frames.py --frames /data/some_frames --budget 20 \
+        --checkpoint_dir checkpoints_exp/cv
 
 From a video it writes a session folder under ``frames_to_label/``::
 
@@ -42,7 +44,6 @@ from pathlib import Path
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_COMMITTEE = "checkpoints_exp/cvnat/*/best.pth"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "frames_to_label"
 
 if __package__:
@@ -123,6 +124,22 @@ def clear_generated_png_outputs(directory: Path, include_manifest: bool = False)
             manifest.unlink()
 
 
+def committee_checkpoints(checkpoint_dir: Path) -> list[Path]:
+    """Return the fold checkpoints directly contained in one CV-run directory."""
+    checkpoint_dir = Path(checkpoint_dir)
+    if not checkpoint_dir.is_dir():
+        raise ValueError(f"No such checkpoint directory: {checkpoint_dir}")
+
+    checkpoints = sorted(path for path in checkpoint_dir.glob("*/best.pth") if path.is_file())
+    if len(checkpoints) < 2:
+        raise ValueError(
+            f"Need at least 2 fold checkpoints under {checkpoint_dir}, found {len(checkpoints)}. "
+            "Pass the complete directory created by training/run_cross_validation.py; "
+            "each fold subdirectory must contain best.pth."
+        )
+    return checkpoints
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     source = parser.add_mutually_exclusive_group(required=True)
@@ -142,10 +159,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Ceiling on extracted frames; equally spaced across the recording.",
     )
     parser.add_argument(
-        "--checkpoints",
+        "--checkpoint_dir",
         type=Path,
-        nargs="+",
-        help=f"Committee members. Default: {DEFAULT_COMMITTEE} under the project root.",
+        required=True,
+        metavar="DIR",
+        help=(
+            "Complete cross-validation run directory. Its immediate fold subdirectories "
+            "must each contain best.pth."
+        ),
     )
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument(
@@ -186,22 +207,10 @@ def main(argv: list[str] | None = None) -> int:
         load_unet_checkpoint,
     )
 
-    checkpoints = args.checkpoints or sorted(PROJECT_ROOT.glob(DEFAULT_COMMITTEE))
-    if len(checkpoints) < 2:
-        # The default committee lives under the gitignored checkpoints_exp/, so a fresh
-        # clone finds nothing here and the reason needs saying out loud.
-        default_hint = (
-            f"The default committee is {DEFAULT_COMMITTEE} under {PROJECT_ROOT}, which is "
-            "gitignored -- it exists only on a machine that has run the cross-validation "
-            "sweeps. Produce one with training/run_cross_validation.py, or pass --checkpoints."
-            if not args.checkpoints
-            else "Pass more paths to --checkpoints."
-        )
-        parser.error(
-            f"Need at least 2 checkpoints for a committee, found {len(checkpoints)}. "
-            f"Disagreement between models is the main ranking signal, so a single "
-            f"checkpoint cannot rank frames. {default_hint}"
-        )
+    try:
+        checkpoints = committee_checkpoints(args.checkpoint_dir)
+    except ValueError as error:
+        parser.error(str(error))
 
     frames_dir, recommended_dir, name = resolve_output_dirs(args)
     if frames_dir.resolve() == recommended_dir.resolve():

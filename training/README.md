@@ -196,13 +196,43 @@ You may label whichever frames make sense for your experiment. The recommender i
 when you want help prioritising a larger recording:
 
 ```powershell
-python training\recommend_frames.py --video D:\data\recording.avi --budget 20
-python training\recommend_frames.py --frames D:\data\already_extracted --budget 20
+python training\recommend_frames.py `
+    --video D:\data\recording.avi `
+    --budget 20 `
+    --checkpoint_dir checkpoints_exp\cv516_nat_macro_20260819
+
+python training\recommend_frames.py `
+    --frames D:\data\already_extracted `
+    --budget 20 `
+    --checkpoint_dir checkpoints_exp\cv516_nat_macro_20260819
 ```
+
+`--checkpoint_dir` is the complete directory from one cross-validation run, not an
+individual model folder. The recommender discovers every immediate `*/best.pth` fold
+checkpoint inside it and uses their disagreement to rank frames. Use a committee whose
+models did not train on the recording you are selecting from.
 
 By default, its outputs go under `frames_to_label/<session>/`. After labelling, put the
 resulting image/mask pairs in `labeled_frames/<session>/` by any supported method and run
 `prepare_splits.py`.
+
+<details>
+<summary>Optional recommender arguments</summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--budget N` | `20` | Number of frames to recommend. |
+| `--extraction-fps FPS` | `5` | Sampling rate for video input before the extraction cap applies. |
+| `--max-extracted N` | `2000` | Maximum frames extracted from a video; excess recordings are sampled evenly. |
+| `--threshold P` | `0.5` | Pixel-probability threshold used while scoring committee masks. |
+| `--min-gap N` | Automatic | Minimum spacing between recommended frames, measured in extracted-frame positions. |
+| `--temporal-weight W` | `0` | Weight for the consecutive-frame consistency signal. |
+| `--output_dir DIR` | `frames_to_label/` | Root for the session's `extracted_frames/` and `recommended/` folders. |
+| `--device DEVICE` | `auto` | Inference device, such as `cpu` or `cuda`. |
+| `--no-dedup` | Off | Keep visually near-identical frames instead of collapsing them. |
+| `--force` | Off | Replace generated PNGs and `selection.csv` in an existing output folder. |
+
+</details>
 
 ### Inspect augmentation
 

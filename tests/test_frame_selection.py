@@ -130,6 +130,26 @@ def test_force_cleanup_removes_only_generated_files(tmp_path):
     assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "keep"
 
 
+def test_committee_checkpoints_reads_fold_runs_from_one_directory(tmp_path):
+    for fold in ("fold_0", "fold_1"):
+        run_dir = tmp_path / fold
+        run_dir.mkdir()
+        (run_dir / "best.pth").write_bytes(b"weights")
+    (tmp_path / "notes.txt").write_text("not a checkpoint", encoding="utf-8")
+
+    checkpoints = recommend.committee_checkpoints(tmp_path)
+
+    assert checkpoints == [tmp_path / "fold_0" / "best.pth", tmp_path / "fold_1" / "best.pth"]
+
+
+def test_committee_checkpoints_requires_a_complete_committee(tmp_path):
+    (tmp_path / "fold_0").mkdir()
+    (tmp_path / "fold_0" / "best.pth").write_bytes(b"weights")
+
+    with pytest.raises(ValueError, match="at least 2 fold checkpoints"):
+        recommend.committee_checkpoints(tmp_path)
+
+
 def test_video_outputs_default_to_frames_to_label():
     args = SimpleNamespace(
         video=PROJECT_ROOT / "videos" / "HQL095_sleep260324_010_eye.avi",
