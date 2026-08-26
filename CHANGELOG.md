@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The packaged default segmentation model is now the 615-image all-labeled natural-sampling
+  refit. It uses the grouped-CV-selected 100-epoch recipe and a calibrated prediction threshold
+  of 0.5. On the public velocity fixture it retains all 31 usable frames, with five temporal-area
+  warnings and diameters from 17.70 to 25.03 model pixels.
+- Confidence-mask overlays now default to 5% heatmap transparency, preserving more of the
+  original frame beneath the confidence colors.
+
 ### Fixed
 
 - Cross-validation now has a 200-epoch selection ceiling and a 20-epoch validation patience,
@@ -17,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `training/` utilities run when CI invokes the `pytest` console script.
 - The console-script smoke test now resolves its executable from the active Python environment,
   avoiding platform-specific `PATH` assumptions.
+- Checkpoint packaging now supports all-labeled refits and verifies the CV recipe and summary
+  that selected their fixed training settings before creating installed assets.
 
 ### Added
 

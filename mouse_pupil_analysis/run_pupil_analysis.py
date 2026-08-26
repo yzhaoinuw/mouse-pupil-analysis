@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Keep the confidence-weighted component nearest the image center. Off by default.",
     )
-    parser.add_argument("--mask_transparency", type=float, default=0.1)
+    parser.add_argument("--mask_transparency", type=float, default=0.05)
     parser.add_argument("--extraction_fps", type=float, default=5)
     parser.add_argument("--max_frames", type=int, default=10000)
     parser.add_argument(

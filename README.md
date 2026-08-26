@@ -139,7 +139,7 @@ extract-frames --video_path data/mouse1.avi --out_dir data/frames_mouse1
 | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
 | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
 | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
-| `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.1`). Higher values are more saturated. |
+| `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
 | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
 | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
 | `--calculate_velocity` | Analyze every encoded source frame and append pupil-center, speed, and segmentation-quality fields and plot panels to the analysis outputs. |

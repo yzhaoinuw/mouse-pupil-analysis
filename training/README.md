@@ -360,12 +360,18 @@ configuration.
 <summary><strong>Package an accepted checkpoint into the installed application</strong></summary>
 
 Packaging is a package/release change, not a normal training step. After checking overlays and
-downstream tracking on representative recordings, preview then package a validation-selected run:
+downstream tracking on representative recordings, preview then package either a
+validation-selected run or an all-labeled refit:
 
 ```powershell
 python training\package_checkpoint.py --run_dir checkpoints_exp\<run-name> --dry_run
 python training\package_checkpoint.py --run_dir checkpoints_exp\<run-name> `
     --validation_note "Held-out session validation; see best.json."
+
+# An all_data.* refit must verify the CV recipe that selected its fixed settings.
+python training\package_checkpoint.py --run_dir checkpoints_exp\<all-data-run> `
+    --training_config_path checkpoints_exp\cv\training_config.json `
+    --validation_note "All-labeled refit; filename score is the mean four-fold CV macro IoU, not an evaluation of the final weights."
 ```
 
 Update `CHANGELOG.md`, run the repository checks in `AGENTS.md`, and verify the checkpoint,
@@ -373,7 +379,8 @@ metadata, and log are included in both package distributions.
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
-| `--run_dir` | Required | Validation-selected run folder containing `best.pth`, `best.json`, and `train.log`. |
+| `--run_dir` | Required | Validation-selected `best.*` run or all-labeled `all_data.*` run. |
+| `--training_config_path` | Empty | CV-generated recipe for an all-labeled run; its summary hashes are verified before packaging. |
 | `--validation_note` | Empty | Scope note saved with the packaged metadata. |
 | `--dry_run` | Off | Print intended packaged filenames without writing files. |
 

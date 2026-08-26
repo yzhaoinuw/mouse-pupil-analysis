@@ -45,7 +45,7 @@ class AnalysisConfig:
     batch_size: int = 32
     pred_thresh: float | None = None
     prefer_central_component: bool = False
-    mask_transparency: float = 0.1
+    mask_transparency: float = 0.05
     extraction_fps: float = 5.0
     max_frames: int = 10000
     calculate_velocity: bool = False

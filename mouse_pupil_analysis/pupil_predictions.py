@@ -502,7 +502,7 @@ def generate_pupil_predictions(
     output_mask_dir: Path | None = None,
     pred_thresh: float | None = None,
     batch_size: int = 32,
-    mask_transparency: float = 0.1,
+    mask_transparency: float = 0.05,
     prefer_central_component: bool = False,
     show_progress: bool = False,
 ) -> list[tuple[str, float]]:
@@ -540,7 +540,7 @@ def generate_pupil_mask_prediction(
     output_mask_dir: Path | None = None,
     pred_thresh: float | None = None,
     batch_size: int = 32,
-    mask_transparency: float = 0.1,
+    mask_transparency: float = 0.05,
     prefer_central_component: bool = False,
 ) -> list[tuple[str, float]]:
     """Deprecated. Prefer :func:`mouse_pupil_analysis.analyze_frames`.
@@ -576,7 +576,7 @@ if __name__ == "__main__":
     output_mask_dir = project_root / "predictions_test"
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.
     batch_size = 32
-    mask_transparency = 0.1
+    mask_transparency = 0.05
     prefer_central_component = False  # Keep one centre-favoured component when needed.
 
     image_frames = frames_from_image_directory(image_dir)

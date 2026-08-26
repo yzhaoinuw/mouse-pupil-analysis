@@ -2,6 +2,31 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-08-26
+
+### Promote the 615-image all-labeled model and soften confidence overlays (Codex, GPT-5)
+
+- Promoted `checkpoints_exp/all_615_cv_e100_nat_macro_s0/all_data.pth` as the sole packaged
+  checkpoint: `615pupils_thresh=0.5_iou=0.6080.pth`. It is an attention U-Net trained from
+  scratch on 615 labelled pairs for 100 epochs with natural sampling and threshold 0.5.
+  Maintainer visual inspection found it performs well on the unlabeled test images.
+- The filename's 0.6080 is the mean macro IoU across the four grouped-CV folds that selected
+  the fixed recipe, not an evaluation of the final all-labeled weights. The packaged metadata
+  records that distinction and the old 166-image packaged asset is retained locally only under
+  the package-excluded checkpoint archive.
+- Extended `training/package_checkpoint.py` so all-labeled `all_data.*` runs require and verify
+  their CV-generated recipe and sibling summary hashes before packaging; this closes the previous
+  promotion gap, which accepted only validation-selected `best.*` runs.
+- Reduced the analysis CLI, API, direct-run helpers, and prediction helpers' default confidence
+  overlay transparency from 0.1 to 0.05. No release/tag was created; user-facing documentation
+  remains intentionally in progress.
+- Verification: full Pytest passed using a repository-local base temp (one existing source-import
+  deprecation warning and 345 existing Pillow deprecation warnings); repository-wide Ruff, Black,
+  and whitespace checks passed. A clean wheel/sdist build and distribution namespace check passed;
+  both distributions contain only the new checkpoint, matching metadata, and training log, with no
+  archive contents. The initial build exposed stale retired assets under ignored `build/`; those
+  generated `build/` and `dist/` folders were removed before the clean verification build.
+
 ## 2026-08-25
 
 ### Bound cross-validation model selection (Codex, GPT-5)

@@ -24,6 +24,7 @@ Typical use, from the repository root:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -162,6 +163,98 @@ def build_packaged_metadata(run_metadata: dict, validation_note: str = "") -> di
     return {key: packaged[key] for key in PACKAGED_KEYS}
 
 
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def build_all_labeled_packaged_metadata(
+    run_metadata: dict,
+    training_config_path: Path,
+    validation_note: str,
+) -> dict:
+    """Build honest package metadata for a fixed all-labeled refit.
+
+    The final weights have no validation set by design.  Their filename therefore uses
+    the mean macro IoU from the CV run that selected the training recipe; the note makes
+    clear that this is recipe-selection evidence, not an evaluation of the final weights.
+    """
+    if not validation_note:
+        raise ValueError(
+            "all-labeled packaging requires a validation_note describing its CV scope."
+        )
+    required = {
+        "run_name",
+        "workflow",
+        "training_mode",
+        "training_examples",
+        "trained_epochs",
+        "prediction_threshold",
+        "training_config_sha256",
+        "config",
+    }
+    missing = required - set(run_metadata)
+    if missing:
+        raise ValueError(f"All-labeled metadata is missing {sorted(missing)}.")
+    if run_metadata["workflow"] != "all_labeled_training":
+        raise ValueError("Expected all_labeled_training metadata.")
+
+    training_config_path = Path(training_config_path)
+    if not training_config_path.is_file():
+        raise FileNotFoundError(f"Training configuration not found: {training_config_path}")
+    if _file_sha256(training_config_path) != run_metadata["training_config_sha256"]:
+        raise ValueError("Training configuration does not match the all-labeled run metadata.")
+    training_config = json.loads(training_config_path.read_text(encoding="utf-8"))
+    summary_path = training_config_path.parent / training_config["source_cv_summary"]
+    if not summary_path.is_file():
+        raise FileNotFoundError(f"CV summary not found: {summary_path}")
+    if _file_sha256(summary_path) != training_config["source_cv_summary_sha256"]:
+        raise ValueError("CV summary does not match the training configuration.")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    folds = summary.get("per_fold", [])
+    if not summary.get("complete_cv") or not folds:
+        raise ValueError("All-labeled packaging requires a complete CV summary with fold metrics.")
+
+    macro_iou = sum(float(fold["macro_iou"]) for fold in folds) / len(folds)
+    balanced_iou = sum(float(fold["balanced_iou"]) for fold in folds) / len(folds)
+    config = run_metadata["config"]
+    source_checkpoint = config.get("finetune_checkpoint")
+    packaged = {
+        "run_name": run_metadata["run_name"],
+        "prediction_threshold": float(run_metadata["prediction_threshold"]),
+        "best_epoch": int(run_metadata["trained_epochs"]),
+        "balanced_iou": balanced_iou,
+        "macro_iou": macro_iou,
+        # The CV summary deliberately contains only the promotion metrics it needs.
+        "macro_dice": None,
+        "size_iou": None,
+        "low_circularity_iou": None,
+        "validation_note": validation_note,
+        "training": {
+            "mode": run_metadata["training_mode"],
+            "source_checkpoint": (
+                None if source_checkpoint is None else _recorded_basename(source_checkpoint)
+            ),
+            "training_examples": int(run_metadata["training_examples"]),
+            "sampling": training_config["sampling"],
+            "use_attention": bool(config["use_attention"]),
+            "batch_size": int(config["batch_size"]),
+            "learning_rate": float(config["scratch_learning_rate"]),
+            "seed": int(config["seed"]),
+            "early_stopping_patience": int(config["early_stopping_patience"]),
+            "scheduler_patience": int(config["scheduler_patience"]),
+            "tiny_max_diameter": float(config["tiny_max_diameter"]),
+            "large_min_diameter": float(config["large_min_diameter"]),
+            "workflow": run_metadata["workflow"],
+            "selection_metric": config["selection_metric"],
+            "scheduler_metric": config["scheduler_metric"],
+            "selection_threshold": float(config["selection_threshold"]),
+            "threshold_candidates": list(config["threshold_candidates"]),
+            "split_manifest_sha256": None,
+        },
+    }
+    return {key: packaged[key] for key in PACKAGED_KEYS}
+
+
 def redact_log_header(header_line: str) -> str:
     """Strip machine-specific paths from a training log's JSON header line."""
     header = json.loads(header_line)
@@ -180,7 +273,18 @@ def _redacted_log(log_path: Path) -> str:
 
 
 def _load_packagable_run(run_dir: Path) -> tuple[Path, dict, Path]:
-    """Load a complete validation-selected development run."""
+    """Load a complete validation-selected or fixed all-labeled run."""
+    all_data_metadata = run_dir / "all_data.json"
+    if all_data_metadata.is_file():
+        weights = run_dir / "all_data.pth"
+        log_path = run_dir / "train.log"
+        for required in (weights, log_path):
+            if not required.is_file():
+                raise FileNotFoundError(
+                    f"{run_dir} is not a complete all-labeled run; missing {required.name}."
+                )
+        return weights, json.loads(all_data_metadata.read_text(encoding="utf-8")), log_path
+
     log_path = run_dir / "train.log"
     weights = run_dir / "best.pth"
     metadata_path = run_dir / "best.json"
@@ -196,13 +300,23 @@ def package_checkpoint(
     run_dir: Path,
     checkpoints_dir: Path = PACKAGED_CHECKPOINT_DIR,
     validation_note: str = "",
+    training_config_path: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Path]:
     """Copy one run folder into `checkpoints_dir` under the packaged naming pattern."""
     run_dir = Path(run_dir)
     checkpoints_dir = Path(checkpoints_dir)
     weights, run_metadata, log_path = _load_packagable_run(run_dir)
-    packaged = build_packaged_metadata(run_metadata, validation_note)
+    if run_metadata.get("workflow") == "all_labeled_training":
+        if training_config_path is None:
+            raise ValueError(
+                "all-labeled packaging requires training_config_path so CV provenance can be verified."
+            )
+        packaged = build_all_labeled_packaged_metadata(
+            run_metadata, training_config_path, validation_note
+        )
+    else:
+        packaged = build_packaged_metadata(run_metadata, validation_note)
     basename = packaged_basename(packaged)
     targets = {
         "weights": checkpoints_dir / f"{basename}.pth",
@@ -254,6 +368,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Validation-selected development run containing best.pth, best.json, and train.log.",
     )
     parser.add_argument(
+        "--training_config_path",
+        type=Path,
+        help=(
+            "CV-generated all-labeled recipe used by an all_data.* run. Required only when "
+            "packaging that run type."
+        ),
+    )
+    parser.add_argument(
         "--validation_note",
         default="",
         help=(
@@ -275,6 +397,7 @@ def main(argv: list[str] | None = None) -> int:
     package_checkpoint(
         run_dir=args.run_dir,
         validation_note=args.validation_note,
+        training_config_path=args.training_config_path,
         dry_run=args.dry_run,
     )
     return 0

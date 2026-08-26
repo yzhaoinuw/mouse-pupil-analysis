@@ -34,3 +34,7 @@ def test_central_component_cli_option_is_opt_in():
     assert parser.parse_args(
         ["--image_dir", "frames", "--prefer_central_component"]
     ).prefer_central_component
+
+
+def test_overlay_transparency_defaults_to_five_percent():
+    assert build_parser().parse_args(["--image_dir", "frames"]).mask_transparency == 0.05

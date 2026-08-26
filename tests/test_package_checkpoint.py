@@ -6,6 +6,7 @@ tests pin both ends of `training/package_checkpoint.py`: the transform it
 applies, and the shape of the package data it produces.
 """
 
+import hashlib
 import json
 import runpy
 from pathlib import Path
@@ -117,9 +118,9 @@ def test_packaging_reproduces_the_packaged_metadata_shape():
 
     assert tuple(packaged) == tuple(shipped)
     assert tuple(packaged["training"]) == tuple(shipped["training"])
-    assert packaged["training"]["mode"] == shipped["training"]["mode"]
-    assert packaged["training"]["sampling"] == shipped["training"]["sampling"]
-    assert packaged["prediction_threshold"] == shipped["prediction_threshold"]
+    assert packaged["training"]["mode"] == "fine_tune"
+    assert packaged["training"]["sampling"] == "natural"
+    assert packaged["prediction_threshold"] == 0.4
     assert packaged["training"]["selection_metric"] == "balanced_iou"
     assert packaged["training"]["split_manifest_sha256"] is None
 
@@ -147,10 +148,10 @@ def test_packaging_strips_local_paths_from_metadata_and_log():
     assert json.loads(header) == {"finetune_checkpoint": "source.pth", "seed": 0}
 
 
-def test_packaged_basename_matches_the_shipped_checkpoint():
+def test_packaged_basename_is_derived_from_its_run_metadata():
     assert (
         packaged_basename(build_packaged_metadata(_run_metadata()))
-        == find_default_checkpoint().stem
+        == "166pupils_thresh=0.4_iou=0.8749"
     )
 
 
@@ -207,6 +208,69 @@ def test_packaging_writes_the_three_files_and_refuses_to_clobber(tmp_path):
 
     with pytest.raises(FileExistsError, match="Remove or archive"):
         package_checkpoint(run_dir, checkpoints_dir=packaged_dir)
+
+
+def test_all_labeled_packaging_verifies_cv_recipe_and_records_its_scope(tmp_path):
+    summary = {
+        "complete_cv": True,
+        "per_fold": [
+            {"macro_iou": 0.600, "balanced_iou": 0.610},
+            {"macro_iou": 0.616, "balanced_iou": 0.630},
+        ],
+    }
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    recipe = {
+        "source_cv_summary": "summary.json",
+        "source_cv_summary_sha256": hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+        "sampling": "natural",
+    }
+    recipe_path = tmp_path / "training_config.json"
+    recipe_path.write_text(json.dumps(recipe), encoding="utf-8")
+
+    run_dir = tmp_path / "all_data"
+    run_dir.mkdir()
+    run_metadata = {
+        "run_name": "all_data",
+        "workflow": "all_labeled_training",
+        "training_mode": "scratch",
+        "training_examples": 615,
+        "trained_epochs": 100,
+        "prediction_threshold": 0.5,
+        "training_config_sha256": hashlib.sha256(recipe_path.read_bytes()).hexdigest(),
+        "config": {
+            "finetune_checkpoint": None,
+            "use_attention": True,
+            "batch_size": 8,
+            "scratch_learning_rate": 0.001,
+            "seed": 0,
+            "early_stopping_patience": 40,
+            "scheduler_patience": 8,
+            "tiny_max_diameter": 15.0,
+            "large_min_diameter": 80.0,
+            "selection_metric": "macro_iou",
+            "scheduler_metric": "val_loss",
+            "selection_threshold": 0.5,
+            "threshold_candidates": [0.5, 0.55],
+        },
+    }
+    (run_dir / "all_data.pth").write_bytes(b"weights")
+    (run_dir / "all_data.json").write_text(json.dumps(run_metadata), encoding="utf-8")
+    (run_dir / "train.log").write_text('{"checkpoint_dir": "C:\\\\local"}\n', encoding="utf-8")
+
+    targets = package_checkpoint(
+        run_dir,
+        checkpoints_dir=tmp_path / "checkpoints",
+        training_config_path=recipe_path,
+        validation_note="Final refit; CV metrics select its recipe, not its weights.",
+    )
+    metadata = json.loads(targets["metadata"].read_text(encoding="utf-8"))
+
+    assert targets["weights"].name == "615pupils_thresh=0.5_iou=0.6080.pth"
+    assert metadata["macro_iou"] == pytest.approx(0.608)
+    assert metadata["balanced_iou"] == pytest.approx(0.62)
+    assert metadata["macro_dice"] is None
+    assert metadata["training"]["workflow"] == "all_labeled_training"
 
 
 def test_packaged_metadata_states_the_scope_of_its_numbers():
