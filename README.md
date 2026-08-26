@@ -8,17 +8,15 @@
 *Left: confidence-colored pupil mask and estimated center. Right: pupil diameter, center, and speed over time.*
 
 Measure mouse pupil diameter from a video or a folder of frames, in one command. A trained
-UNet ships inside the package, so there is no model to download, no config to write, and
-nothing to label. It targets the low-contrast, low-resolution frames that rodent eye cameras
-actually produce, and it also tracks the pupil center, its speed, and per-frame segmentation
-quality.
+UNet ships inside the package, so there is no model to download. It targets the low-contrast, 
+low-resolution frames that rodent eye cameras actually produce, and it also tracks the pupil center, 
+its speed, and per-frame segmentation quality.
 
 ## Contents
 
 - [Install](#install)
 - [Usage](#usage)
 - [Output](#output)
-- [CLI reference](#cli-reference)
 - [Python API](#python-api)
 - [Sample data](#sample-data)
 - [Installation options](#installation-options)
@@ -40,42 +38,69 @@ specific CUDA version.
 
 ## Usage
 
-Analyze a video:
+To track the pupil diameter given a video as an avi file:
 
 ```bash
 run-pupil-analysis --video_path movie.avi
 ```
 
-Or a folder of PNG frames you already have:
+Or given a folder of images as PNG files:
 
 ```bash
 run-pupil-analysis --image_dir movie_frames/
 ```
 
-Add `--calculate_velocity` to track the pupil center and its speed alongside diameter:
+To also see the segmented pupil overlaid on the original images:
 
 ```bash
-run-pupil-analysis \
-  --video_path movie.avi \
-  --calculate_velocity \
-  --acquisition_fps 33.3333333333
+run-pupil-analysis --video_path data/mouse1.avi --output_mask_dir data/predicted_masks_mouse1
 ```
 
-That is the whole thing. Video frames are sampled at 5 fps by default, velocity mode
-analyzes every encoded frame instead, and inference uses a GPU when one is available.
+To also track the pupil center and its speed, add `--calculate_velocity` :
 
-> **Input requirement.** The eye should be roughly centered and fill most of the frame.
-> Every image is resized with its aspect ratio preserved and center-padded to the model's
-> 148 x 148 input, so a small eye inside a wide scene has to be cropped first.
+```bash
+run-pupil-analysis --video_path movie.avi --calculate_velocity
+```
+
+> Note: Video frames are sampled at 5 fps by default, velocity mode analyzes every encoded frame 
+> instead. Inference uses CUDA when available.
+
+<details>
+  <summary>Click here to show list of all arguments</summary>
+
+  | Flag | Description |
+  |---|---|
+  | `--video_path` | Input video. Frames are extracted automatically before analysis. Mutually exclusive with `--image_dir`. |
+  | `--image_dir` | Input directory of existing PNG frames, used instead of a video. |
+  | `--out_dir` | Where to write extracted frames. Defaults to `<video_stem>_frames/` next to the video. |
+  | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
+  | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
+  | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
+  | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
+  | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
+  | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
+  | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
+  | `--calculate_velocity` | Analyze every encoded source frame and append pupil-center, speed, and segmentation-quality fields and plot panels to the analysis outputs. |
+  | `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. Required with `--image_dir` in velocity mode; defaults to the video header rate for video input. |
+  | `--checkpoint` | Path to a custom model checkpoint. Defaults to the packaged checkpoint with the highest IoU encoded in its filename. |
+  | `--batch_size` | Inference batch size (default `32`). |
+  | `--num_workers` | Dataloader worker processes (default: up to 4, capped by CPU count). Use `0` to load frames in the main process, which is often faster for short recordings. |
+  
+</details>
+
+To extract frames as PNG files from a video without analyzing them
+```bash
+extract-frames --video_path data/mouse1.avi --out_dir data/frames_mouse1
+```
 
 ## Output
 
-Results land next to the input, in `<video_stem>_result/` for a video and
-`<image_dir>_result/` for a frame directory:
+Results land next to the input by default, in `<video_stem>_result/` for a video and
+`<image_dir>_result/` for a frame directory. For example,
 
 ```text
 movie.avi
-movie_frames/                     # extracted frames (video input only)
+movie_frames/
     movie_00001.png
     movie_00002.png
     ...
@@ -83,6 +108,8 @@ movie_result/
     movie_pupil_analysis.csv
     movie_pupil_analysis.png
 ```
+
+Here's what the result files contain: 
 
 | File | Contents |
 |------|--------------|
@@ -110,43 +137,6 @@ No column is calibrated; see the [FAQ](#faq) before comparing recordings.
 [Segmentation-to-velocity method][method] documents how the center and quality fields are
 derived.
 
-## CLI reference
-
-Two commands are installed: `run-pupil-analysis` (extraction plus analysis) and
-`extract-frames` (extraction only). Run either with `--help` for the raw list.
-
-```bash
-# custom output locations, plus confidence overlays
-run-pupil-analysis \
-  --video_path data/mouse1.avi \
-  --out_dir data/frames_mouse1 \
-  --result_dir data/results_mouse1 \
-  --output_mask_dir data/masks_mouse1
-
-# existing frames, with a stricter segmentation threshold
-run-pupil-analysis --image_dir data/mouse1_frames --pred_thresh 0.75
-
-# extract frames without analyzing them
-extract-frames --video_path data/mouse1.avi --out_dir data/frames_mouse1
-```
-
-| Flag | Description |
-|---|---|
-| `--video_path` | Input video. Frames are extracted automatically before analysis. Mutually exclusive with `--image_dir`. |
-| `--image_dir` | Input directory of existing PNG frames, used instead of a video. |
-| `--out_dir` | Where to write extracted frames. Defaults to `<video_stem>_frames/` next to the video. |
-| `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
-| `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
-| `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
-| `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
-| `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
-| `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
-| `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
-| `--calculate_velocity` | Analyze every encoded source frame and append pupil-center, speed, and segmentation-quality fields and plot panels to the analysis outputs. |
-| `--acquisition_fps` | Actual experimental sampling rate used for timestamps and velocity. Required with `--image_dir` in velocity mode; defaults to the video header rate for video input. |
-| `--checkpoint` | Path to a custom model checkpoint. Defaults to the packaged checkpoint with the highest IoU encoded in its filename. |
-| `--batch_size` | Inference batch size (default `32`). |
-| `--num_workers` | Dataloader worker processes (default: up to 4, capped by CPU count). Use `0` to load frames in the main process, which is often faster for short recordings. |
 
 ## Python API
 
@@ -168,7 +158,6 @@ Velocity mode and every CLI flag are keyword arguments:
 result = analyze_video(
     "data/mouse1.avi",
     calculate_velocity=True,
-    acquisition_fps=33.3333333333,
     output_mask_dir="data/masks_mouse1",
 )
 
@@ -184,7 +173,6 @@ from mouse_pupil_analysis import analyze_frames
 result = analyze_frames(
     "data/mouse1_frames",
     calculate_velocity=True,
-    acquisition_fps=33.3333333333,
 )
 ```
 
@@ -279,7 +267,7 @@ pip install mouse-pupil-analysis
 
 ## FAQ
 
-**The pupil mask looks wrong. What do I check first?**
+### The pupil mask looks wrong. What do I check first?
 
 Framing, before anything else. A small or off-center eye is the most common cause, so
 confirm the input requirement under [Usage](#usage) first. If the framing is right, write
@@ -298,14 +286,17 @@ stored with the checkpoint. If the mask spills past the pupil, override it with 
 empty, low-confidence, border-touching, or low-circularity candidate. A narrow visible sliver
 may be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.
 
-**What should I pass for `--acquisition_fps`?**
 
+### How do I improve the model or finetune the model on my data?
+Follow the instructions in [training](https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/training/README.md).
+
+### What should I pass for `--acquisition_fps`?
 The rate your camera actually acquired at. Velocity mode derives timestamps from the
 source-frame index and this value, not from the frame rate stored in the video container,
 which often is not experimental time. With `--image_dir` there is no container to fall back
 on, so the flag is required; with `--video_path` it defaults to the container rate.
 
-**Can I compare diameters or speeds between recordings?**
+### Can I compare diameters or speeds between recordings?
 
 Only when the optics and working distance match, or after applying your own per-recording
 scale factor. Nothing reported here is calibrated, and converting to millimeters needs a
@@ -318,24 +309,13 @@ whatever you prepared with `--image_dir`. `estimated_pupil_diameter` is measured
 or cropping; it is kept for continuity with earlier results. If your frames were already
 148 x 148, the two columns are identical. Center and speed use the same input-image scale.
 
-**Why are `center_x_pixels` and `speed_pixels_per_second` empty for some frames?**
-
+### Why are `center_x_pixels` and `speed_pixels_per_second` empty for some frames?
 Because the pipeline neither publishes nor interpolates values it cannot stand behind.
 Center and speed are empty when segmentation is rejected, and speed is additionally empty
 when either adjacent frame is invalid or when the two source frames are not consecutive. A
 `warning` frame remains usable, such as extra foreground components when the selected pupil
 component is still acceptable; `quality_reason` names the check that fired.
 
-**What is the relationship to `pupil-tracking` on PyPI?**
-
-None. That name belongs to an unrelated project by a different author, and it installs its
-own `pupil_tracking` module, so this project deliberately claims no `pupil_tracking` import
-namespace of any kind. Install `mouse-pupil-analysis`, import `mouse_pupil_analysis`, and
-run `run-pupil-analysis` or `extract-frames`.
-
-**Do I need to rename an existing conda environment?**
-
-No. Environment names are local and have no bearing on which package is installed.
 
 ## Citation
 
@@ -375,17 +355,6 @@ arguments:
 ```bash
 python training/run_train.py --help
 ```
-
-Deeper documentation lives in the file that owns it:
-
-| Topic | Document |
-|---|---|
-| Training, fine-tuning, and checkpoint packaging | [`training/README.md`][training] |
-| Runtime architecture and the segmentation-to-velocity method | [`project_overview.md`][overview] |
-| Sample-data provenance and examples | [`sample_data/README.md`][sample-data] |
-| Regenerating the demo GIF | [`media/README.md`][media] |
-| Release, PyPI, and Zenodo procedure | [`RELEASING.md`][releasing] |
-| Conventions for agents working in this repo | [`AGENTS.md`][agents] |
 
 ## License
 
