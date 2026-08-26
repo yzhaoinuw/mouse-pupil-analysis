@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 615 images; the 100-epoch all-data refit has been promoted after maintainer visual QC on unlabeled recordings. Grouped CV still has a weak Purple-sleep session, so investigate that regression before treating performance as universal. A release tag remains deliberately deferred while user-facing documentation is revised.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 615 images; the 100-epoch all-data refit has been promoted after maintainer visual QC on unlabeled recordings. Grouped CV still has a weak Purple-sleep session, so investigate that regression before treating performance as universal. A release tag remains deliberately deferred while the remaining user-facing documentation is revised.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool; an opt-in centre-favoured component selector now offers a practical inference-time guard for off-centre artifacts and needs cross-session evaluation.

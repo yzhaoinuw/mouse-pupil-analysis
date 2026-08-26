@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-26
 
+### Tighten the public README's first-run path (Codex, GPT-5)
+
+- Kept the main README centered on install, common commands, results, and the Python API; moved
+  framing guidance into the mask-troubleshooting FAQ instead of interrupting first-run usage.
+- Documented the actual timing contract: velocity mode falls back to an input video's encoded FPS,
+  but frame directories require `--acquisition_fps`; users should supply the camera's real rate
+  when interpreting speed. The prior `analyze_frames` example was corrected to satisfy that
+  requirement.
+- Replaced volatile PyTorch CUDA-index/version instructions with a link to PyTorch's maintained
+  installer selector.
+- Verification: full Pytest suite, repository-wide Ruff and Black checks, package wheel/sdist
+  build, `git diff --check`, and an API validation call confirming the frame-directory
+  missing-FPS error. Pytest reported one existing source-import deprecation warning and 345
+  existing Pillow deprecation warnings; Black could not read its global Windows cache but
+  completed the check.
+
 ### Promote the 615-image all-labeled model and soften confidence overlays (Codex, GPT-5)
 
 - Promoted `checkpoints_exp/all_615_cv_e100_nat_macro_s0/all_data.pth` as the sole packaged

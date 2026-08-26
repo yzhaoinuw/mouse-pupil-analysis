@@ -8,9 +8,9 @@
 *Left: confidence-colored pupil mask and estimated center. Right: pupil diameter, center, and speed over time.*
 
 Measure mouse pupil diameter from a video or a folder of frames, in one command. A trained
-UNet ships inside the package, so there is no model to download. It targets the low-contrast, 
-low-resolution frames that rodent eye cameras actually produce, and it also tracks the pupil center, 
-its speed, and per-frame segmentation quality.
+UNet ships inside the package, so there is no model to download. It targets the low-contrast,
+low-resolution frames that rodent eye cameras actually produce. With `--calculate_velocity`,
+it also tracks pupil center, speed, and per-frame segmentation quality.
 
 ## Contents
 
@@ -32,41 +32,49 @@ pip install mouse-pupil-analysis
 ```
 
 Python 3.10 or newer. The trained checkpoint ships with the package, so that is the entire
-install. On Linux, `pip` pulls a CUDA-enabled PyTorch by default; see
-[Installation options](#installation-options) to skip the extra gigabytes or to target a
-specific CUDA version.
+install. See [Installation options](#installation-options) if you need a particular PyTorch
+CPU or accelerator build.
 
 ## Usage
 
-To track the pupil diameter given a video as an avi file:
+Analyze a video:
 
 ```bash
 run-pupil-analysis --video_path movie.avi
 ```
 
-Or given a folder of images as PNG files:
+Or analyze a folder of PNG frames:
 
 ```bash
 run-pupil-analysis --image_dir movie_frames/
 ```
 
-To also see the segmented pupil overlaid on the original images:
+To save confidence overlays on the original images:
 
 ```bash
 run-pupil-analysis --video_path data/mouse1.avi --output_mask_dir data/predicted_masks_mouse1
 ```
 
-To also track the pupil center and its speed, add `--calculate_velocity` :
+To track the pupil center and its speed:
 
 ```bash
-run-pupil-analysis --video_path movie.avi --calculate_velocity
+run-pupil-analysis \
+  --video_path movie.avi \
+  --calculate_velocity \
+  --acquisition_fps 33.3333333333
 ```
 
-> Note: Video frames are sampled at 5 fps by default, velocity mode analyzes every encoded frame 
+> **Velocity timing.** With video input, `--acquisition_fps` is optional: when it is omitted,
+> the program uses the frame rate encoded in the video. A PNG directory has no such metadata, so
+> velocity mode requires `--acquisition_fps` and otherwise reports an error. For scientifically
+> meaningful speeds, always provide the camera's actual acquisition rate; a video header may not
+> represent experimental time.
+>
+> Video frames are sampled at 5 fps by default; velocity mode analyzes every encoded frame
 > instead. Inference uses CUDA when available.
 
 <details>
-  <summary>Click here to show list of all arguments</summary>
+  <summary>Show all command-line options</summary>
 
   | Flag | Description |
   |---|---|
@@ -85,10 +93,9 @@ run-pupil-analysis --video_path movie.avi --calculate_velocity
   | `--checkpoint` | Path to a custom model checkpoint. Defaults to the packaged checkpoint with the highest IoU encoded in its filename. |
   | `--batch_size` | Inference batch size (default `32`). |
   | `--num_workers` | Dataloader worker processes (default: up to 4, capped by CPU count). Use `0` to load frames in the main process, which is often faster for short recordings. |
-  
 </details>
 
-To extract frames as PNG files from a video without analyzing them
+To extract PNG frames from a video without analyzing them:
 ```bash
 extract-frames --video_path data/mouse1.avi --out_dir data/frames_mouse1
 ```
@@ -109,7 +116,7 @@ movie_result/
     movie_pupil_analysis.png
 ```
 
-Here's what the result files contain: 
+The result files contain:
 
 | File | Contents |
 |------|--------------|
@@ -141,7 +148,7 @@ derived.
 ## Python API
 
 Everything the CLI does is available from Python, which is usually more convenient inside a
-notebook or a larger analysis script. The results come back as a DataFrame, so there is no
+notebook or a larger analysis script. The returned result includes a DataFrame, so there is no
 need to read the CSV back in.
 
 ```python
@@ -158,6 +165,7 @@ Velocity mode and every CLI flag are keyword arguments:
 result = analyze_video(
     "data/mouse1.avi",
     calculate_velocity=True,
+    acquisition_fps=33.3333333333,
     output_mask_dir="data/masks_mouse1",
 )
 
@@ -173,6 +181,7 @@ from mouse_pupil_analysis import analyze_frames
 result = analyze_frames(
     "data/mouse1_frames",
     calculate_velocity=True,
+    acquisition_fps=97,
 )
 ```
 
@@ -242,36 +251,21 @@ conda activate mouse_pupil_analysis
 pip install mouse-pupil-analysis
 ```
 
-### CPU and GPU builds of PyTorch
+### PyTorch builds
 
-On **Windows and macOS**, the plain `pip install` gives you a CPU-only build of PyTorch,
-which is all this package needs to run. No action required.
-
-On **Linux**, the default PyPI wheel bundles CUDA and is several times larger. If you do not
-have an NVIDIA GPU, install the CPU-only build first to avoid the download:
-
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip install mouse-pupil-analysis
-```
-
-To use an **NVIDIA GPU**, install a matching CUDA build first. This package requires
-`torch>=2.8`, which is served by the `cu126`, `cu128`, and `cu129` indexes; older indexes
-such as `cu124` stop at PyTorch 2.6 and will not satisfy that floor. Pick the index matching
-your driver with the [official selector][pytorch-selector]:
-
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-pip install mouse-pupil-analysis
-```
+PyTorch installation depends on your operating system and hardware. To choose a CPU-only or
+accelerated build, use the [official PyTorch selector][pytorch-selector] first, then install
+this package with `pip install mouse-pupil-analysis`. The pipeline uses CUDA when
+`torch.cuda.is_available()`; otherwise it runs on the CPU.
 
 ## FAQ
 
 ### The pupil mask looks wrong. What do I check first?
 
-Framing, before anything else. A small or off-center eye is the most common cause, so
-confirm the input requirement under [Usage](#usage) first. If the framing is right, write
-the confidence overlays and look at them:
+Start with framing. The eye should be roughly centered and fill most of the frame. Every image
+is resized with its aspect ratio preserved and center-padded to the model's 148 x 148 input, so
+crop a wide scene with a small eye before analyzing it. If the framing is right, write the
+confidence overlays and look at them:
 
 ```bash
 run-pupil-analysis --video_path movie.avi --output_mask_dir movie_overlays
@@ -287,8 +281,9 @@ empty, low-confidence, border-touching, or low-circularity candidate. A narrow v
 may be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.
 
 
-### How do I improve the model or finetune the model on my data?
-Follow the instructions in [training](https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/training/README.md).
+### How do I improve or fine-tune the model on my data?
+
+Follow the [training guide][training].
 
 ### What should I pass for `--acquisition_fps`?
 The rate your camera actually acquired at. Velocity mode derives timestamps from the
@@ -369,10 +364,6 @@ MIT. See [`LICENSE`][license].
 [changelog]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/CHANGELOG.md
 [sample-data]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/sample_data/README.md
 [training]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/training/README.md
-[overview]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/project_overview.md
 [method]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/project_overview.md#segmentation-to-velocity-method
-[media]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/media/README.md
-[releasing]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/RELEASING.md
-[agents]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/AGENTS.md
 [miniconda]: https://www.anaconda.com/docs/getting-started/miniconda/install
 [pytorch-selector]: https://pytorch.org/get-started/locally/
