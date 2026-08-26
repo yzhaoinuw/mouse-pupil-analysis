@@ -1,31 +1,27 @@
-# Train or Fine-Tune a Pupil Model
+# Train or Fine-Tune a Mouse Pupil Segmentation Model
 
-Use this workflow when you already have labelled image/mask pairs and want a new
-experimental pupil-segmentation checkpoint. The normal path is deliberately short:
+Follow this workflow to label your own data, train or fine-tune a model. The core procedures are:
 
-1. Put labelled frames in session folders.
-2. Refresh `training_data_split.json`.
-3. Review the automatic assignment and optionally reserve a validation session.
-4. Train with validation when that session exists.
+1. Organize your labeled images into recording sessions (one folder for each session).
+2. Add new sessions to folds.
+3. Train a model on the labeled data.
 
-`run_train.py` selects the best checkpoint, early-stops, and calibrates its prediction
-threshold against that held-out group. Cross-validation is useful when comparing
-configurations, but it is not required for a working training run.
+Additionally, we also provide the 
 
 ## Contents
 
 - [Core workflow](#core-workflow)
   - [Environment](#environment)
-  - [1. Prepare labelled sessions](#1-prepare-labelled-sessions)
-  - [2. Refresh the session split](#2-refresh-the-session-split)
-  - [3. Review or adjust assignments](#3-review-or-adjust-assignments)
-  - [4. Train and validate](#4-train-and-validate)
-  - [5. Use the experimental checkpoint](#5-use-the-experimental-checkpoint)
+  - [1. Organize labeled images](#1-organize-labeled-images)
+  - [2. Add new sessions ](#2-add-new-sessions)
+  - [3. Train and validate](#4-train-and-validate)
 - [Optional tools](#optional-tools)
-  - [Fine-tune a checkpoint](#fine-tune-a-checkpoint)
-  - [Label a batch with Labelme](#label-a-batch-with-labelme)
   - [Choose frames to label](#choose-frames-to-label)
+  - [Label images with Labelme](#label-a-batch-with-labelme)
+  - [Review or adjust assignments](#3-review-or-adjust-assignments)
   - [Inspect augmentation](#inspect-augmentation)
+  - [Use the experimental checkpoint](#5-use-the-experimental-checkpoint)
+  - [Fine-tune a checkpoint](#fine-tune-a-checkpoint)
   - [Cross-validate a configuration](#cross-validate-a-configuration)
   - [Package an accepted checkpoint](#package-an-accepted-checkpoint)
   - [Developer fixture](#developer-fixture)
@@ -41,10 +37,10 @@ conda activate pupil_tracking
 python -m pip install -e .
 ```
 
-### 1. Prepare labelled sessions
+### 1. Organize labelled images
 
-The trainer is label-tool neutral. It only needs matching PNG images and masks arranged
-by recording session:
+Create a folder named `labeled_frames/`. In it, place matching PNG images and masks arranged by 
+recording session. For example:
 
 ```text
 labeled_frames/
@@ -60,39 +56,29 @@ labeled_frames/
 
 Keep every frame from the same recording in one `<session>` directory. A filename only
 needs to be unique within that session; `session/frame_00001.png` is the data identity.
-Do not create `train` and `validation` folders or move pairs between folders.
 
-Use the original camera-frame size. The loader converts each image/mask pair to the
-model's 148 x 148 input automatically: square frames are resized, while non-square
-frames are resized proportionally and black-padded. Do not crop, resize, or pad data
-yourself.
+Use the original camera-frame size. During training, the data loader automatically converts 
+each image/mask pair to the model's 148 x 148 input: square frames are resized, while non-square
+frames are resized proportionally and black-padded. Do not crop, resize, or pad data yourself.
 
-### 2. Refresh the session split
+### 2. Add new sessions
 
-Run this after adding labelled frames, including a completely new session:
+The training data from `labeled_frames` is grouped into folds, which is tracked by `training_data_split.json` in the repo root. 
+Run this to add the labeled images from new sessions (previous step) to the folds in the training data.
 
 ```powershell
 python training\prepare_splits.py
 ```
 
-`prepare_splits.py` keeps every session together, assigns each session to a validation fold,
-and preserves existing assignments when new data arrives. It does not move images on disk.
-The first manifest uses five folds by default; if the dataset has fewer than five sessions,
-choose a smaller count once, for example `--n_folds 3`.
-
-`--labeled_frames_dir` names the `labeled_frames/` folder itself when it is outside the
-repository; its parent always receives `training_data_split.json`. `--validation_session <session>`
-reserves a session for choosing a normal training run, while `--final_test_session <session>`
-keeps a session out of cross-validation until an all-labeled production run is built.
-
-Review the assignment without writing changes when needed:
-
-```powershell
-python training\prepare_splits.py --show
+`prepare_splits.py` assigns news sessions to folds automatically while balancing for pupil size, lighting condition in each fold.
+Existing assignments are preserved when new sessions are assigned. It updates the `training_data_split.json` and does not move images 
+or masks on disk. It creates four folds by default. If you'd like a different number of folds, add `--n_folds`. For example,
+```bash
+python training\prepare_splits.py --n_folds 5
 ```
 
 <details>
-<summary><strong>prepare_splits.py arguments</strong></summary>
+<summary><strong>Click to see additional prepare_splits.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -105,66 +91,24 @@ python training\prepare_splits.py --show
 
 </details>
 
-The automatic assignment is a safe starting point: it keeps sessions intact and balances pupil
-size and lighting summaries across folds. Existing assignments are preserved when
-new labels arrive.
-
-### 3. Review or adjust assignments
-
-Open the local split manager when you want to inspect the session statistics or change the
-automatic assignment:
-
+### 3. Train and validate
+There are two approaches to training a model. You can train a model using all data in `labeled_frames/` with
+the `default_all_labeled_training_config.json` included in this repo which sets the training configurations like 
+maximum epochs, early stopping, and learning rate scheduling, etc., for you, based on the developer's experiments.
+To train this way, supply `--training_config_path`,
 ```powershell
-python training\review_splits.py
+python training\run_train.py --training_config_path training\default_all_labeled_training_config.json --checkpoint_dir checkpoints_exp\scratch
 ```
 
-Do not open `split_manager.html` directly in a browser: it is the interface asset, while
-`review_splits.py` starts the local service that reads and safely writes
-`training_data_split.json`.
-
-It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
-brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
-own chart; click it again to hide that chart. Both charts update immediately when a session is
-dragged. Drag a whole session between folds or into the **validation session**. Saving validates
-the complete session assignment and updates
-`training_data_split.json`. The served interface is the tracked
-[`split_manager.html`](split_manager.html)
-asset; `review_splits.py` provides its local manifest API.
-
-The local server stops automatically shortly after every split-manager tab is closed. It also
-stops if no browser tab connects after launch.
-
-<details>
-<summary><strong>review_splits.py arguments</strong></summary>
-
-This command has no command-line arguments. It opens the current repository's
-`training_data_split.json`; run `prepare_splits.py` first if that record does not exist.
-
-</details>
-
-Folds are used only by cross-validation. The validation session is excluded from CV and is used
-by the normal training command below. Assign one before starting a validation-backed run.
-
-### 4. Train and validate
-
-This trains from scratch using the validation session configured in
-`training_data_split.json`:
-
-```powershell
+Alternatively, you can set a validation set by following [Review or adjust assignments](#3-review-or-adjust-assignments)
+```bash
 python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 ```
 
-When the validation session contains sessions, they control early stopping, learning-rate
-scheduling, checkpoint selection, and prediction-threshold calibration. All folds train the
-model. `run_train.py` finds `labeled_frames/` and its sibling
-`training_data_split.json` automatically; pass
-`--labeled_frames_dir <folder>` only when the labelled pool lives elsewhere.
-
-CUDA is selected automatically when available. Normal runs use the project defaults for learning
-rate, batch size, epoch limit, and seed; configuration comparison belongs in cross-validation.
+> CUDA is selected automatically when available.
 
 <details>
-<summary><strong>run_train.py arguments</strong></summary>
+<summary><strong>Click to see all run_train.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -175,20 +119,6 @@ rate, batch size, epoch limit, and seed; configuration comparison belongs in cro
 
 </details>
 
-### 5. Use the experimental checkpoint
-
-Each run writes to the specified checkpoint directory. Without `--checkpoint_dir`, the trainer
-creates a collision-safe directory under `checkpoints_exp/`.
-
-- `best.pth` — selected model weights.
-- `best.json` — selected threshold, validation metrics, epoch, and full configuration.
-- `train.log` — per-epoch training and validation record.
-
-All-labeled training from a CV configuration writes `all_data.pth` and `all_data.json` instead
-of `best.*`; its metadata records the recipe used.
-
-Treat this folder as experimental output. Test the checkpoint on representative recordings
-before replacing the package's default model.
 
 ## Optional tools
 
@@ -251,6 +181,42 @@ and refreshes `training_data_split.json`; it cannot overwrite or add frames to
 
 </details>
 
+### Review or adjust assignments
+
+Open the local split manager when you want to inspect the session statistics or change the
+automatic assignment:
+
+```powershell
+python training\review_splits.py
+```
+
+Do not open `split_manager.html` directly in a browser: it is the interface asset, while
+`review_splits.py` starts the local service that reads and safely writes
+`training_data_split.json`.
+
+It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
+brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
+own chart; click it again to hide that chart. Both charts update immediately when a session is
+dragged. Drag a whole session between folds or into the **validation session**. Saving validates
+the complete session assignment and updates
+`training_data_split.json`. The served interface is the tracked
+[`split_manager.html`](split_manager.html)
+asset; `review_splits.py` provides its local manifest API.
+
+The local server stops automatically shortly after every split-manager tab is closed. It also
+stops if no browser tab connects after launch.
+
+<details>
+<summary><strong>review_splits.py arguments</strong></summary>
+
+This command has no command-line arguments. It opens the current repository's
+`training_data_split.json`; run `prepare_splits.py` first if that record does not exist.
+
+</details>
+
+Folds are used only by cross-validation. The validation session is excluded from CV and is used
+by the normal training command below. Assign one before starting a validation-backed run.
+
 ### Choose frames to label
 
 You may label whichever frames make sense for your experiment. The recommender is available
@@ -307,6 +273,22 @@ transforms look plausible.
 | `--data_root` | Repository root | Use a different repository-style root containing `labeled_frames/`. |
 
 </details>
+
+### Use the experimental checkpoint
+
+Each run writes to the specified checkpoint directory. Without `--checkpoint_dir`, the trainer
+creates a collision-safe directory under `checkpoints_exp/`.
+
+- `best.pth` — selected model weights.
+- `best.json` — selected threshold, validation metrics, epoch, and full configuration.
+- `train.log` — per-epoch training and validation record.
+
+All-labeled training from a CV configuration writes `all_data.pth` and `all_data.json` instead
+of `best.*`; its metadata records the recipe used.
+
+Treat this folder as experimental output. Test the checkpoint on representative recordings
+before replacing the package's default model.
+
 
 ### Cross-validate a configuration
 
