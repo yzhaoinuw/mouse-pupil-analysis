@@ -1,11 +1,11 @@
-# Choosing And Grouping New Labelled Data
+# Choosing And Grouping New Labeled Data
 
 This document answers two questions that come up every time a new batch of recordings
-arrives: **which frames are worth labelling**, and **how the labelled result joins the
-split**. The mechanics of running Labelme and the trainer are in
+arrives: **which frames are worth labeling**, and **how the labeled result joins the
+fold assignment**. The mechanics of running Labelme and the trainer are in
 [`README.md`](README.md); this is the policy that sits above them.
 
-Read this before labelling a batch. Labelling is the expensive step and the one that
+Read this before labeling a batch. Labeling is the expensive step and the one that
 cannot be undone cheaply — a hundred frames from one recording cost the same effort as
 a hundred frames spread across twenty, and are worth far less.
 
@@ -62,7 +62,7 @@ In priority order. Spend the budget top-down.
 3. **Small pupils from a session that is not already the small-pupil session.** Only
    four sessions in the pool contain any mask at or below 15 model pixels, and one holds
    10 of the 14. Stratification spreads what exists across folds; it cannot manufacture
-   small pupils that were never labelled. Every fold currently holds at least one, but
+   small pupils that were never labeled. Every fold currently holds at least one, but
    three of them hold only one or two, so the tiny-bin IoU is still thin. Small pupils
    from a *different* setting fix that; more from the same one do not.
 4. **Frames where the packaged model visibly fails.** Run inference first and label what
@@ -157,12 +157,12 @@ refuses to merge a batch into an existing session directory.
 identified by `<session>/<filename>` — `HQL091_sleep260820/frame_0001` — so the session
 folders keep them apart.
 
-The whole split is reproducible from this layout alone: delete `training_data_split.json` and
-regenerate, and the folds come back identical, because the sessions come from the
-directories and the packing is deterministic. A mixed or unassigned batch is not valid
-split input: sort it into its recording-session directory before importing it.
+The fold assignment is reproducible from this layout alone: delete
+`training_data_split.json` and regenerate it. The folds come back identical because the sessions
+come from the directories and the packing is deterministic. A mixed or unassigned batch is not
+valid input: sort it into its recording-session directory before importing it.
 
-## Adding a labelled batch to the split
+## Adding a labeled batch to the fold record
 
 1. Keep each Labelme JSON beside its source image, then import the new session:
 
@@ -171,17 +171,17 @@ split input: sort it into its recording-session directory before importing it.
    ```
 
    It validates all labels, image references, frame indices, and destinations together before
-   writing. It refuses to overwrite an existing session, then refreshes the frozen split.
+   writing. It refuses to overwrite an existing session, then refreshes the frozen fold assignment.
    `pupil` and `no_visible_pupil` become compact image/mask pairs. `uncertain` image/JSON
    pairs are archived under the session's `uncertain/` directory, outside the segmentation
    pool, and receive no mask or current training loss. Every image already in
    `training_data_split.json`
    keeps its fold; only the genuinely new session is packed. There are no train/validation
-   source folders: the manifest decides what trains and validates, so re-splitting moves no
-   labelled file.
+   source folders: the fold assignment decides what trains and validates, so reassignment moves no
+   labeled file.
 2. Read the census it prints before training. Check that the new session landed in
    sensible folds and that fold sizes and strata are still roughly even.
-3. Re-run cross-validation ([`README.md`](README.md#5-cross-validate-a-configuration)).
+3. Re-run cross-validation ([`README.md`](README.md#cross-validate-a-configuration)).
 
 **Never pass `--reassign` casually.** It repacks every session from scratch, which
 invalidates comparison against every previously recorded run. It is correct only when
@@ -191,7 +191,7 @@ different experiment.
 
 ## How folds are balanced
 
-Grouping alone is not enough. The first grouped split of this pool put three of five
+Grouping alone is not enough. The first grouped fold assignment of this pool put three of five
 folds with no small pupil at all and left a 3x spread in median diameter across folds,
 which made fold-to-fold variance mostly a story about which size regime happened to land
 where rather than about the model.
@@ -222,7 +222,7 @@ least 62 images whatever you do. The rest is the granularity of the remaining se
 sizes. It self-corrects as data arrives; five new sessions bring the spread to about
 1.35x.
 
-The pool is split into **four** folds rather than five. Four holds a small pupil in every
+The pool uses **four** folds rather than five. Four holds a small pupil in every
 fold and gives a tighter condition balance, because each fold holds more sessions and the
 indivisible 62-image session is a smaller share of a larger target:
 
@@ -252,7 +252,7 @@ what makes it usable as a lighting axis.
 Cross-validation chooses a reusable training configuration. It writes a JSON recipe containing
 the median successful-fold epoch and calibrated threshold, together with the fixed learning-rate
 schedule and other training settings. Use that recipe to train a production model on the complete
-labelled pool:
+labeled pool:
 
 ```bash
 python training/run_cross_validation.py --checkpoint_dir checkpoints_exp/cv
@@ -269,13 +269,13 @@ representative unlabeled recordings before promoting it.
 compare configurations. The all-labeled training command deliberately includes it once you decide
 to build the production model, so it is no longer an independent final-test gate.
 
-## What the split does not protect against
+## What fold assignments do not protect against
 
 - **Label quality.** Grouping guards against optimistic evaluation, not wrong masks.
   Compare filenames and counts between image and mask folders after every conversion.
 - **A session that is internally heterogeneous.** If the camera was physically moved
-  mid-recording, one recorded session covers two settings and the split under-groups.
-  Split such a recording into two differently-named sessions by hand — this is the one
+  mid-recording, one recorded session covers two settings and the assignment under-groups.
+  Divide such a recording into two differently named sessions by hand — this is the one
   case where the recorded provenance is wrong and nothing will catch it.
 - **Failures validation cannot see.** Three of five from-scratch runs in the noise-floor
   study lost a real small pupil that no validation image covered, and those were the

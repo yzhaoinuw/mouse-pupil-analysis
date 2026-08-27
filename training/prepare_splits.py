@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Assign labelled images to stratified, recording-grouped cross-validation folds.
+"""Assign labeled images to stratified, recording-grouped cross-validation folds.
 
 Two independent things are going on here, and conflating them is the mistake this
 module exists to avoid:
@@ -17,7 +17,7 @@ first grouped split of this pool left three of five folds with no small pupil at
 and a 3x spread in median diameter, which made fold-to-fold variance mostly a story
 about which size regime happened to land where.
 
-Session identity is the labelled-frame directory name; nothing here parses a filename.
+Session identity is the labeled-frame directory name; nothing here parses a filename.
 
 Generate or refresh the manifest::
 
@@ -52,7 +52,7 @@ HOLDOUT_FOLD = -1
 VALIDATION_HOLDOUT_FOLD = -2
 TINY_MAX_DIAMETER = 15.0
 
-# The labelled pool, one session per directory::
+# The labeled pool, one session per directory::
 #
 #     labeled_frames/<session>/images/<anything>.png
 #     labeled_frames/<session>/masks/<anything>.png
@@ -66,7 +66,7 @@ TRAINING_DATA_SPLIT_FILENAME = "training_data_split.json"
 
 @dataclass
 class PoolImage:
-    """One labelled image/mask pair, located relative to the data root."""
+    """One labeled image/mask pair, located relative to the data root."""
 
     key: str
     image: str
@@ -77,7 +77,7 @@ class PoolImage:
 
 @dataclass
 class Session:
-    """Every labelled image sharing one recording setting."""
+    """Every labeled image sharing one recording setting."""
 
     key: str
     source: str
@@ -108,7 +108,7 @@ def _pool_image(image_path: Path, mask_path: Path, key: str, data_root: Path) ->
 
 
 def discover_pool(data_root: Path) -> list[PoolImage]:
-    """Read every labelled pair under ``data_root`` as one collection.
+    """Read every labeled pair under ``data_root`` as one collection.
 
     Reads ``labeled_frames/<session>/images``. A session folder states its own session,
     so no filename inference, sidecar, or fallback grouping is needed.
@@ -126,7 +126,7 @@ def discover_pool(data_root: Path) -> list[PoolImage]:
         if key in seen:
             raise ValueError(
                 f"Image {key!r} appears in both {seen[key]} and {where}. "
-                "One key must map to exactly one labelled pair."
+                "One key must map to exactly one labeled pair."
             )
         seen[key] = where
 
@@ -152,7 +152,7 @@ def discover_pool(data_root: Path) -> list[PoolImage]:
                 found.append(_pool_image(image_path, mask_path, key, data_root))
 
     if not found:
-        raise FileNotFoundError(f"No labelled images found under {data_root} in {LABELLED_ROOT}/.")
+        raise FileNotFoundError(f"No labeled images found under {data_root} in {LABELLED_ROOT}/.")
     return found
 
 
@@ -178,7 +178,7 @@ def frozen_validation_holdout(previous: dict | None) -> set[str]:
 
 
 def group_sessions(images: list[PoolImage]) -> dict[str, Session]:
-    """Group labelled pairs by their required session directory."""
+    """Group labeled pairs by their required session directory."""
     grouped: dict[str, list[PoolImage]] = defaultdict(list)
     for image in images:
         session, _ = image.key.split("/", 1)
@@ -683,7 +683,7 @@ def format_census(manifest: dict) -> str:
         lines.append(
             f"NOTE: folds {empty} hold no masks at or below {tiny_max:g} model pixels, so their "
             "tiny-bin IoU is undefined. Stratification spreads what exists; it cannot "
-            "manufacture small pupils that were never labelled."
+            "manufacture small pupils that were never labeled."
         )
     return "\n".join(lines)
 

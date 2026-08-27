@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pupil training split manager</title>
+  <title>Pupil training fold manager</title>
   <style>
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
     body { max-width: 1500px; margin: 0 auto; padding: 1.5rem; background: #f7f8fa; color: #18212b; }
@@ -52,7 +52,7 @@
   </style>
 </head>
 <body>
-  <h1>Training split manager</h1>
+  <h1>Training fold manager</h1>
   <p class="muted">
     Automatic grouping is the starting point. Drag whole sessions between folds or into the
     validation session. Cross-validation ignores the validation session. Save writes
@@ -60,8 +60,8 @@
   </p>
   <div id="notice" aria-live="polite"></div>
   <p id="launch-help" class="error" hidden>
-    Do not open this file directly. Start the local split manager with
-    <code>python training\review_splits.py</code>; it will open this page with the
+    Do not open this file directly. Start the local fold manager with
+    <code>python training\review_folds.py</code>; it will open this page with the
     local manifest service it needs.
   </p>
   <div class="actions">
@@ -72,7 +72,7 @@
   <div id="distribution-charts" class="session-hidden">
     <section aria-labelledby="fold-chart-heading">
       <h2 id="fold-chart-heading">Fold distribution</h2>
-      <p class="muted">Bars count labelled images by pupil size. Purple ranges show background-brightness Q1–Q3; dots are medians (0 black–255 white).</p>
+      <p class="muted">Bars count labeled images by pupil size. Purple ranges show background-brightness Q1–Q3; dots are medians (0 black–255 white).</p>
       <div id="fold-chart" class="chart"></div>
     </section>
     <section id="session-chart-section" aria-labelledby="session-chart-heading" hidden>
@@ -175,7 +175,7 @@
       const maximum = niceMaximum(Math.max(1, ...items.map(item => item.images)));
       const graph = svg('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': title});
       graph.append(svg('title', {}, title));
-      graph.append(svg('desc', {}, 'Stacked bars show tiny, medium, and large labelled pupil images.'));
+      graph.append(svg('desc', {}, 'Stacked bars show tiny, medium, and large labeled pupil images.'));
 
       for (let tick = 0; tick <= 4; tick += 1) {
         const value = maximum * tick / 4;
@@ -186,7 +186,7 @@
       graph.append(svg('line', {class: 'axis', x1: margin.left, x2: margin.left, y1: margin.top, y2: margin.top + plotHeight}));
       graph.append(svg('line', {class: 'axis', x1: width - margin.right, x2: width - margin.right, y1: margin.top, y2: margin.top + plotHeight}));
       graph.append(svg('line', {class: 'axis', x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight}));
-      graph.append(svg('text', {class: 'axis-label', x: 16, y: margin.top + plotHeight / 2, transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Labelled images'));
+      graph.append(svg('text', {class: 'axis-label', x: 16, y: margin.top + plotHeight / 2, transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Labeled images'));
       graph.append(svg('text', {class: 'axis-label', x: width - 14, y: margin.top + plotHeight / 2, transform: `rotate(90 ${width - 14} ${margin.top + plotHeight / 2})`, 'text-anchor': 'middle'}, 'Brightness (0–255)'));
       for (let tick = 0; tick <= 4; tick += 1) {
         const brightness = Math.round(255 * tick / 4);
@@ -242,7 +242,7 @@
       node.dataset.session = session.session;
       node.setAttribute('aria-pressed', String(selected));
       node.append(el('strong', '', session.session));
-      node.append(el('div', 'meta', `${session.n_images} labelled images`));
+      node.append(el('div', 'meta', `${session.n_images} labeled images`));
       node.addEventListener('click', () => {
         selectedSession = selected ? undefined : session.session;
         render();

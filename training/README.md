@@ -1,26 +1,25 @@
 # Train or Fine-Tune a Mouse Pupil Segmentation Model
 
-Follow this workflow to label your own data, train, or fine-tune a model. The core procedures are:
+Use this guide to label your own images and train a model to segment the pupil. You do not need
+to choose model settings for a first run. The core workflow is:
 
-1. Organize your labeled images by recording sessions (one folder for each session).
-2. Arrange new sessions to folds.
-3. Train a model on the labeled data.
-
-Additionally, we also provide some additional tools to aid the core procedures.
+1. Organize labeled image and mask pairs by recording session.
+2. Create or update the fold assignments, then reserve one session for validation.
+3. Train a model and check its results on representative recordings.
 
 ## Contents
 
 - [Core workflow](#core-workflow)
   - [Environment](#environment)
   - [1. Organize labeled images](#1-organize-labeled-images)
-  - [2. Arrange new sessions ](#2-arrange-new-sessions)
-  - [3. Train a model](#4-train-a-model)
-- [Additional tools](#optional-tools)
+  - [2. Create and review fold assignments](#2-create-and-review-fold-assignments)
+  - [3. Train with validation](#3-train-with-validation)
+- [Additional tools](#additional-tools)
   - [Choose frames to label](#choose-frames-to-label)
-  - [Label images with Labelme](#label-a-batch-with-labelme)
-  - [Review or adjust assignments](#3-review-or-adjust-assignments)
+  - [Label images with Labelme](#label-images-with-labelme)
+  - [Review fold assignments](#review-fold-assignments)
   - [Inspect augmentation](#inspect-augmentation)
-  - [Use the experimental checkpoint](#5-use-the-experimental-checkpoint)
+  - [Use the experimental checkpoint](#use-the-experimental-checkpoint)
   - [Fine-tune a checkpoint](#fine-tune-a-checkpoint)
   - [Cross-validate a configuration](#cross-validate-a-configuration)
   - [Package an accepted checkpoint](#package-an-accepted-checkpoint)
@@ -37,10 +36,10 @@ conda activate pupil_tracking
 python -m pip install -e .
 ```
 
-### 1. Organize labelled images
+### 1. Organize labeled images
 
-Create a folder named `labeled_frames/`. In it, place matching PNG images and masks arranged by 
-recording session. For example:
+Create a `labeled_frames/` folder. Inside it, place matching PNG images and masks for each
+recording session:
 
 ```text
 labeled_frames/
@@ -56,83 +55,87 @@ labeled_frames/
 
 Keep every frame from the same recording in one `<session>` directory. A filename only
 needs to be unique within that session; `session/frame_00001.png` is the data identity.
+Do not create separate `train` and `validation` folders or move pairs between folders.
 
-Use the original camera-frame size. During training, the data loader automatically converts 
+Use the original camera-frame size. During training, the data loader automatically converts
 each image/mask pair to the model's 148 x 148 input: square frames are resized, while non-square
 frames are resized proportionally and black-padded. Do not crop, resize, or pad data yourself.
 
 For pointers on choosing images to add to the training data and on labeling images, see
-[Choose frames to label](#choose-frames-to-label) and [Label images with Labelme](#label-a-batch-with-labelme).
+[Choose frames to label](#choose-frames-to-label) and [Label images with Labelme](#label-images-with-labelme).
 
-### 2. Arrange new sessions
+### 2. Create and review fold assignments
 
-The training data from `labeled_frames` is grouped into folds, which is tracked by `training_data_split.json`, attached in the repo root. 
-Run this to add the new sessions from the previous step to the folds in the training data. 
+The fold-assignment record is `training_data_split.json`, stored beside `labeled_frames/`.
+Run this after adding labeled frames, including a new session:
 
 ```powershell
 python training\prepare_splits.py
 ```
 
-`prepare_splits.py` assigns news sessions to folds automatically while balancing for pupil size, lighting condition in each fold.
-Existing assignments are preserved when new sessions are assigned. It updates the `training_data_split.json` and does not move images 
-or masks on disk. It creates four folds by default. If you'd like a different number of folds, add `--n_folds`. For example,
-```bash
-python training\prepare_splits.py --n_folds 5
+`prepare_splits.py` keeps every session together, assigns new sessions to folds while balancing
+pupil size and lighting, and preserves existing assignments. It does not move images or masks.
+The first record has five folds by default. Use `--n_folds` only when creating it; changing an
+existing fold count requires `--reassign`.
+
+Reserve one complete session for validation before the first training run. Replace `<session>`
+with one of your session-folder names:
+
+```powershell
+python training\prepare_splits.py --validation_session <session>
 ```
 
+The validation session stays out of cross-validation and chooses the best checkpoint, early-
+stopping point, and prediction threshold for a normal training run.
+
 <details>
-<summary><strong>Click to see additional prepare_splits.py arguments</strong></summary>
+<summary><strong>More prepare_splits.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
-| `--labeled_frames_dir` | `./labeled_frames` | Use a labelled pool outside the repository. Its parent receives the split record. |
-| `--n_folds` | Existing count, otherwise `5` | Set the number of CV folds when first creating the split. |
+| `--labeled_frames_dir` | `./labeled_frames` | Use a labeled pool outside the repository. Its parent receives the fold-assignment record. |
+| `--n_folds` | Existing count, otherwise `5` | Set the number of CV folds when first creating the record; use `--reassign` to change it later. |
 | `--final_test_session` | None | Repeat for each session to exclude from CV while comparing configurations. |
 | `--validation_session` | None | Repeat for each session reserved for normal validation-backed training. |
-| `--show` | Off | Print the proposed census without writing the split record. |
+| `--show` | Off | Print the proposed census without writing the fold-assignment record. |
 | `--reassign` | Off | Deliberately repack every session and invalidate comparisons to earlier assignments. |
 
 </details>
 
-To visualize the pupil size and lighting condition distribution in each folds or to adjust them,
-follow [Review or adjust assignments](#3-review-or-adjust-assignments) 
+To inspect or adjust the assignment, use [Review fold assignments](#review-fold-assignments).
 
 
-### 3. Train a model
-There are two approaches to training a model. You can train a model using all data in `labeled_frames/` with
-the `default_all_labeled_training_config.json` included in this repo which sets the training configurations like 
-maximum epochs, early stopping, and learning rate scheduling, etc., for you, based on the developer's experiments.
-To train this way, supply `--training_config_path`,
+### 3. Train with validation
+
+Train from scratch with the validation session you reserved above:
+
 ```powershell
-python training\run_train.py --training_config_path training\default_all_labeled_training_config.json --checkpoint_dir checkpoints_exp\scratch
-```
-
-Alternatively, you can set a validation set by following [Review or adjust assignments](#3-review-or-adjust-assignments)
-```bash
 python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 ```
 
-> CUDA is selected automatically when available.
+The held-out session selects the best checkpoint, controls early stopping and learning-rate
+scheduling, and calibrates the prediction threshold. CUDA is selected automatically when
+available.
 
 <details>
-<summary><strong>Click to see all run_train.py arguments</strong></summary>
+<summary><strong>More run_train.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
-| `--labeled_frames_dir` | `./labeled_frames` | Train from a labelled pool outside the repository. |
+| `--labeled_frames_dir` | `./labeled_frames` | Train from a labeled pool outside the repository. |
 | `--checkpoint_dir` | A new directory under `checkpoints_exp/` | Choose where this run writes its checkpoint and metadata. |
 | `--finetune_checkpoint` | Fresh training | Start normal validation-backed training from compatible weights. |
-| `--training_config_path` | Normal training | Use the all-labelled recipe emitted by cross-validation. It owns model settings and ignores the split record. |
+| `--training_config_path` | Normal training | Use the all-labeled recipe emitted by cross-validation. It owns model settings and ignores the fold-assignment record. |
 
 </details>
 
 
-## Optional tools
+## Additional tools
 
 ### Choose frames to label
-You may whichever frames make sense for your experiment to label and add to the training data. Generally speaking, starting with 
-the images on which the model struggles the most helps the model improve on similar images. We also provide a recommender 
-when you want help prioritizing a larger recording:
+
+You can label any frames that serve your experiment. Use the recommender when you want help
+prioritizing frames from a larger recording:
 
 ```powershell
 python training\recommend_frames.py `
@@ -166,17 +169,18 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 
 </details>
 
-### Label a session with Labelme
-[Labelme](https://github.com/wkentaro/labelme) is one recommended tool, not a requirement.
-Use the label `pupil`, or `no_visible_pupil` if you are certain that the image does not contain 
-a pupil, such as when the eye is closed in an image. You may also label `uncertain` for an image 
-that should be retained but excluded from segmentation loss. See [data_collection.md](data_collection.md)
-for the detailed annotation policy. Labelme automatically saves your labeled masks as JSON files beside 
-their source images. 
+### Label images with Labelme
 
-Make sure you give every genuinely new recording session its own session name; matching text such as 
-`Purple_trial5` is not proof that two recordings belong together. The importer never merges into an existing 
-session directory.
+[Labelme](https://github.com/wkentaro/labelme) is one recommended labeling tool, not a
+requirement. Use `pupil` for a visible pupil, `no_visible_pupil` when you are certain no pupil
+is visible (for example, when the eye is closed), and `uncertain` for a frame to retain outside
+the segmentation loss. Labelme saves annotations as JSON files beside the source images; the
+importer below creates the PNG masks. See [data_collection.md](data_collection.md) for the
+detailed policy.
+
+Give every genuinely new recording session its own session name. Matching text such as
+`Purple_trial5` does not prove that two recordings belong together, and the importer never merges
+into an existing session directory.
 
 Import a session when labeling is completed:
 
@@ -184,10 +188,11 @@ Import a session when labeling is completed:
 python training\labelme_json2png.py --source <annotation-folder> --session <new-session>
 ```
 
-This will create the session's `images/`, `masks/`, and optional `uncertain/` folders in `labeled_frames/`  
+The importer creates the session's `images/`, `masks/`, and optional `uncertain/` folders under
+`labeled_frames/` and refreshes the fold-assignment record.
 
 <details>
-<summary><strong>Click to see all labelme_json2png.py arguments</strong></summary>
+<summary><strong>More labelme_json2png.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -197,28 +202,22 @@ This will create the session's `images/`, `masks/`, and optional `uncertain/` fo
 </details>
 
 
-### Review or adjust assignments
-Open the interactive local fold manager when you want to inspect the fold/session statistics or 
-change the fold assignment:
+### Review fold assignments
+
+Open the interactive local fold manager to inspect session statistics or change an assignment:
 
 ```powershell
-python training\review_splits.py
+python training\review_folds.py
 ```
 
-It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
-brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
-own chart; click it again to hide that chart. Both charts update immediately when a session is
-dragged. Drag a whole session between folds or into the **validation session**. Saving validates
-the complete session assignment and updates
-`training_data_split.json`. The served interface is the tracked
-[`split_manager.html`](split_manager.html)
-asset; `review_splits.py` provides its local manifest API.
+Do not open `fold_manager.html` directly: `review_folds.py` starts the local service that reads
+and safely updates the fold-assignment record. Drag whole sessions between folds or into the
+**validation session**, then save. The charts update as you work.
 
 
 ### Inspect augmentation
 
-The training pipeline applies a series of augmentation such as rotation, jitter, etc. To inspect
-the augmentation effects:
+`preview_augmentation.py` is a visual diagnostic, not preprocessing:
 
 ```powershell
 python training\preview_augmentation.py
@@ -292,8 +291,8 @@ configuration.
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
-| `--labeled_frames_dir` | `./labeled_frames` | Cross-validate a labelled pool outside the repository. |
-| `--checkpoint_dir` | `checkpoints_exp/cv` beside the data root | Directory that receives one fold folder per CV split. |
+| `--labeled_frames_dir` | `./labeled_frames` | Cross-validate a labeled pool outside the repository. |
+| `--checkpoint_dir` | `checkpoints_exp/cv` beside the data root | Directory that receives one folder for each CV fold. |
 | `--cv_folds` | Every fold | Rerun only selected existing fold indices; this writes a partial summary only. |
 | `--finetune_checkpoint` | Fresh training | Evaluate a compatible starting checkpoint, provided it was not trained on this pool. |
 
@@ -301,17 +300,18 @@ configuration.
 
 
 ### Fine-tune a checkpoint
+
 Fine-tuning is often faster than training from scratch when you added new sessions to the
-existing labelled pool. It uses the same held-out-fold validation workflow:
+existing labeled pool. It uses the same held-out-fold validation workflow:
 
 ```powershell
 python training\run_train.py `
-    --finetune_checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
+    --finetune_checkpoint "path\to\existing_checkpoint.pth" `
     --checkpoint_dir checkpoints_exp\ft
 ```
 
 Fine-tuning loads model weights but starts a new optimizer, scheduler, and training log. Keep
-the prior labelled sessions in the pool alongside newly labelled difficult cases to reduce
+the prior labeled sessions in the pool alongside newly labeled difficult cases to reduce
 forgetting.
 
 

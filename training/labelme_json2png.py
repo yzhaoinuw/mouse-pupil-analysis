@@ -7,7 +7,7 @@ and explicit ``no_visible_pupil`` negatives become compact image/mask pairs unde
 ``labeled_frames/<session>/images|masks``. ``uncertain`` annotations are preserved under
 ``labeled_frames/<session>/uncertain`` and never enter segmentation training.
 
-Import a labelled batch and refresh the frozen split::
+Import a labeled batch and refresh the frozen fold assignment::
 
     python training/labelme_json2png.py --source path/to/annotations --session SESSION
 """
@@ -142,7 +142,7 @@ def build_import_plan(source: Path, data_root: Path, session: str) -> list[Impor
     if target.exists():
         raise FileExistsError(
             f"Refusing to merge into existing session {target}. "
-            "Use a new session name so intake cannot overwrite labelled data."
+            "Use a new session name so intake cannot overwrite labeled data."
         )
 
     json_files = sorted(source.glob("*.json"))

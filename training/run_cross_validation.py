@@ -5,7 +5,7 @@ Each fold trains on all other folds and validates on its own held-out sessions, 
 every session is scored exactly once by a model that never saw that recording
 setting. The headline number is the mean per-session IoU: averaging over images
 instead lets the largest session dominate, and one session currently holds 28% of
-the labelled pool.
+the labeled pool.
 
     python training/prepare_splits.py
     python training/run_cross_validation.py

@@ -1,10 +1,10 @@
-"""Run a local browser UI for reviewing and editing session-level data splits.
+"""Run a local browser UI for reviewing and editing session-level fold assignments.
 
 The page reads ``training_data_split.json`` produced by :mod:`prepare_splits`, then opens a loopback-only
 interface. Drag whole sessions between folds and the validation session; the Python
 backend delegates validation and manifest writes to ``prepare_splits``.
 
-    python training/review_splits.py
+    python training/review_folds.py
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ import prepare_splits as data_splits  # noqa: E402
 HOST = "127.0.0.1"
 MAX_REQUEST_BYTES = 1_000_000
 LARGE_MIN_DIAMETER = 80.0
-PAGE_PATH = Path(__file__).with_name("split_manager.html")
+PAGE_PATH = Path(__file__).with_name("fold_manager.html")
 TAB_STALE_SECONDS = 8.0
 TAB_CLOSE_GRACE_SECONDS = 5.0
 STARTUP_GRACE_SECONDS = 120.0
@@ -115,8 +115,8 @@ def ui_state(manifest: dict) -> dict:
     }
 
 
-def split_paths(labeled_frames_dir: Path) -> tuple[Path, Path]:
-    """Return the dataset parent and its fixed split-manifest path."""
+def fold_record_paths(labeled_frames_dir: Path) -> tuple[Path, Path]:
+    """Return the dataset parent and its fixed fold-assignment record path."""
     labeled_frames_dir = Path(labeled_frames_dir).resolve()
     if labeled_frames_dir.name != data_splits.LABELLED_ROOT:
         raise ValueError(
@@ -129,7 +129,7 @@ def split_paths(labeled_frames_dir: Path) -> tuple[Path, Path]:
 
 def refresh_manifest(labeled_frames_dir: Path, folds: int | None) -> dict:
     """Refresh source statistics through data_splits while preserving assignments."""
-    data_root, manifest_path = split_paths(labeled_frames_dir)
+    data_root, manifest_path = fold_record_paths(labeled_frames_dir)
     previous = data_splits.read_previous(manifest_path)
     n_folds = folds if folds is not None else previous["n_folds"] if previous else 5
     manifest = data_splits.build_manifest(data_root, n_folds=n_folds, previous=previous)
@@ -140,14 +140,14 @@ def refresh_manifest(labeled_frames_dir: Path, folds: int | None) -> dict:
 def read_page() -> bytes:
     """Return the tracked UI template, failing clearly if a source checkout is incomplete."""
     if not PAGE_PATH.is_file():
-        raise FileNotFoundError(f"Split-manager HTML template is missing: {PAGE_PATH}")
+        raise FileNotFoundError(f"Fold-manager HTML template is missing: {PAGE_PATH}")
     return PAGE_PATH.read_bytes()
 
 
 def handler_factory(manifest_path: Path, lifecycle: BrowserLifecycle):
     """Build a loopback request handler bound to one manifest path."""
 
-    class SplitManagerHandler(BaseHTTPRequestHandler):
+    class FoldManagerHandler(BaseHTTPRequestHandler):
         def _json(self, status: HTTPStatus, payload: dict) -> None:
             encoded = json.dumps(payload).encode("utf-8")
             self.send_response(status)
@@ -226,14 +226,14 @@ def handler_factory(manifest_path: Path, lifecycle: BrowserLifecycle):
         def log_message(self, _format: str, *_args) -> None:
             return
 
-    return SplitManagerHandler
+    return FoldManagerHandler
 
 
 def stop_when_browser_closes(server: ThreadingHTTPServer, lifecycle: BrowserLifecycle) -> None:
     """Stop the loopback service after its last browser tab is gone."""
     while not lifecycle.should_stop():
         time.sleep(1)
-    print("Split manager stopped because its browser tab(s) closed.")
+    print("Fold manager stopped because its browser tab(s) closed.")
     server.shutdown()
 
 
@@ -241,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.parse_args(argv)
     labeled_frames_dir = Path.cwd() / data_splits.LABELLED_ROOT
-    _, manifest_path = split_paths(labeled_frames_dir)
+    _, manifest_path = fold_record_paths(labeled_frames_dir)
     if not manifest_path.exists():
         parser.error(
             f"No {data_splits.TRAINING_DATA_SPLIT_FILENAME} beside {labeled_frames_dir}; "
@@ -256,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     server = ThreadingHTTPServer((HOST, 0), handler_factory(manifest_path, lifecycle))
     server.daemon_threads = True
     url = f"http://{HOST}:{server.server_port}/"
-    print(f"Split manager: {url}\nThe server stops after the last browser tab closes.")
+    print(f"Fold manager: {url}\nThe server stops after the last browser tab closes.")
     webbrowser.open(url)
     threading.Thread(
         target=stop_when_browser_closes,
@@ -266,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nSplit manager stopped.")
+        print("\nFold manager stopped.")
     finally:
         server.server_close()
     return 0

@@ -21,7 +21,7 @@ spaced frames across the whole recording.
 
 Scoring is implemented privately in ``training/_frame_scoring.py``; the evidence that it beats picking at
 random is in ``reports/scripts/validate_frame_selection.py``, which measured 89% of
-the achievable gap over the labelled pool. Read that module's docstring before
+the achievable gap over the labeled pool. Read that module's docstring before
 trusting the output: ranking is weakest on recordings whose pupils are much smaller
 than anything in training.
 

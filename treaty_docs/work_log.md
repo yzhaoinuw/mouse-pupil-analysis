@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-26
 
+### Make the training guide experimenter-first and name the fold manager (Codex, GPT-5)
+
+- Rewrote the training guide's core path in plain language: organize sessions, create fold
+  assignments, reserve validation, train, and inspect results. The all-labeled refit remains a
+  deliberate post-CV route rather than the default first run.
+- Renamed the interactive browser surface from split manager to fold manager:
+  `review_folds.py` serves `fold_manager.html`, with tests and developer documentation updated.
+  The established `prepare_splits.py` command and `training_data_split.json` record remain
+  compatible paths rather than undergoing an unnecessary data migration.
+- Standardized reader-facing language on `labeled` and `fold assignment`; clarified that Labelme
+  saves JSON annotations and the importer creates PNG masks.
+- Verification: focused fold-manager and training tests, full Pytest suite, repository-wide Ruff
+  and Black checks, package wheel/sdist build, and `git diff --check`. Pytest reported one
+  existing source-import deprecation warning and 345 existing Pillow deprecation warnings;
+  Black could not read its global Windows cache but completed its checks.
+
 ### Tighten the public README's first-run path (Codex, GPT-5)
 
 - Kept the main README centered on install, common commands, results, and the Python API; moved

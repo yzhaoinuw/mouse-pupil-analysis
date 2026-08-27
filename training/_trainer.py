@@ -124,7 +124,7 @@ class TrainingConfig:
         if self.train_all_labeled_frames and (
             self.split_manifest is not None or self.fold is not None
         ):
-            raise ValueError("all-labeled training does not use a split manifest or fold.")
+            raise ValueError("all-labeled training does not use a fold-assignment record or fold.")
         if self.fold is not None and self.fold < 0:
             raise ValueError("fold must be nonnegative.")
         if self.batch_size <= 0 or self.max_epochs <= 0:
@@ -186,7 +186,7 @@ def make_split_datasets(
     therefore uses the manifest's validation session.
     """
     if config.split_manifest is None:
-        raise ValueError("Validation-backed training requires a split manifest.")
+        raise ValueError("Validation-backed training requires a fold-assignment record.")
     manifest = data_splits.load_manifest(config.split_manifest)
     if config.fold is None:
         train, validation = data_splits.validation_holdout_paths(manifest, config.data_root)
@@ -225,13 +225,11 @@ def make_all_labeled_dataset(config: TrainingConfig) -> SegmentationDataset:
 
 
 def split_description(config: TrainingConfig) -> str:
-    """Return a one-line description of which split a run used."""
+    """Return a one-line description of the fold assignment a run used."""
     if config.train_all_labeled_frames:
-        return (
-            f"all labeled sessions under {Path(config.labeled_frames_dir).name}/ (splits ignored)"
-        )
+        return f"all labeled sessions under {Path(config.labeled_frames_dir).name}/ (fold assignments ignored)"
     if config.split_manifest is None:
-        raise ValueError("Validation-backed training requires a split manifest.")
+        raise ValueError("Validation-backed training requires a fold-assignment record.")
     manifest = data_splits.load_manifest(config.split_manifest)
     name = Path(config.split_manifest).name
     if config.fold is None:
@@ -554,7 +552,7 @@ def evaluate_checkpoint(
 
 
 def run_all_labeled_training(config: TrainingConfig) -> Path:
-    """Train every labelled session with a CV-generated fixed configuration."""
+    """Train every labeled session with a CV-generated fixed configuration."""
     if not config.train_all_labeled_frames:
         raise ValueError("run_all_labeled_training needs train_all_labeled_frames=True.")
 
@@ -564,7 +562,7 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
 
     train_dataset = make_all_labeled_dataset(config)
     split = split_description(config)
-    print(f"Split: {split}")
+    print(f"Fold assignment: {split}")
 
     device = resolve_device(config.device)
     train_loader = DataLoader(
@@ -657,7 +655,7 @@ def run_training(config: TrainingConfig) -> Path:
 
     train_dataset, val_dataset = make_split_datasets(config)
     split = split_description(config)
-    print(f"Split: {split}")
+    print(f"Fold assignment: {split}")
 
     training_examples = len(train_dataset)
 
@@ -805,7 +803,7 @@ def run_training(config: TrainingConfig) -> Path:
     # outside it. At the low edge that reflects the image-weighted majority of the
     # validation set wanting more pixels predicted -- which says nothing about the minority.
     # Measured on 2026-08-16 fold 1: the threshold sat on the floor because the 32-image
-    # session under-predicted (0.72x the labelled area), while the two sessions that
+    # session under-predicted (0.72x the labeled area), while the two sessions that
     # actually failed were over-predicting by 4.8x and 7.8x and needed the opposite. One
     # global threshold cannot serve sessions whose errors point in different directions.
     calibrated = json.loads(metadata_path.read_text(encoding="utf-8"))["prediction_threshold"]
@@ -815,7 +813,7 @@ def run_training(config: TrainingConfig) -> Path:
             f"WARNING: calibrated threshold {calibrated:.2f} is the lowest candidate, so this "
             "run wanted to go lower still. That is driven by whichever sessions supply the most "
             "validation images, and can coexist with severe over-segmentation elsewhere. Check "
-            "the per-session scores, and the predicted-to-labelled area ratio, before trusting "
+            "the per-session scores, and the predicted-to-labeled area ratio, before trusting "
             "this checkpoint."
         )
     elif calibrated == high:

@@ -78,11 +78,11 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 11. `training/`
 
-- Contains the training launcher, split manager, Labelme JSON conversion, and augmentation inspection.
+- Contains the training launcher, fold manager, Labelme JSON conversion, and augmentation inspection.
 - `training/README.md` documents data preparation, fresh training, checkpoint-based fine-tuning, and intentional checkpoint packaging.
 - `training/run_train.py` is the short command-line and direct-run entry point; private
   `training/_trainer.py` owns training, evaluation, and run-artifact implementation.
-- The trainer supports fresh training or lower-rate weight fine-tuning. A manifest validation holdout drives checkpoint selection and threshold calibration; when it is empty, all development sessions train with a fixed schedule and recorded fixed threshold instead. `training/review_splits.py` renders the automatic session grouping, its pupil-size/lighting summaries, and validates manual whole-session reassignment.
+- The trainer supports fresh training or lower-rate weight fine-tuning. A manifest validation holdout drives checkpoint selection and threshold calibration; normal training requires one. An all-labeled recipe instead trains every valid pair with fixed settings. `training/review_folds.py` renders the automatic session grouping, its pupil-size/lighting summaries, and validates manual whole-session reassignment.
 
 ### 12. `media/`
 
@@ -142,8 +142,8 @@ mouse-pupil-analysis/
 |  |- run_train.py
 |  |- run_cross_validation.py
 |  |- prepare_splits.py
-|  |- review_splits.py
-|  |- split_manager.html
+|  |- review_folds.py
+|  |- fold_manager.html
 |  |- _trainer.py            (private training implementation)
 |  |- _frame_scoring.py      (private recommender implementation)
 |  |- provenance.py
@@ -209,7 +209,7 @@ Active local/developer scripts:
 - `training/run_train.py`
 - `training/run_cross_validation.py`
 - `training/prepare_splits.py`
-- `training/review_splits.py`
+- `training/review_folds.py`
 - `training/labelme_json2png.py`
 - `training/preview_augmentation.py`
 - `media/make_gif.py`
@@ -217,12 +217,12 @@ Active local/developer scripts:
 Local/generated surfaces to treat carefully:
 
 - `images_test_*`, `images_*_result`, `predicted_masks_*`, `predictions_test/`, and `results/` are local analysis outputs.
-- Root `labeled_frames/` holds the local labelled pool, one directory per recording session,
+- Root `labeled_frames/` holds the local labeled pool, one directory per recording session,
   each with `images/` and `masks/`; an optional `uncertain/` archive is deliberately ignored
   by segmentation training. It is gitignored, as is the derived `folds/`.
   `training_data_split.json`
   records the grouped, stratified fold assignment and *is* committed, so it is the only part
-  of the split that survives a fresh clone. The `sample_data/` versions of both are
+  of the fold-assignment record that survives a fresh clone. The `sample_data/` versions of both are
   intentionally tracked fixtures.
 - `checkpoints_exp/` holds experimental training checkpoints.
 - `videos/` holds local source recordings used for frame extraction, so this folder remains

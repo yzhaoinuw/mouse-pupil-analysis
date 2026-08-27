@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Preview random training augmentations for one labelled recording session."""
+"""Preview random training augmentations for one labeled recording session."""
 
 import argparse
 from pathlib import Path

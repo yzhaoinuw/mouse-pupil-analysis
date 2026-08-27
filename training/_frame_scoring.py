@@ -21,7 +21,7 @@ Three label-free signals replace it:
     signature stated as a geometric prior.
 ``temporal``
     Within one recording the pupil cannot jump between neighbouring frames. Needs
-    consecutive frames, so it is not measurable on the sparsely-sampled labelled pool.
+    consecutive frames, so it is not measurable on the sparsely-sampled labeled pool.
 
 ``reports/scripts/validate_frame_selection.py`` checks these against known labels
 before any of it is trusted on a new recording. As of 2026-08-16 it picks frames

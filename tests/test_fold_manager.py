@@ -1,14 +1,14 @@
-"""Focused coverage for the browser split-manager payload and write boundary."""
+"""Focused coverage for the browser fold-manager payload and write boundary."""
 
 import runpy
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "review_splits.py"))
+MANAGER = runpy.run_path(str(PROJECT_ROOT / "training" / "review_folds.py"))
 BrowserLifecycle = MANAGER["BrowserLifecycle"]
 ui_state = MANAGER["ui_state"]
 read_page = MANAGER["read_page"]
-split_paths = MANAGER["split_paths"]
+fold_record_paths = MANAGER["fold_record_paths"]
 
 
 def test_ui_state_exposes_session_size_and_lighting_stats():
@@ -38,8 +38,8 @@ def test_ui_state_exposes_session_size_and_lighting_stats():
     assert by_session["b"]["medium"] == 1
 
 
-def test_split_paths_uses_the_manifest_beside_labeled_frames(tmp_path: Path):
-    data_root, manifest_path = split_paths(tmp_path / "labeled_frames")
+def test_fold_record_paths_uses_the_manifest_beside_labeled_frames(tmp_path: Path):
+    data_root, manifest_path = fold_record_paths(tmp_path / "labeled_frames")
 
     assert data_root == tmp_path.resolve()
     assert manifest_path == tmp_path.resolve() / "training_data_split.json"
@@ -48,7 +48,7 @@ def test_split_paths_uses_the_manifest_beside_labeled_frames(tmp_path: Path):
 def test_html_template_is_a_tracked_ui_asset():
     page = read_page()
 
-    assert b"Training split manager" in page
+    assert b"Training fold manager" in page
     assert b"Fold distribution" in page
     assert b"Selected session" in page
     assert b"Background brightness: Q1" in page
