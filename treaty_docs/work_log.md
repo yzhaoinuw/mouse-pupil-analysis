@@ -21,6 +21,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - Restored the reasons behind each major action: whole-session validation makes the first training
   result more meaningful, folds balance sessions for later comparison, and the augmentation viewer
   lets users see the varied images used during training and confirm that their masks still align.
+- Clarified Labelme use after frame recommendation: inspect a recommended difficult frame alongside
+  its neighbors, then label the frame with a clear boundary. A closed or low-resolution candidate
+  can be replaced by a nearby confidently labelable frame.
 - Verification: focused fold-manager and training tests, full Pytest suite, repository-wide Ruff
   and Black checks, package wheel/sdist build, and `git diff --check`. Pytest reported one
   existing source-import deprecation warning and 345 existing Pillow deprecation warnings;

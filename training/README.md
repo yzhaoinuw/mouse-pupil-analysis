@@ -177,7 +177,13 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 
 ### Label images with Labelme
 
-[Labelme](https://github.com/wkentaro/labelme) lets you draw the pupil boundary on each frame.
+[Labelme](https://github.com/wkentaro/labelme) lets you draw the pupil boundary on selected
+images. Choose a small, varied set of frames. If you used the recommender, open a recommended
+frame in Labelme and look at the nearby frames too: difficult cases often need that context, and
+a nearby frame with a clear boundary can be a useful training example. When a recommended frame
+is closed or too low-resolution to label confidently, choose a nearby frame with a clear pupil
+boundary instead.
+
 Use `pupil` for a visible pupil, `no_visible_pupil` when you are certain no pupil is visible
 (for example, when the eye is closed), and `uncertain` for a frame to retain outside the
 segmentation loss. Labelme saves annotations as JSON files beside the source images; the importer
