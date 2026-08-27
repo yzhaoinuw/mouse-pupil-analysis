@@ -1,21 +1,21 @@
 # Train or Fine-Tune a Mouse Pupil Segmentation Model
 
-Follow this workflow to label your own data, train or fine-tune a model. The core procedures are:
+Follow this workflow to label your own data, train, or fine-tune a model. The core procedures are:
 
-1. Organize your labeled images into recording sessions (one folder for each session).
-2. Add new sessions to folds.
+1. Organize your labeled images by recording sessions (one folder for each session).
+2. Arrange new sessions to folds.
 3. Train a model on the labeled data.
 
-Additionally, we also provide the 
+Additionally, we also provide some additional tools to aid the core procedures.
 
 ## Contents
 
 - [Core workflow](#core-workflow)
   - [Environment](#environment)
   - [1. Organize labeled images](#1-organize-labeled-images)
-  - [2. Add new sessions ](#2-add-new-sessions)
-  - [3. Train and validate](#4-train-and-validate)
-- [Optional tools](#optional-tools)
+  - [2. Arrange new sessions ](#2-arrange-new-sessions)
+  - [3. Train a model](#4-train-a-model)
+- [Additional tools](#optional-tools)
   - [Choose frames to label](#choose-frames-to-label)
   - [Label images with Labelme](#label-a-batch-with-labelme)
   - [Review or adjust assignments](#3-review-or-adjust-assignments)
@@ -61,10 +61,13 @@ Use the original camera-frame size. During training, the data loader automatical
 each image/mask pair to the model's 148 x 148 input: square frames are resized, while non-square
 frames are resized proportionally and black-padded. Do not crop, resize, or pad data yourself.
 
-### 2. Add new sessions
+For pointers on choosing images to add to the training data and on labeling images, see
+[Choose frames to label](#choose-frames-to-label) and [Label images with Labelme](#label-a-batch-with-labelme).
 
-The training data from `labeled_frames` is grouped into folds, which is tracked by `training_data_split.json` in the repo root. 
-Run this to add the labeled images from new sessions (previous step) to the folds in the training data.
+### 2. Arrange new sessions
+
+The training data from `labeled_frames` is grouped into folds, which is tracked by `training_data_split.json`, attached in the repo root. 
+Run this to add the new sessions from the previous step to the folds in the training data. 
 
 ```powershell
 python training\prepare_splits.py
@@ -91,7 +94,11 @@ python training\prepare_splits.py --n_folds 5
 
 </details>
 
-### 3. Train and validate
+To visualize the pupil size and lighting condition distribution in each folds or to adjust them,
+follow [Review or adjust assignments](#3-review-or-adjust-assignments) 
+
+
+### 3. Train a model
 There are two approaches to training a model. You can train a model using all data in `labeled_frames/` with
 the `default_all_labeled_training_config.json` included in this repo which sets the training configurations like 
 maximum epochs, early stopping, and learning rate scheduling, etc., for you, based on the developer's experiments.
@@ -122,105 +129,10 @@ python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 
 ## Optional tools
 
-### Fine-tune a checkpoint
-
-Fine-tuning is often faster than training from scratch when you added new sessions to the
-existing labelled pool. It uses the same held-out-fold validation workflow:
-
-```powershell
-python training\run_train.py `
-    --finetune_checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
-    --checkpoint_dir checkpoints_exp\ft
-```
-
-Fine-tuning loads model weights but starts a new optimizer, scheduler, and training log. Keep
-the prior labelled sessions in the pool alongside newly labelled difficult cases to reduce
-forgetting.
-
-### Label a batch with Labelme
-
-Labelme is one supported intake route, not a requirement. If you use it, save the annotated
-JSON files beside their source images. Give every genuinely new recording session its own
-session name; matching text such as `Purple_trial5` is not proof that two recordings belong
-together. The importer never merges into an existing session directory.
-
-Import the complete batch:
-
-```powershell
-python training\labelme_json2png.py --source <annotation-folder> --session <new-session>
-```
-
-The importer creates the session's `images/`, `masks/`, and optional `uncertain/` folders,
-then refreshes the split manifest. Use `pupil` for a visible pupil polygon,
-`no_visible_pupil` for a confident true-negative frame, and `uncertain` for a frame that
-should be retained but excluded from segmentation loss. See [data_collection.md](data_collection.md)
-for the detailed annotation policy.
-
-For example, a Labelme-reviewed recommendation queue for one recording can become a separate
-training session without touching any other `Purple_trial5` folder:
-
-```powershell
-python training\labelme_json2png.py `
-    --source "frames_to_label\260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1\recommended" `
-    --session "260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1"
-
-```
-
-This command writes only to
-`labeled_frames/260812_3582_Purple_trial5_pupil_recording_2026-08-12T15-05-55.154-1/`
-and refreshes `training_data_split.json`; it cannot overwrite or add frames to
-`labeled_frames/260812_3582_Purple_trial5/`.
-
-<details>
-<summary><strong>labelme_json2png.py arguments</strong></summary>
-
-| Argument | Default | Purpose |
-| --- | --- | --- |
-| `--source` | Required | Folder containing Labelme JSON files and their source images. |
-| `--session` | Required | New recording-session name under this repository's `labeled_frames/`. |
-
-</details>
-
-### Review or adjust assignments
-
-Open the local split manager when you want to inspect the session statistics or change the
-automatic assignment:
-
-```powershell
-python training\review_splits.py
-```
-
-Do not open `split_manager.html` directly in a browser: it is the interface asset, while
-`review_splits.py` starts the local service that reads and safely writes
-`training_data_split.json`.
-
-It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
-brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
-own chart; click it again to hide that chart. Both charts update immediately when a session is
-dragged. Drag a whole session between folds or into the **validation session**. Saving validates
-the complete session assignment and updates
-`training_data_split.json`. The served interface is the tracked
-[`split_manager.html`](split_manager.html)
-asset; `review_splits.py` provides its local manifest API.
-
-The local server stops automatically shortly after every split-manager tab is closed. It also
-stops if no browser tab connects after launch.
-
-<details>
-<summary><strong>review_splits.py arguments</strong></summary>
-
-This command has no command-line arguments. It opens the current repository's
-`training_data_split.json`; run `prepare_splits.py` first if that record does not exist.
-
-</details>
-
-Folds are used only by cross-validation. The validation session is excluded from CV and is used
-by the normal training command below. Assign one before starting a validation-backed run.
-
 ### Choose frames to label
-
-You may label whichever frames make sense for your experiment. The recommender is available
-when you want help prioritising a larger recording:
+You may whichever frames make sense for your experiment to label and add to the training data. Generally speaking, starting with 
+the images on which the model struggles the most helps the model improve on similar images. We also provide a recommender 
+when you want help prioritizing a larger recording:
 
 ```powershell
 python training\recommend_frames.py `
@@ -254,9 +166,59 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 
 </details>
 
+### Label a session with Labelme
+[Labelme](https://github.com/wkentaro/labelme) is one recommended tool, not a requirement.
+Use the label `pupil`, or `no_visible_pupil` if you are certain that the image does not contain 
+a pupil, such as when the eye is closed in an image. You may also label `uncertain` for an image 
+that should be retained but excluded from segmentation loss. See [data_collection.md](data_collection.md)
+for the detailed annotation policy. Labelme automatically saves your labeled masks as JSON files beside 
+their source images. 
+
+Make sure you give every genuinely new recording session its own session name; matching text such as 
+`Purple_trial5` is not proof that two recordings belong together. The importer never merges into an existing 
+session directory.
+
+Import a session when labeling is completed:
+
+```powershell
+python training\labelme_json2png.py --source <annotation-folder> --session <new-session>
+```
+
+This will create the session's `images/`, `masks/`, and optional `uncertain/` folders in `labeled_frames/`  
+
+<details>
+<summary><strong>Click to see all labelme_json2png.py arguments</strong></summary>
+
+| Argument | Default | Purpose |
+| --- | --- | --- |
+| `--source` | Required | Folder containing Labelme JSON files and their source images. |
+| `--session` | Required | New recording-session name under this repository's `labeled_frames/`. |
+
+</details>
+
+
+### Review or adjust assignments
+Open the interactive local fold manager when you want to inspect the fold/session statistics or 
+change the fold assignment:
+
+```powershell
+python training\review_splits.py
+```
+
+It displays a stacked pupil-size chart for the folds, overlaid with each fold's background-
+brightness interquartile range (Q1–Q3) and median (0 black–255 white). Click a session for its
+own chart; click it again to hide that chart. Both charts update immediately when a session is
+dragged. Drag a whole session between folds or into the **validation session**. Saving validates
+the complete session assignment and updates
+`training_data_split.json`. The served interface is the tracked
+[`split_manager.html`](split_manager.html)
+asset; `review_splits.py` provides its local manifest API.
+
+
 ### Inspect augmentation
 
-`preview_augmentation.py` is a visual diagnostic, not preprocessing:
+The training pipeline applies a series of augmentation such as rotation, jitter, etc. To inspect
+the augmentation effects:
 
 ```powershell
 python training\preview_augmentation.py
@@ -273,6 +235,7 @@ transforms look plausible.
 | `--data_root` | Repository root | Use a different repository-style root containing `labeled_frames/`. |
 
 </details>
+
 
 ### Use the experimental checkpoint
 
@@ -336,8 +299,23 @@ configuration.
 
 </details>
 
-### Package an accepted checkpoint
 
+### Fine-tune a checkpoint
+Fine-tuning is often faster than training from scratch when you added new sessions to the
+existing labelled pool. It uses the same held-out-fold validation workflow:
+
+```powershell
+python training\run_train.py `
+    --finetune_checkpoint "mouse_pupil_analysis\checkpoints\166pupils_thresh=0.4_iou=0.8749.pth" `
+    --checkpoint_dir checkpoints_exp\ft
+```
+
+Fine-tuning loads model weights but starts a new optimizer, scheduler, and training log. Keep
+the prior labelled sessions in the pool alongside newly labelled difficult cases to reduce
+forgetting.
+
+
+### Package an accepted checkpoint
 <details>
 <summary><strong>Package an accepted checkpoint into the installed application</strong></summary>
 
