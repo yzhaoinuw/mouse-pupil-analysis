@@ -92,8 +92,8 @@ unrelated PyPI distribution and must not be claimed here.
 
 ### 10. `sample_data/`
 
-- Contains a public clone-and-run fixture: eight paired training crops, four paired validation crops, six uncropped frames, and 31 consecutive prepared velocity frames.
-- `sample_data/README.md` documents segmentation, velocity, augmentation, and training smoke workflows; `manifest.csv` records provenance and transformations.
+- Contains a public clone-and-run fixture: 32 labeled image/mask pairs from 10 sessions, six full-size unlabeled frames, and 31 consecutive prepared velocity frames.
+- `sample_data/README.md` contains fixture-specific commands and links to the main analysis and training guides; `provenance.csv` records source and transformation details.
 - The fixture is maintained example data rather than a benchmark. Its velocity sequence preserves source frames `07212`-`07242` at 97 Hz.
 - `MANIFEST.in` includes the fixture and its training utilities in source distributions so the bundled guide and integrity test remain self-contained; wheels exclude them from the installed runtime package.
 
@@ -156,7 +156,7 @@ mouse-pupil-analysis/
 |  |- pupil_diameter_analysis_result_demo.gif
 |- sample_data/
 |  |- README.md
-|  |- manifest.csv
+|  |- provenance.csv
 |  |- training_data_split.json
 |  |- labeled_frames/
 |  |  |- <session>/
@@ -213,6 +213,9 @@ Active local/developer scripts:
 - `training/labelme_json2png.py`
 - `training/preview_augmentation.py`
 - `media/make_gif.py`
+- `scripts/verify_distribution_namespaces.py` verifies that built distributions contain only the
+  `mouse_pupil_analysis` package namespace; CI and the release workflow run it before wheel smoke
+  tests or publication.
 
 Local/generated surfaces to treat carefully:
 
@@ -260,7 +263,7 @@ The test suite is intentionally lightweight:
 - `tests/test_outputs.py` verifies 1-based source-frame naming, compact unified schemas, three-state tracking status, and plot creation.
 - `tests/test_tracking.py` verifies coordinate mapping, component measurements, quality flags, timing, and kinematics with synthetic inputs.
 - `tests/test_end_to_end.py` runs the real pipeline against the packaged checkpoint on a synthetic video generated in a fixture: extraction, the UNet forward pass, diameter and velocity outputs, overlays, and video-versus-image-directory agreement. Synthetic input verifies wiring rather than segmentation accuracy.
-- `tests/test_sample_data.py` verifies paired sample counts, matching masks, raw-frame dimensions, the consecutive 31-frame velocity contract, and manifest coverage.
+- `tests/test_sample_data.py` verifies paired sample counts, matching masks, full-size frame dimensions, the consecutive 31-frame velocity contract, and provenance coverage.
 - `tests/test_real_images.py` runs the packaged checkpoint over the committed `sample_data/` frames, which is what actually detects a corrupted checkpoint or a preprocessing regression.
 - `.github/workflows/ci.yml` runs Ruff, Black, Pytest, and a wheel smoke check across Python 3.10, 3.11, and 3.12 where appropriate.
 

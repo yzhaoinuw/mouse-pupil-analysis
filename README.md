@@ -234,10 +234,9 @@ run-pupil-analysis \
   --acquisition_fps 97
 ```
 
-Those are 31 consecutive frames acquired at 97 Hz. The fixture also holds uncropped frames
-from two recordings and paired training and validation masks, which the
-[sample-data guide][sample-data] covers. It is sized for trying the workflow and for
-debugging, not for scientific model evaluation or useful training.
+Those are 31 consecutive frames acquired at 97 Hz. The fixture also holds full-size frames from
+two recordings and labeled image/mask pairs arranged by recording session. The
+[sample-data guide][sample-data] covers the fixture-specific commands and provenance.
 
 ## Installation options
 

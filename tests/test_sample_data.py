@@ -105,9 +105,9 @@ def test_unlabeled_and_velocity_fixture_contracts():
             assert image.size == (148, 148)
 
 
-def test_manifest_covers_every_logical_sample():
-    with (SAMPLE_ROOT / "manifest.csv").open(newline="", encoding="utf-8") as manifest_file:
-        rows = list(csv.DictReader(manifest_file))
+def test_provenance_covers_every_logical_sample():
+    with (SAMPLE_ROOT / "provenance.csv").open(newline="", encoding="utf-8") as provenance_file:
+        rows = list(csv.DictReader(provenance_file))
 
     assert len(rows) == 69
     assert {row["category"] for row in rows} == {"cropped", "unlabeled", "velocity"}

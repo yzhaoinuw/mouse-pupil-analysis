@@ -1,51 +1,29 @@
 # Sample Data
 
-This directory is a small public fixture for trying the repository from a fresh clone or source distribution. It contains real pupil images published with permission, but it is intentionally too small to support scientific model evaluation or production training. The fixture is not installed into the runtime wheel.
+This small public fixture lets you try the analysis and training workflow after downloading the
+project. It contains 32 labeled image/mask pairs from 10 recording sessions, six full-size
+unlabeled frames, and 31 consecutive frames for the velocity example.
 
 ## Contents
 
 ```text
 sample_data/
-|- labeled_frames/          # 32 curated cropped pairs, one folder per session
-|  |- <session>/
-|  |  |- images/          #   the frames
-|  |  |- masks/           #   the matching hand-labeled masks
-|- training_data_split.json # the grouped, stratified fold assignment
-|- unlabeled_frames/      # 6 frames from two recordings, no masks, never trained on
-|  |- recording_250530/
-|  |- recording_250616/
-|- velocity_frames/       # 31 consecutive prepared frames
-|- manifest.csv
+|- labeled_frames/             # 32 image/mask pairs, arranged by recording session
+|- training_data_split.json    # grouped fold assignment for the labeled pairs
+|- unlabeled_frames/           # 6 full-size frames from two recordings
+|- velocity_frames/            # 31 consecutive frames acquired at 97 Hz
+|- provenance.csv              # source and transformation record for every shipped image
 |- README.md
 ```
 
-This mirrors the maintained dataset's layout exactly: one directory per recording
-session, each holding `images/` and `masks/`, and `training_data_split.json` deciding what trains and
-what validates. There are no train/validation folders. The session an image belongs to
-is the folder it sits in, so the whole split regenerates from the layout alone.
+`training_data_split.json` tells the training tools which complete recording sessions belong to
+each fold. `provenance.csv` records the source recording, source-frame suffix, and transformation
+for every fixture image.
 
-`manifest.csv` records the session, fold, source recording, source-frame suffix, and
-transformation of each logical sample.
+## Analyze the sample frames
 
-The 32 pairs are a real subset of the maintained pool, chosen so the fixture exercises
-the split rather than merely containing images:
-
-| | fixture | maintained pool |
-| --- | --- | --- |
-| labelled pairs | 32 | 222 |
-| sessions | 10 | 16 |
-| images per session | 6 5 4 4 3 3 3 2 1 1 | 62 32 18 17 15 13 13 13 12 11 5 4 3 2 1 1 |
-| mask diameter range | 8.8 - 109.7 | 8.8 - 109.7 |
-| folds containing a mask <=15 px | 3 of 4 | 4 of 4 |
-
-Several sessions are deep enough that holding one out removes a block of related frames,
-which is what the grouping exists to do; a fixture of one image per session would satisfy
-"no session spans a fold" vacuously. One fold holds no small pupil, which is the same
-honest limitation the real pool has and worth seeing in a test.
-
-## Try segmentation on real frames
-
-From the repository root, activate an environment where the package is installed and run:
+The root [README's Sample data section](../README.md#sample-data) runs the 31-frame velocity
+example. To analyze the full-size frames from one recording, run:
 
 ```powershell
 run-pupil-analysis `
@@ -54,70 +32,33 @@ run-pupil-analysis `
     --output_mask_dir results\sample_unlabeled_250530\overlays
 ```
 
-Repeat with `recording_250616` to try the second acquisition setup. Each folder is analyzed separately so a result plot never connects unrelated recording timelines. This exercises preprocessing, packaged-checkpoint selection, segmentation, diameter estimation, CSV/plot output, and overlays. All six inputs retain their original dimensions.
+Use `recording_250616` to try the second acquisition setup. Each folder is analyzed separately,
+so the result plot represents one recording at a time.
 
-To run without command-line arguments, edit the paths and options near the bottom of
-`mouse_pupil_analysis/run_pupil_analysis.py`, then run the file directly.
+## Check the training tools
 
-These six frames carry no masks, and that is the point: they are the only frames here the packaged model has never trained on. `reports/scripts/hard_frame_check.py` defaults to `recording_250616`, which holds a small pupil that appears in no labelled image — the failure that three of five checkpoints in the 2026-08-14 seed study lost entirely while scoring the *highest* validation IoU.
-
-## Try the velocity pipeline
-
-```powershell
-run-pupil-analysis `
-    --image_dir sample_data\velocity_frames `
-    --result_dir results\sample_velocity `
-    --output_mask_dir results\sample_velocity\overlays `
-    --calculate_velocity `
-    --acquisition_fps 97
-```
-
-The velocity fixture contains source frames `07212` through `07242`, inclusive. They are consecutive frames from the recording used for the README GIF window, not the every-third-frame display sampling used by the animation. Preserving every source suffix allows the tracking code to calculate all 30 frame-to-frame speeds without bridging gaps.
-
-The committed velocity images are grayscale 148 x 148 outputs from the package's aspect-preserving `resize_with_pad(...)` preprocessing. On the current packaged checkpoint, all 31 segmentations are usable, five frames carry an `abrupt_area_change` warning, and the diameter ranges from approximately 17.70 to 25.03 model pixels. These frames are already 148 x 148, so their input-pixel diameters are identical. These observations are debugging landmarks rather than a permanently frozen numerical-output contract.
-
-## Try training and augmentation
-
-Inspect paired augmentation:
+The [training guide](../training/README.md) explains [augmentation](../training/README.md#inspect-augmentation),
+[fold assignments](../training/README.md#2-set-aside-a-session-to-check-the-model), and
+[cross-validation](../training/README.md#cross-validate-a-configuration). Use these
+fixture-specific commands to try them with the bundled data:
 
 ```powershell
-python training\preview_augmentation.py
-```
-
-Or run a one-epoch CV smoke test:
-
-```powershell
-python training\run_cross_validation.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
-```
-
-The generated fold checkpoints, JSON metadata, logs, and all-labeled recipe are written under
-`checkpoints_exp/sample_cv/`. A model trained on this small fixture is expected to
-overfit and must not be treated as a useful trained model.
-
-## Try the grouped, stratified split
-
-```powershell
+python training\preview_augmentation.py --data_root sample_data
 python training\prepare_splits.py --labeled_frames_dir sample_data\labeled_frames --show
-```
-
-prints the per-session census and the per-fold summary. `sample_data/training_data_split.json` is
-committed, so a fresh clone can read the split without running anything. Train one fold with:
-
-```powershell
 python training\run_cross_validation.py --labeled_frames_dir sample_data\labeled_frames --max_epochs 1 --checkpoint_dir checkpoints_exp\sample_cv
 ```
 
-See [`../training/data_collection.md`](../training/data_collection.md) for how sessions are
-recorded and how folds are packed. Thirty-two images is enough to check the split mechanics,
-not to train anything.
+The cross-validation command writes its checkpoints, metadata, and log under
+`checkpoints_exp\sample_cv`.
 
-## Provenance and use
+## Provenance
 
-- The image/mask pairs were copied unchanged from the project's local labelled pool.
-- The Labelme `.json` annotations are not shipped. The fixture already contains its masks, and its session comes from its folder rather than annotation metadata.
-- Each pair sits in the folder of the recording session it came from, which is what the split groups on. `training_data_split.json` is generated from that layout by `training/prepare_splits.py`.
-- The unlabelled frames were copied unchanged from two original recording frame directories. They were briefly named `raw_frames/`.
-- The velocity frames were derived from source frames `07212`-`07242` of `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042` using grayscale conversion and the package's 148 x 148 resize-and-pad convention.
-- The project has permission to publish these images and masks in this repository for collaboration and reproducible examples.
+- The labeled pairs and unlabeled frames were copied unchanged from the project's local recordings.
+- The fixture stores PNG masks directly; Labelme JSON annotations are not included.
+- The velocity frames come from source frames `07212` through `07242` of
+  `250530_5003_Green_Training_very_dm_light_2025-05-30T09-27-57.042`, prepared with grayscale
+  conversion and the package's 148 x 148 resize-and-pad convention.
+- The project has permission to publish these images and masks for collaboration and reproducible
+  examples.
 
-Generated results belong under the ignored `results/` directory and should not be committed.
+Generated results belong under the ignored `results/` directory.

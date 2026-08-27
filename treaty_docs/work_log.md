@@ -4,6 +4,18 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-26
 
+### Prepare the sample fixture documentation for release (Codex, GPT-5)
+
+- Renamed the fixture's provenance ledger from `manifest.csv` to `provenance.csv` so it is clearly
+  distinct from `training_data_split.json`, the session-to-fold assignment used by training.
+- Reduced the fixture guide to its unique material: layout, fixture-specific commands, and image
+  provenance. It now links to the root analysis guide and training guide for shared instructions,
+  sends augmentation preview at `sample_data`, and removes stale maintained-pool comparison data.
+- Updated the root README and project overview to describe the current session-organized fixture,
+  documented the distribution-namespace verifier, and reconciled stale paths and fold-manager
+  names in `next_steps.md`. The public-documentation release prerequisite is complete; the
+  Purple-sleep cross-recording regression remains an open performance limitation.
+
 ### Make the training guide experimenter-first and name the fold manager (Codex, GPT-5)
 
 - Rewrote the training guide's core path in plain language: organize sessions, create fold

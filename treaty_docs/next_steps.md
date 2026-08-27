@@ -4,7 +4,7 @@ Use this checklist alongside `work_log.md`. Keep it concrete: only add work here
 
 ## Currently Hot
 
-- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 615 images; the 100-epoch all-data refit has been promoted after maintainer visual QC on unlabeled recordings. Grouped CV still has a weak Purple-sleep session, so investigate that regression before treating performance as universal. A release tag remains deliberately deferred while the remaining user-facing documentation is revised.
+- [Recording-grouped data splits](#recording-grouped-data-splits) - the pool is now 615 images; the 100-epoch all-data refit has been promoted after maintainer visual QC on unlabeled recordings. Grouped CV still has a weak Purple-sleep session, so investigate that regression before treating performance as universal. The public guides are aligned with the current workflow; start the release gate when the maintainer is ready.
 - [Model-selection metric fragility](#model-selection-metric-fragility) - fixed; macro IoU and validation loss are now the defaults.
 - [Training sampling default](#training-sampling-default) - fixed; natural sampling is now the default after beating size-balanced by 0.0354.
 - [Improving cross-recording generalization](#improving-cross-recording-generalization) - diagnosed: the model segments the eye aperture, not the pupil, at p=0.99. Augmentation is the wrong tool; an opt-in centre-favoured component selector now offers a practical inference-time guard for off-centre artifacts and needs cross-session evaluation.
@@ -82,11 +82,11 @@ also entered since the previous trained baseline.
 Then:
 
 - Diagnose or repeat fold 1 before promotion. `250616_5120_Purple_sleep_trial_1` regressed
-  0.7304 -> 0.2585 and predicts 0.218x the labelled area, despite large gains on the two old
+  0.7304 -> 0.2585 and predicts 0.218x the labeled area, despite large gains on the two old
   aperture-confusion sessions.
 - `checkpoints_exp/final_516_nat_macro_s0` is a historical 512-image refit with a frozen 115-epoch
   schedule and threshold 0.5. New production runs instead consume `run_cross_validation.py`'s generated
-  `training_config.json`, train every labelled session, and are inspected on representative
+  `training_config.json`, train every labeled session, and are inspected on representative
   unlabeled recordings.
 
 ## Improving Cross-Recording Generalization
@@ -101,7 +101,7 @@ model mediocre everywhere" but "what makes a recording setting fall off the clif
 comparisons on the same pool version.**
 
 **Settled: the model segments the eye aperture, not the pupil.** Measured, not inferred. On the two
-failing sessions the fold-1 checkpoint predicts **4.8x and 7.8x** the labelled area, at **p = 0.99
+failing sessions the fold-1 checkpoint predicts **4.8x and 7.8x** the labeled area, at **p = 0.99
 on every frame**, while the session that works in the same fold predicts 0.72x. It has learned
 "dark blob = pupil", which holds while the pupil is the only dark thing in frame and breaks where
 the whole eye aperture is dark. No appearance statistic explains it: brightness correlates with
@@ -331,7 +331,7 @@ A ten-run seed study on 2026-08-14 (`reports/2026-08-14-checkpoint-noise-floor.m
   their 20th percentile. Fine-tune runs peaked at epochs 1-26, so the best checkpoint was
   essentially the starting weights.
 - Retraining from scratch is **not** a safe substitute. Three of five from-scratch runs lose a
-  real small pupil in `sample_data/raw_frames/recording_250616` that every fine-tuned run and
+  real small pupil in `sample_data/unlabeled_frames/recording_250616` that every fine-tuned run and
   the packaged checkpoint detect, and those three are the runs with the *highest* validation
   IoU. A higher-scoring scratch candidate was promoted and then reverted for this reason.
 - The fine-tuned lineage preserves something validation cannot see. Keep the packaged
@@ -401,12 +401,12 @@ Remaining work:
 
 Status: cleaned on `training-compaction` (2026-08-24)
 
-The training README now treats labelled image/mask pairs as the input contract and puts the
-ordinary path first: organise sessions, refresh `training_data_split.json`, review the split manager if needed,
-then run `run_train.py` against an optional validation session. Labelme, frame recommendation,
+The training README now treats labeled image/mask pairs as the input contract and puts the
+ordinary path first: organize sessions, refresh `training_data_split.json`, review the fold manager,
+reserve a validation session, then run `run_train.py`. Labelme, frame recommendation,
 augmentation review, cross-validation, and checkpoint packaging are optional tools.
 
-`training/review_splits.py` now serves a local browser UI over the existing manifest. It shows
+`training/review_folds.py` now serves a local browser UI over the existing manifest. It shows
 session/fold image counts, tiny/medium/large pupil counts, median diameter, and median brightness;
 it starts from the automatic grouping and saves only validated whole-session assignments. The
 validation session is excluded from CV and drives ordinary `run_train.py` selection when nonempty.
