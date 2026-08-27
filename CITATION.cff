@@ -23,11 +23,11 @@ abstract: "A Python package and command-line pipeline for mouse pupil segmentati
 # what README.md badges. Order matters: citation generators take the first
 # doi-type identifier, so the per-version DOI must stay first or exported BibTeX
 # will point at the moving concept DOI instead of the archived code. See RELEASING.md.
-doi: "10.5281/zenodo.21897796"
+doi: "10.5281/zenodo.22120636"
 identifiers:
   - type: doi
-    value: "10.5281/zenodo.21897796"
-    description: "DOI for version 0.2.0"
+    value: "10.5281/zenodo.22120636"
+    description: "DOI for version 0.3.0"
   - type: doi
     value: "10.5281/zenodo.21897795"
     description: "Concept DOI resolving to the latest version"

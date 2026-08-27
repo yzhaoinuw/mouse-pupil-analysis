@@ -16,6 +16,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
   615-image checkpoint all passed. Pytest retains one existing source-import deprecation warning
   and 345 Pillow deprecation warnings; Black could not read its global Windows cache but completed
   its checks.
+- Published v0.3.0 on PyPI and GitHub after the release workflow passed. Zenodo archived the
+  release as `10.5281/zenodo.22120636`; `CITATION.cff` now names that version DOI first and
+  retains the stable concept DOI (`10.5281/zenodo.21897795`) as the second identifier.
 
 ### Prepare the sample fixture documentation for release (Codex, GPT-5)
 
