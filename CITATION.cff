@@ -6,8 +6,8 @@ authors:
   - family-names: Zhao
     given-names: Yue
     orcid: "https://orcid.org/0000-0002-0819-5012"
-version: "0.2.0"
-date-released: "2026-08-12"
+version: "0.3.0"
+date-released: "2026-08-26"
 repository-code: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
 url: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
 license: MIT

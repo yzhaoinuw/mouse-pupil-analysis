@@ -4,6 +4,19 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-08-26
 
+### Compact live planning and prepare v0.3.0 (Codex, GPT-5)
+
+- Replaced the historical `next_steps.md` narrative with the few genuine open decisions:
+  Purple-sleep generalization, velocity-threshold validation, the local CV-committee
+  prerequisite for frame recommendation, and two post-release API/plot decisions.
+- Prepared the v0.3.0 metadata and concise release notes. The versioned DOI remains at v0.2.0
+  until Zenodo creates the v0.3.0 record after the GitHub release.
+- Verification: repository-wide Ruff and Black checks, full Pytest suite, wheel/sdist build,
+  distribution-namespace verification, and direct inspection of the v0.3.0 wheel's packaged
+  615-image checkpoint all passed. Pytest retains one existing source-import deprecation warning
+  and 345 Pillow deprecation warnings; Black could not read its global Windows cache but completed
+  its checks.
+
 ### Prepare the sample fixture documentation for release (Codex, GPT-5)
 
 - Renamed the fixture's provenance ledger from `manifest.csv` to `provenance.csv` so it is clearly

@@ -7,205 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- The packaged default segmentation model is now the 615-image all-labeled natural-sampling
-  refit. It uses the grouped-CV-selected 100-epoch recipe and a calibrated prediction threshold
-  of 0.5. On the public velocity fixture it retains all 31 usable frames, with five temporal-area
-  warnings and diameters from 17.70 to 25.03 model pixels.
-- Confidence-mask overlays now default to 5% heatmap transparency, preserving more of the
-  original frame beneath the confidence colors.
-
-### Fixed
-
-- Cross-validation now has a 200-epoch selection ceiling and a 20-epoch validation patience,
-  replacing the unnecessarily loose 400-epoch ceiling.
-- CV-generated all-data recipes now round their selected epoch budget up to the next 100 and
-  record their source summary by a portable relative filename.
-- Pytest now adds the repository root to its import path, so tests for the source-only
-  `training/` utilities run when CI invokes the `pytest` console script.
-- The console-script smoke test now resolves its executable from the active Python environment,
-  avoiding platform-specific `PATH` assumptions.
-- Checkpoint packaging now supports all-labeled refits and verifies the CV recipe and summary
-  that selected their fixed training settings before creating installed assets.
+## [0.3.0] - 2026-08-26
 
 ### Added
 
-- Opt-in `--prefer_central_component` postprocessing for analysis. It keeps one
-  confidence-weighted foreground component with a gentle preference for the image centre, helping
-  reject separate off-centre dark structures without imposing a circularity requirement.
-- `training/split_manager.py` provides a local drag-and-drop view of automatic session grouping,
-  a live stacked pupil-size chart with background-brightness quartiles and median for the folds,
-  and a selectable session chart. The local server stops automatically after its browser tabs
-  close. It also provides validated assignment to folds or an optional validation holdout. Normal
-  `run_train.py --split-manifest splits.json` runs validate against that holdout when it exists;
-  when it is empty, they train all development sessions with a recorded fixed schedule instead of
-  tuning against validation labels that do not exist.
-- Running `mouse_pupil_analysis/run_pupil_analysis.py` with no arguments now uses an editable
-  direct-run configuration block, while the `run-pupil-analysis` command keeps its existing
-  terminal-argument workflow.
-- Frame recommendations now default to
-  `frames_to_label/<session>/{extracted_frames,recommended}` instead of writing beside the source
-  video. Use `--output_dir` to replace the output root.
-- Recording-grouped, condition-stratified data splits. `training/data_splits.py` groups the
-  labelled pool into *sessions* — one animal, one date, one condition — and packs whole
-  sessions into cross-validation folds, writing the assignment to a `splits.json` manifest.
-  The former `images_train/`, `images_validation/`, `masks_train/`, `masks_validation/`
-  were merged into `labeled_frames/`, and are still read where an older checkout has them. The manifest decides what
-  trains and what validates, so re-splitting moves no labelled files and adding data moves
-  none either. Because an image is keyed by its path *within* the pool folder, the merge
-  itself moved no image between folds. `run_train.py` gains `--split-manifest` and `--fold`; without
-  them it keeps the previous fixed-folder behaviour. Grouping is worth 0.25 IoU against a
-  0.02 seed noise floor: copying a nearest neighbour's mask scores 0.652 when the neighbour
-  shares a session and 0.399 when it does not.
-- The labelled pool is organised by recording session: `labeled_frames/<session>/images/`
-  and `.../masks/`. The session is the grouping unit for the split, so it is a directory --
-  an image cannot enter the pool without one, which makes provenance a consequence of where
-  the file goes rather than a convention to remember, and means the whole split regenerates
-  from the layout alone. A `session` flag in the labelme JSON or a `provenance.csv` sidecar
-  overrides the folder for a batch that arrived pre-mixed; anything still unresolved
-  collapses into a single over-merged group, which costs data efficiency but cannot leak.
-  No filename is parsed (`training/provenance.py`). Once an image is in the manifest its session and fold are frozen, and a
-  provenance source that later contradicts the record raises instead of silently repacking.
-  Recovering the grouping from the images was tested and does not work — crop geometry
-  splits 6 of 16 sessions, and agglomerative clustering on preprocessed frames tears 3 at
-  k=5 and 6 at k=10.
-- Fold stratification on pupil size and lighting. Sessions are banded by median mask
-  diameter and by median background brightness (new
-  `mouse_pupil_analysis.augmentation.image_background_brightness`), and a new session
-  prefers a fold holding no session of its diameter band, then the smallest fold.
-  Grouping alone had left a 3.03x spread in median diameter across folds with only 2 of 5
-  containing any small mask; at the four folds the pool now uses, it is 1.60x and 4 of 4.
-  Letting only the *absence* of a
-  band outrank fold size is what makes one rule work both when packing from scratch and
-  when sessions arrive one at a time — over 200 simulated arrival orders it holds fold
-  sizes to a 1.15x median spread against 1.33x for ranking by band count throughout, with
-  identical band coverage.
-- The labelled pool directory is `labeled_frames/`, not `labeled_data/`, to match
-  `unlabeled_frames/`: both hold frames, and what separates them is whether masks exist.
-  Keys are `<session>/<filename>` and exclude the pool root, so the rename moved no fold.
-- `sample_data/raw_frames/` is renamed `sample_data/unlabeled_frames/`. "Raw" said
-  nothing useful once `labeled_frames/` held raw frames too; these six are distinguished by
-  having *no masks*, which is exactly what makes them usable as a promotion gate. Frames
-  from `labeled_frames/` are training data, so `hard_frame_check.py` aimed there would pass
-  unconditionally.
-- `sample_data/` mirrors the maintained layout: `labeled_frames/<session>/images|masks`,
-  `splits.json`, and a `folds/` rebuilt on demand with `--materialize`. Expanded from 12 real pairs to 32 across 10 sessions, chosen so the
-  fixture exercises the split rather than only containing images -- several sessions are
-  5-6 images deep, so holding one out removes a block of related frames, and the mask
-  diameter range now spans 8.8-109.7 px, matching the maintained pool and populating
-  every size bin. The labelme JSON annotations are included with `imageData` set to null,
-  which drops 1.5 MB of base64 duplicating the PNGs beside them.
-- `data_splits.py --materialize`, which writes the fold assignment to disk as
-  `folds/cv1/`, `folds/cv2/`, ... each with `images/` and `masks/` (and `holdout/` where
-  set), so the split can be inspected as folders rather than JSON. Derived output: rebuilt
-  from the manifest, never read back, overwritten on each run. The manifest stays the
-  record because it is committed and the image folders are not. `--symlink` avoids the
-  copy, though folds partition the pool so the tree is one copy of the dataset either way.
-- A holdout gate. `data_splits.py --holdout SESSION` sets sessions aside from every fold,
-  and `run_train.py --final` trains on everything else and validates against them — the
-  only number in the project measured on data the training procedure was never tuned on.
-- `training/run_cv.py`, which runs every fold and reports mean per-session IoU. Averaging
-  over sessions rather than images stops the largest session — currently 28% of the pool —
-  from dominating the headline number.
-- `training/data_collection.md`, documenting which incoming frames are worth labelling,
-  how to record the session a batch came from, and how a labelled batch joins the split.
-- `training/import_labelme_batch.py`, a dry-run-first intake command that validates a complete
-  Labelme batch, creates compact pupil and explicit-negative image/mask pairs, archives
-  `uncertain` image/JSON records outside segmentation training, refuses to overwrite an
-  existing session, and refreshes the frozen manifest and materialized folds in the same run.
-- `reports/`, holding dated analyses and the scripts that regenerate their numbers.
-  `reports/2026-08-14-checkpoint-noise-floor.md` measures the run-to-run spread of the
-  model-selection metric, and `reports/scripts/` provides the seed study, the run summariser,
-  a dataset/leakage census, IoU-plus-diameter-bias validation diagnostics, and a promotion
-  gate that runs candidates over real frames validation does not cover.
-- Apple MPS support in `training/run_train.py` via `--device {auto,cuda,mps,cpu}`. `auto`
-  prefers CUDA, then MPS, then CPU, which is roughly 4.6x faster than CPU on Apple silicon.
-  The resolved device is recorded in the training log, since MPS, CUDA, and CPU kernels are
-  not bit-identical.
-- `training/promote_checkpoint.py`, which turns one `checkpoints_exp/<run-name>/` folder into
-  the three packaged checkpoint files. It applies the concise naming pattern, strips local
-  absolute paths from the metadata and log header, and records run provenance and a
-  `validation_note` under a fixed schema, so a promotion is reproducible from its run folder
-  instead of assembled by hand. `run_train.py` now records `training_examples` and
-  `training_mode` in `best.json` and the log header to make that transform possible.
-- Terminal arguments for `training/run_train.py`, while running the script without arguments
-  retains its editable direct-run configuration.
-- Fine-tuning support in `training/run_train.py`, with a lower default fine-tuning learning
-  rate, size-balanced sampling, per-image and size-stratified validation, calibrated
-  prediction thresholds, and best-checkpoint/metadata/log retention even when early stopping
-  occurs below the promotion target. Experimental artifacts are grouped in descriptive,
-  collision-safe run folders.
-- Segmentation visibility and quality-control fields for ordinary diameter-only runs. Empty,
-  low-confidence, low-circularity, and border-touching segmentations are now explicit without
-  requiring velocity analysis; potentially partial shapes are labeled conservatively rather
-  than treated as reconstructed hidden pupils.
-- Zenodo DOI metadata. `CITATION.cff` records the v0.2.0 version DOI
-  (`10.5281/zenodo.21897796`) and the concept DOI (`10.5281/zenodo.21897795`), so
-  GitHub's "Cite this repository" button now exports a DOI. `README.md` badges the
-  concept DOI and `[project.urls]` links it.
-
-### Fixed
-
-- `training/labelme_json2png.py` still wrote to `masks_validation/`, which the pool merge
-  had deleted, and picked its target through an edited `dataset_type` variable. It now
-  walks the session folders, writes each mask beside its image, takes `--data-root` and
-  `--session`, and skips masks that already exist.
-
-- A manifest's recorded provenance `source` degraded to `frozen` on every regeneration,
-  so the manifest differed from itself on a no-op rerun and, worse, the census warning
-  about sessions with no recorded provenance fired once and then silently retired. The
-  recorded *session* still wins; the *source* now reports what the live sources say. A
-  batch fallback no longer counts as contradicting a recorded session either, so removing
-  a sidecar row does not read as a deliberate reassignment.
+- An interactive fold manager (`python training\review_folds.py`) for reviewing session-level
+  assignments, comparing pupil-size and lighting summaries, and reserving a validation session.
+- Frame recommendation that ranks informative frames from a completed cross-validation committee.
+- Optional `--prefer_central_component` analysis postprocessing for separate off-center dark
+  structures.
 
 ### Changed
 
-- **Reported diameters are about 6% larger than in v0.2.0.** The packaged checkpoint's
-  calibrated threshold is `0.4`; v0.2.0 used `0.7`. A lower threshold admits more boundary
-  pixels, so every `estimated_pupil_diameter` and `pupil_diameter_input_pixels` value is
-  systematically larger. On the `sample_data` velocity fixture the mean diameter rises 6.0%;
-  the new weights evaluated at the old `0.7` threshold differ from v0.2.0 by about 1%, so
-  nearly all of the shift is the threshold rather than the model. The shift is a correction,
-  not an error: measured against ground-truth masks, `0.7` under-estimated diameters by about
-  4%, while `0.40`-`0.45` is close to unbiased. Diameters remain uncalibrated and comparable
-  only within one analysis run.
+- The packaged default model is now the 615-image, all-labeled model selected from grouped
+  cross-validation. It uses a calibrated prediction threshold of 0.5.
+- Training data is organized by recording session. Normal training reserves one session for
+  validation; cross-validation is available when comparing configurations.
+- The training and sample-data guides now use the same focused, session-and-fold terminology.
 
-  **Do not pool or compare diameters measured before and after this release.** Re-run earlier
-  recordings with this version, or pass `--pred_thresh 0.7` to reproduce v0.2.0 numbers.
+### Fixed
 
-- Replaced the packaged checkpoint and training log with a fine-tuned candidate. Its
-  calibrated threshold is 0.4, macro IoU is 0.8749, and balanced size-bin IoU is 0.8690 on the
-  maintained validation set. Its concise filename retains the training-set size, calibrated
-  threshold, and macro IoU; detailed hyperparameters and secondary metrics remain in the
-  matching log and JSON metadata.
-
-  A subsequent ten-run seed study (`reports/2026-08-14-checkpoint-noise-floor.md`) found this
-  candidate's margin over its predecessor is about 1.6 standard deviations of the spread
-  produced by changing the random seed alone, so it is **not** a demonstrated improvement in
-  the weights. It is kept rather than replaced because every fine-tuned run preserves a
-  small-pupil detection on real frames that three of five higher-scoring from-scratch runs
-  lose entirely. The threshold recalibration below is the part of this release with evidence
-  behind it.
-
-  The filename metric is **not** comparable with the superseded `iou=0.9158`, which was
-  measured with the batch-aggregated IoU used before this release. Re-scored with the same
-  per-image metric and calibrated on the same threshold grid, the superseded checkpoint
-  selects `0.45` and reaches 0.8618 macro and 0.8578 balanced IoU, so the fine-tuned model
-  gains roughly 0.013 macro and 0.011 balanced IoU. Both figures are validation-selected: the
-  weights, the epoch, and the threshold were all chosen on one 56-image validation set whose
-  recordings share recording groups with the training set. Treat them as a relative comparison
-  between candidates, not as an independent generalization estimate. `validation_note` in the
-  packaged JSON metadata records the same caveat.
-
-- Inference now uses calibrated JSON metadata beside a checkpoint, then a threshold encoded
-  in its filename, before falling back to `0.7`. `--pred_thresh` remains an explicit override.
-- Rewrote `README.md` around the order a user actually needs: install, run, output,
-  then the full CLI reference, with a plain linked contents list above them. Unit
-  conventions, calibration caveats, quality-control semantics, environment setup, and
-  PyTorch CPU/GPU builds moved into later sections and an FAQ, leaving the CSV column
-  table as the inline reference. No documented behavior changed. `--batch_size` and
-  `--mask_transparency`, which the CLI has always accepted, are now documented.
+- Cross-validation now has a 200-epoch limit, a 20-epoch validation patience, and portable
+  all-labeled training recipes.
+- Package checks now verify the selected all-labeled model and its source cross-validation recipe
+  before packaging.
+- Analysis and frame-directory workflows document their acquisition-rate requirements more
+  clearly.
 
 ## [0.2.0] - 2026-08-12
 
@@ -353,7 +180,8 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 Changes before 0.1.2 predate this changelog; see the Git history for details.
 
-[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.2...v0.1.4
 [0.1.2]: https://github.com/yzhaoinuw/mouse-pupil-analysis/releases/tag/v0.1.2
