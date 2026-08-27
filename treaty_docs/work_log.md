@@ -18,6 +18,9 @@ Prepend new session notes to the top of this file. The live log holds at most th
 - Rephrased the guide around the actions readers should take, without introducing avoidable
   detours. Every expandable options panel now begins with “Click here” so its interactive purpose
   is clear.
+- Restored the reasons behind each major action: whole-session validation makes the first training
+  result more meaningful, folds balance sessions for later comparison, and the augmentation viewer
+  lets users see the varied images used during training and confirm that their masks still align.
 - Verification: focused fold-manager and training tests, full Pytest suite, repository-wide Ruff
   and Black checks, package wheel/sdist build, and `git diff --check`. Pytest reported one
   existing source-import deprecation warning and 345 existing Pillow deprecation warnings;

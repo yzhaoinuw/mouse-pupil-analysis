@@ -4,16 +4,16 @@ Use this guide to label your own images and train a model to segment the pupil. 
 is:
 
 1. Organize labeled image and mask pairs by recording session.
-2. Create or update the fold assignments, then reserve one session for validation.
-3. Train a model and check its results on representative recordings.
+2. Set aside one recording session to check the model during training.
+3. Train the model and check its results on representative recordings.
 
 ## Contents
 
 - [Core workflow](#core-workflow)
   - [Environment](#environment)
   - [1. Organize labeled images](#1-organize-labeled-images)
-  - [2. Create and review fold assignments](#2-create-and-review-fold-assignments)
-  - [3. Train with validation](#3-train-with-validation)
+  - [2. Set aside a session to check the model](#2-set-aside-a-session-to-check-the-model)
+  - [3. Train the model](#3-train-the-model)
 - [Additional tools](#additional-tools)
   - [Choose frames to label](#choose-frames-to-label)
   - [Label images with Labelme](#label-images-with-labelme)
@@ -29,7 +29,7 @@ is:
 
 ### Environment
 
-Run these source-checkout utilities from the repository root with the project environment:
+Run these commands from the folder where you downloaded this project:
 
 ```powershell
 conda activate pupil_tracking
@@ -65,19 +65,26 @@ the data loader handles this conversion.
 For pointers on choosing images to add to the training data and on labeling images, see
 [Choose frames to label](#choose-frames-to-label) and [Label images with Labelme](#label-images-with-labelme).
 
-### 2. Create and review fold assignments
+### 2. Set aside a session to check the model
 
-The fold-assignment record is `training_data_split.json`, stored beside `labeled_frames/`.
-Run this after adding labeled frames, including a new session:
+Frames from one recording session are often very similar. To check whether the model works on a
+new recording, keep one complete session aside while it learns from the others. This reserved
+session is called the **validation session**.
+
+First, arrange the remaining sessions into balanced groups, called **folds**. This keeps every
+recording session together, spreads different pupil sizes and lighting conditions across the
+groups, and prepares the data for the optional cross-validation workflow. Run this after adding
+labeled frames, including a new session:
 
 ```powershell
 python training\prepare_splits.py
 ```
 
-`prepare_splits.py` keeps every session together, assigns new sessions to folds while balancing
-pupil size and lighting, and preserves existing assignments. It does not move images or masks.
-The first record has five folds by default. Use `--n_folds` only when creating it; changing an
-existing fold count requires `--reassign`.
+`prepare_splits.py` creates the fold-assignment record, `training_data_split.json`, beside
+`labeled_frames/`. It keeps every session together, assigns new sessions to folds while balancing
+pupil size and lighting, and preserves earlier assignments. The first record has five folds by
+default. Use `--n_folds` only when creating it; changing an existing fold count requires
+`--reassign`.
 
 Reserve one complete session for validation before the first training run. Replace `<session>`
 with one of your session-folder names:
@@ -86,8 +93,8 @@ with one of your session-folder names:
 python training\prepare_splits.py --validation_session <session>
 ```
 
-The validation session stays out of cross-validation and chooses the best checkpoint, early-
-stopping point, and prediction threshold for a normal training run.
+During training, the validation session chooses the best checkpoint, the stopping point, and the
+prediction threshold. It also stays separate from optional cross-validation.
 
 <details>
 <summary><strong>Click here for more prepare_splits.py options</strong></summary>
@@ -106,17 +113,16 @@ stopping point, and prediction threshold for a normal training run.
 To inspect or adjust the assignment, use [Review fold assignments](#review-fold-assignments).
 
 
-### 3. Train with validation
+### 3. Train the model
 
-Train from scratch with the validation session you reserved above:
+The trainer learns from the other sessions and checks its progress against the validation session
+you reserved above. Start a new training run with:
 
 ```powershell
 python training\run_train.py --checkpoint_dir checkpoints_exp\scratch
 ```
 
-The held-out session selects the best checkpoint, controls early stopping and learning-rate
-scheduling, and calibrates the prediction threshold. CUDA is selected automatically when
-available.
+The run saves its selected model, settings, and training record in `checkpoints_exp\scratch`.
 
 <details>
 <summary><strong>Click here for more run_train.py options</strong></summary>
@@ -135,8 +141,8 @@ available.
 
 ### Choose frames to label
 
-You can label any frames that serve your experiment. Use the recommender when you want help
-prioritizing frames from a larger recording:
+You can label any frames that serve your experiment. For a long recording, use the recommender to
+prioritize a small set of frames that the current models find most informative:
 
 ```powershell
 python training\recommend_frames.py `
@@ -149,10 +155,9 @@ python training\recommend_frames.py `
 ```
 
 The recommender uses the current completed CV run at `checkpoints_exp/cv` by default.
-`--checkpoint_dir` optionally selects another complete cross-validation run, not an individual
-model folder. The recommender discovers every immediate `*/best.pth` fold checkpoint inside it
-and uses their disagreement to rank frames. Use a committee whose models did not train on the
-recording you are selecting from.
+`--checkpoint_dir` can select another completed cross-validation run. It compares the models in
+that run and ranks frames where their predictions differ. Choose a run trained from other
+recordings when selecting frames from a new recording.
 
 By default, its outputs go under `frames_to_label/<session>/`. After labelling, put the
 resulting image/mask pairs in `labeled_frames/<session>/` by any supported method and run
@@ -172,16 +177,14 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 
 ### Label images with Labelme
 
-[Labelme](https://github.com/wkentaro/labelme) is one recommended labeling tool, not a
-requirement. Use `pupil` for a visible pupil, `no_visible_pupil` when you are certain no pupil
-is visible (for example, when the eye is closed), and `uncertain` for a frame to retain outside
-the segmentation loss. Labelme saves annotations as JSON files beside the source images; the
-importer below creates the PNG masks. See [data_collection.md](data_collection.md) for the
-detailed policy.
+[Labelme](https://github.com/wkentaro/labelme) lets you draw the pupil boundary on each frame.
+Use `pupil` for a visible pupil, `no_visible_pupil` when you are certain no pupil is visible
+(for example, when the eye is closed), and `uncertain` for a frame to retain outside the
+segmentation loss. Labelme saves annotations as JSON files beside the source images; the importer
+below creates the PNG masks. See [data_collection.md](data_collection.md) for the detailed policy.
 
-Give every genuinely new recording session its own session name. The importer treats each named
-folder as a separate recording session; matching text such as `Purple_trial5` alone is not enough
-to join recordings.
+Give every genuinely new recording session its own session name. The importer uses that name for
+the session folder under `labeled_frames/` and keeps the session's images and masks together.
 
 Import a session when labeling is completed:
 
@@ -205,27 +208,29 @@ The importer creates the session's `images/`, `masks/`, and optional `uncertain/
 
 ### Review fold assignments
 
-Open the interactive local fold manager to inspect session statistics or change an assignment:
+Before training, you can check that the folds have a similar range of pupil sizes and lighting
+conditions, and choose the validation session. Open the interactive local fold manager to inspect
+the session statistics or change an assignment:
 
 ```powershell
 python training\review_folds.py
 ```
 
-`review_folds.py` opens the manager and safely updates the fold-assignment record. Drag whole
-sessions between folds or into the **validation session**, then save. The charts update as you
-work.
+`review_folds.py` opens the manager and updates the fold-assignment record. Drag whole sessions
+between folds or into the **validation session**, then save. The charts update as you work.
 
 
 ### Inspect augmentation
 
-`preview_augmentation.py` is a visual diagnostic, not preprocessing:
+During training, the pipeline creates varied versions of each image, such as small shifts, zooms,
+and padding changes. These variations help the model recognize pupils in new recordings. Use this
+tool when you want to see those changes and confirm that the mask still matches the pupil:
 
 ```powershell
 python training\preview_augmentation.py
 ```
 
-It renders augmented image/mask pairs so you can check that the pupil remains aligned and the
-transforms look plausible.
+It shows augmented image/mask pairs with the mask overlaid on the image.
 
 <details>
 <summary><strong>Click here for preview_augmentation.py arguments</strong></summary>
@@ -239,8 +244,9 @@ transforms look plausible.
 
 ### Use the experimental checkpoint
 
-Each run writes to the specified checkpoint directory. Without `--checkpoint_dir`, the trainer
-creates a collision-safe directory under `checkpoints_exp/`.
+After training, the checkpoint directory holds the files you need to inspect or use the new model.
+The command above writes to its chosen directory; omitting `--checkpoint_dir` creates a new
+directory under `checkpoints_exp/`.
 
 - `best.pth` — selected model weights.
 - `best.json` — selected threshold, validation metrics, epoch, and full configuration.
@@ -263,9 +269,9 @@ normal validation session separate:
 python training\run_cross_validation.py --checkpoint_dir checkpoints_exp\cv
 ```
 
-Each fold has a 200-epoch ceiling and stops after 20 non-improving validation epochs; these are
-selection bounds, not a claimed final-training duration. Use its per-session results to compare
-candidate settings. It also writes `training_config.json`, a complete all-labeled training recipe
+Each fold trains for up to 200 epochs and stops after 20 validation epochs without improvement.
+Use its per-session results to compare candidate settings. It also writes `training_config.json`,
+a complete all-labeled training recipe
 using the median successful-fold epoch rounded up to the next 100, its calibrated threshold, and a
 portable `summary.json` provenance reference. The repository also tracks
 `training/default_all_labeled_training_config.json`, the fixed settings used for the 516-pair
@@ -278,14 +284,12 @@ python training\run_train.py `
     --checkpoint_dir checkpoints_exp\all_labeled
 ```
 
-That command deliberately reads every valid image/mask pair under `labeled_frames/` and ignores
-`training_data_split.json`, including any session formerly reserved as a final test. Use it when you are ready
-to trust the CV-selected recipe and inspect the resulting model on representative unlabeled
+That command trains from every valid image/mask pair under `labeled_frames/`. Use it when you are
+ready to trust the CV-selected recipe and inspect the resulting model on representative unlabeled
 recordings.
 
-To rerun only specific existing folds, use `--cv_folds`, for example `--cv_folds 0 2`.
-That writes `partial_summary.json` only; it deliberately does not create a production training
-configuration.
+To rerun only specific existing folds, use `--cv_folds`, for example `--cv_folds 0 2`. This
+writes `partial_summary.json`, a report for the selected folds.
 
 <details>
 <summary><strong>Click here for run_cross_validation.py arguments</strong></summary>
@@ -320,9 +324,9 @@ forgetting.
 <details>
 <summary><strong>Click here to package an accepted checkpoint into the installed application</strong></summary>
 
-Packaging is a package/release change, not a normal training step. After checking overlays and
-downstream tracking on representative recordings, preview then package either a
-validation-selected run or an all-labeled refit:
+After you have accepted a checkpoint, package it to make it the model used by the installed
+application. First check its overlays and downstream tracking on representative recordings, then
+preview and package either a validation-selected run or an all-labeled refit:
 
 ```powershell
 python training\package_checkpoint.py --run_dir checkpoints_exp\<run-name> --dry_run
@@ -349,6 +353,6 @@ metadata, and log are included in both package distributions.
 
 ### Developer fixture
 
-`sample_data/` is a small public fixture for checking data flow and checkpoint writing, not
-for training a useful model. See [sample_data/README.md](../sample_data/README.md) for its
-commands and limits.
+`sample_data/` is a small public example data set for checking that the training workflow and
+checkpoint writing work. See [sample_data/README.md](../sample_data/README.md) for its commands
+and limits.
