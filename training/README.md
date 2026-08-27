@@ -1,7 +1,7 @@
 # Train or Fine-Tune a Mouse Pupil Segmentation Model
 
-Use this guide to label your own images and train a model to segment the pupil. You do not need
-to choose model settings for a first run. The core workflow is:
+Use this guide to label your own images and train a model to segment the pupil. The core workflow
+is:
 
 1. Organize labeled image and mask pairs by recording session.
 2. Create or update the fold assignments, then reserve one session for validation.
@@ -50,16 +50,17 @@ labeled_frames/
     masks/
       frame_00001.png                # same filename as its image
       frame_00002.png
-    uncertain/                       # optional; never used for segmentation training
+    uncertain/                       # optional; kept outside segmentation training
 ```
 
 Keep every frame from the same recording in one `<session>` directory. A filename only
 needs to be unique within that session; `session/frame_00001.png` is the data identity.
-Do not create separate `train` and `validation` folders or move pairs between folders.
+`prepare_splits.py` creates the training and validation groups from these session folders.
 
 Use the original camera-frame size. During training, the data loader automatically converts
 each image/mask pair to the model's 148 x 148 input: square frames are resized, while non-square
-frames are resized proportionally and black-padded. Do not crop, resize, or pad data yourself.
+frames are resized proportionally and black-padded. Provide the original image and mask pairs;
+the data loader handles this conversion.
 
 For pointers on choosing images to add to the training data and on labeling images, see
 [Choose frames to label](#choose-frames-to-label) and [Label images with Labelme](#label-images-with-labelme).
@@ -89,7 +90,7 @@ The validation session stays out of cross-validation and chooses the best checkp
 stopping point, and prediction threshold for a normal training run.
 
 <details>
-<summary><strong>More prepare_splits.py options</strong></summary>
+<summary><strong>Click here for more prepare_splits.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -118,7 +119,7 @@ scheduling, and calibrates the prediction threshold. CUDA is selected automatica
 available.
 
 <details>
-<summary><strong>More run_train.py options</strong></summary>
+<summary><strong>Click here for more run_train.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -158,7 +159,7 @@ resulting image/mask pairs in `labeled_frames/<session>/` by any supported metho
 `prepare_splits.py`.
 
 <details>
-<summary><strong>recommend_frames.py arguments</strong></summary>
+<summary><strong>Click here for recommend_frames.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -178,9 +179,9 @@ the segmentation loss. Labelme saves annotations as JSON files beside the source
 importer below creates the PNG masks. See [data_collection.md](data_collection.md) for the
 detailed policy.
 
-Give every genuinely new recording session its own session name. Matching text such as
-`Purple_trial5` does not prove that two recordings belong together, and the importer never merges
-into an existing session directory.
+Give every genuinely new recording session its own session name. The importer treats each named
+folder as a separate recording session; matching text such as `Purple_trial5` alone is not enough
+to join recordings.
 
 Import a session when labeling is completed:
 
@@ -192,7 +193,7 @@ The importer creates the session's `images/`, `masks/`, and optional `uncertain/
 `labeled_frames/` and refreshes the fold-assignment record.
 
 <details>
-<summary><strong>More labelme_json2png.py options</strong></summary>
+<summary><strong>Click here for more labelme_json2png.py options</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -210,9 +211,9 @@ Open the interactive local fold manager to inspect session statistics or change 
 python training\review_folds.py
 ```
 
-Do not open `fold_manager.html` directly: `review_folds.py` starts the local service that reads
-and safely updates the fold-assignment record. Drag whole sessions between folds or into the
-**validation session**, then save. The charts update as you work.
+`review_folds.py` opens the manager and safely updates the fold-assignment record. Drag whole
+sessions between folds or into the **validation session**, then save. The charts update as you
+work.
 
 
 ### Inspect augmentation
@@ -227,7 +228,7 @@ It renders augmented image/mask pairs so you can check that the pupil remains al
 transforms look plausible.
 
 <details>
-<summary><strong>preview_augmentation.py arguments</strong></summary>
+<summary><strong>Click here for preview_augmentation.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -255,8 +256,8 @@ before replacing the package's default model.
 ### Cross-validate a configuration
 
 Use cross-validation when you need to compare configurations or estimate how sensitive a
-result is to the held-out session group. It takes turns holding out each fold and
-never loads the validation session:
+result is to the held-out session group. It takes turns holding out each fold while keeping the
+normal validation session separate:
 
 ```powershell
 python training\run_cross_validation.py --checkpoint_dir checkpoints_exp\cv
@@ -287,7 +288,7 @@ That writes `partial_summary.json` only; it deliberately does not create a produ
 configuration.
 
 <details>
-<summary><strong>run_cross_validation.py arguments</strong></summary>
+<summary><strong>Click here for run_cross_validation.py arguments</strong></summary>
 
 | Argument | Default | Purpose |
 | --- | --- | --- |
@@ -317,7 +318,7 @@ forgetting.
 
 ### Package an accepted checkpoint
 <details>
-<summary><strong>Package an accepted checkpoint into the installed application</strong></summary>
+<summary><strong>Click here to package an accepted checkpoint into the installed application</strong></summary>
 
 Packaging is a package/release change, not a normal training step. After checking overlays and
 downstream tracking on representative recordings, preview then package either a
