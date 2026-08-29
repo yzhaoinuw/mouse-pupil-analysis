@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet"
+authors:
+  - family-names: Zhao
+    given-names: Yue
+    orcid: "https://orcid.org/0000-0002-0819-5012"
+version: "0.3.0"
+date-released: "2026-08-26"
+repository-code: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+url: "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+license: MIT
+keywords:
+  - pupillometry
+  - pupil tracking
+  - image segmentation
+  - UNet
+  - neuroscience
+abstract: "A Python package and command-line pipeline for mouse pupil segmentation, pupil-diameter estimation, and optional pupil-center velocity analysis from video or extracted frame images."
+# Zenodo mints a per-version DOI and a concept DOI. Update both `doi` and the
+# per-version entry below on every release; the concept DOI never changes and is
+# what README.md badges. Order matters: citation generators take the first
+# doi-type identifier, so the per-version DOI must stay first or exported BibTeX
+# will point at the moving concept DOI instead of the archived code. See RELEASING.md.
+doi: "10.5281/zenodo.22120636"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22120636"
+    description: "DOI for version 0.3.0"
+  - type: doi
+    value: "10.5281/zenodo.21897795"
+    description: "Concept DOI resolving to the latest version"

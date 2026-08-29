@@ -1,3 +1,105 @@
+[project]
+name = "mouse-pupil-analysis"
+version = "0.3.0"
+description = "Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet."
+authors = [{ name = "Yue Zhao" }]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = [
+  "pupillometry",
+  "pupil-tracking",
+  "segmentation",
+  "unet",
+  "neuroscience",
+  "mouse",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+dependencies = [
+  "opencv-python>=4.12",
+  "numpy>=2.1",
+  "tqdm>=4.67",
+  "pandas>=2.3",
+  "Pillow>=11.0",
+  "matplotlib>=3.10",
+  "torch>=2.8",
+  "torchvision>=0.23",
+]
+
+[project.urls]
+Homepage = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+Repository = "https://github.com/yzhaoinuw/mouse-pupil-analysis"
+Issues = "https://github.com/yzhaoinuw/mouse-pupil-analysis/issues"
+Changelog = "https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/CHANGELOG.md"
+# Concept DOI: always resolves to the newest archived version.
+DOI = "https://doi.org/10.5281/zenodo.21897795"
+
+[project.scripts]
+extract-frames = "mouse_pupil_analysis.extract_frames:main"
+run-pupil-analysis = "mouse_pupil_analysis.run_pupil_analysis:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mouse_pupil_analysis*"]
+
+[tool.setuptools.package-data]
+mouse_pupil_analysis = ["checkpoints/*.pth", "checkpoints/*.txt", "checkpoints/*.json"]
+
+[tool.setuptools.exclude-package-data]
+mouse_pupil_analysis = ["checkpoints/archive/*"]
+
 [build-system]
 requires = ["setuptools>=80.9"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# Training utilities are source-checkout tools, not an installed package. Make
+# the checkout root importable when pytest is launched through its console script.
+pythonpath = ["."]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+extend-exclude = '''
+(
+  ^archive/
+| ^sketch.*\.py$
+)
+'''
+
+[tool.ruff]
+line-length = 100
+exclude = ["archive", "sketch*.py"]
+
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+# tomllib is stdlib from 3.11; requires-python allows 3.10, where it is imported
+# defensively in tests. Classify it as stdlib so import order stays stable.
+extra-standard-library = ["tomllib"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7",
+  "black==25.1.0",
+  "ruff==0.14.14",
+  "pre-commit>=3",
+  "build>=1",
+]

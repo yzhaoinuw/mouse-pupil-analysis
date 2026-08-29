@@ -1,0 +1,41 @@
+{
+  "run_name": "all_615_cv_e100_nat_macro_s0",
+  "prediction_threshold": 0.5,
+  "best_epoch": 100,
+  "balanced_iou": 0.6059222084780534,
+  "macro_iou": 0.6080006882548332,
+  "macro_dice": null,
+  "size_iou": null,
+  "low_circularity_iou": null,
+  "validation_note": "All-labeled refit on 615 labelled pairs; the filename's 0.6080 score is the mean four-fold grouped-CV macro IoU that selected this fixed recipe, not an evaluation of the final weights.",
+  "training": {
+    "mode": "scratch",
+    "source_checkpoint": null,
+    "training_examples": 615,
+    "sampling": "natural",
+    "use_attention": true,
+    "batch_size": 8,
+    "learning_rate": 0.001,
+    "seed": 0,
+    "early_stopping_patience": 40,
+    "scheduler_patience": 8,
+    "tiny_max_diameter": 15.0,
+    "large_min_diameter": 80.0,
+    "workflow": "all_labeled_training",
+    "selection_metric": "macro_iou",
+    "scheduler_metric": "val_loss",
+    "selection_threshold": 0.5,
+    "threshold_candidates": [
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.85,
+      0.9
+    ],
+    "split_manifest_sha256": null
+  }
+}

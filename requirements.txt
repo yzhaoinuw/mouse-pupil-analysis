@@ -1,8 +1,0 @@
-opencv-python>=4.12
-numpy>=2.1
-tqdm>=4.67
-pandas>=2.3
-Pillow>=11.0
-matplotlib>=3.10
-torch>=2.8
-torchvision>=0.23

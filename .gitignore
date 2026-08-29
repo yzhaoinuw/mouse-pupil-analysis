@@ -41,11 +41,46 @@ codegen/
 *.sbproj.bak
 
 # folders
+__pycache__/
+.pytest_cache/
+.pytest_tmp*/
+.ruff_cache/
 data/
-checkpoints/
 archive/
 results/
+dist/
+build/
+*.egg-info/
+
+# local project metadata
+.gitattributes
+
+# generated training, inference, and labeling artifacts
+checkpoints_exp/
+images_test*/
+images_test*_result/
+/labeled_frames/
+/media/readme_demo/
+/frames_to_label/
+/videos/
+# Materialized fold folders are regenerated from training_data_split.json by
+# training/data_splits.py --materialize, at any data root.
+folds/
+/images_train/
+/images_validation/
+/masks_train/
+/masks_validation/
+predicted_masks*/
+predictions_test/
 
 # sketches
-*sketch.py
-__pycache__/dataset.cpython-314.pyc
+*sketch*.py
+sketch*.py
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# local: our own trained weights live at the repo root, outside the
+# package. Upstream ignores only checkpoints_exp/, so this rule is ours.
+checkpoints/

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "reference": "Fixed natural-sampling all-data recipe used for final_516_nat_macro_s0.",
+  "max_epochs": 115,
+  "learning_rate": 0.001,
+  "lr_milestones": [25, 51, 62, 71, 82],
+  "batch_size": 8,
+  "seed": 0,
+  "use_attention": true,
+  "sampling": "natural",
+  "prediction_threshold": 0.5,
+  "finetune_checkpoint": null
+}
