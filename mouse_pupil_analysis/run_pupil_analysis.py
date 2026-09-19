@@ -98,6 +98,14 @@ def build_parser() -> argparse.ArgumentParser:
             "Defaults to the video header rate for video input."
         ),
     )
+    parser.add_argument(
+        "--stream_video",
+        action="store_true",
+        help=(
+            "Decode frames from the video as they are analyzed instead of writing PNG "
+            "frames first. Nothing is written to --out_dir."
+        ),
+    )
     return parser
 
 
@@ -123,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         max_frames=args.max_frames,
         calculate_velocity=args.calculate_velocity,
         acquisition_fps=args.acquisition_fps,
+        stream_video=args.stream_video,
         show_progress=True,
     )
 
@@ -158,6 +167,7 @@ if __name__ == "__main__":
     max_frames = 10000
     calculate_velocity = False
     acquisition_fps = None
+    stream_video = False  # True decodes frames from video_path as they are analyzed.
 
     run_analysis(
         AnalysisConfig(
@@ -176,6 +186,7 @@ if __name__ == "__main__":
             max_frames=max_frames,
             calculate_velocity=calculate_velocity,
             acquisition_fps=acquisition_fps,
+            stream_video=stream_video,
             show_progress=True,
         )
     )

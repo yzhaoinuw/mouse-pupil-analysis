@@ -119,3 +119,70 @@ def test_image_directory_analysis_matches_video_analysis(synthetic_video: Path, 
         from_frames.analysis_table["estimated_pupil_diameter"].to_numpy(dtype=float),
         from_video.analysis_table["estimated_pupil_diameter"].to_numpy(dtype=float),
     )
+
+
+def test_streamed_video_matches_extracted_frames(synthetic_video: Path, tmp_path: Path):
+    extracted = analyze_video(
+        synthetic_video,
+        out_dir=tmp_path / "frames",
+        result_dir=tmp_path / "result_extracted",
+        extraction_fps=VIDEO_FPS,
+        num_workers=0,
+    )
+    streamed = analyze_video(
+        synthetic_video,
+        result_dir=tmp_path / "result_streamed",
+        extraction_fps=VIDEO_FPS,
+        stream_video=True,
+        num_workers=0,
+    )
+
+    # nothing was written for the streamed run: no default frames folder beside the video
+    assert not (synthetic_video.parent / f"{synthetic_video.stem}_frames").exists()
+    assert streamed.csv_path.is_file()
+    assert streamed.analysis_table["image_name"].tolist() == (
+        extracted.analysis_table["image_name"].tolist()
+    )
+    assert [frame.source_frame_index for frame in streamed.image_frames] == [
+        frame.source_frame_index for frame in extracted.image_frames
+    ]
+    np.testing.assert_allclose(
+        streamed.analysis_table["estimated_pupil_diameter"].to_numpy(dtype=float),
+        extracted.analysis_table["estimated_pupil_diameter"].to_numpy(dtype=float),
+    )
+    np.testing.assert_allclose(
+        streamed.analysis_table["pupil_diameter_input_pixels"].to_numpy(dtype=float),
+        extracted.analysis_table["pupil_diameter_input_pixels"].to_numpy(dtype=float),
+    )
+
+
+def test_streamed_velocity_mode_writes_overlays(synthetic_video: Path, tmp_path: Path):
+    result = analyze_video(
+        synthetic_video,
+        result_dir=tmp_path / "result",
+        output_mask_dir=tmp_path / "overlays",
+        calculate_velocity=True,
+        stream_video=True,
+        num_workers=0,
+    )
+
+    assert result.analysis_table.columns.tolist() == VELOCITY_COLUMNS
+    assert len(result.analysis_table) == FRAME_COUNT
+    timestamps = result.analysis_table["timestamp_seconds"].to_numpy(dtype=float)
+    np.testing.assert_allclose(timestamps, np.arange(FRAME_COUNT) / VIDEO_FPS)
+
+    overlays = sorted((tmp_path / "overlays").glob("*.png"))
+    assert [path.name for path in overlays] == [
+        f"synthetic_eye_{index + 1:05d}.png" for index in range(FRAME_COUNT)
+    ]
+
+
+def test_stream_video_rejects_image_dir_and_out_dir(tmp_path: Path):
+    from mouse_pupil_analysis import AnalysisConfig
+
+    with pytest.raises(ValueError, match="stream_video requires video_path"):
+        AnalysisConfig(image_dir=tmp_path, stream_video=True).validate()
+    with pytest.raises(ValueError, match="out_dir has no effect"):
+        AnalysisConfig(
+            video_path=tmp_path / "eye.avi", out_dir=tmp_path / "frames", stream_video=True
+        ).validate()

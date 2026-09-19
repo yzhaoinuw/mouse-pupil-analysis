@@ -81,6 +81,7 @@ run-pupil-analysis \
   | `--video_path` | Input video. Frames are extracted automatically before analysis. Mutually exclusive with `--image_dir`. |
   | `--image_dir` | Input directory of existing PNG frames, used instead of a video. |
   | `--out_dir` | Where to write extracted frames. Defaults to `<video_stem>_frames/` next to the video. |
+  | `--stream_video` | Decode frames from the video as they are analyzed instead of writing PNG frames first. The same frames are chosen and named, so the numbers match the extracted-frame path; `--out_dir` is unused and decoding runs in the main process, so `--num_workers` is ignored. |
   | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
   | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
   | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |

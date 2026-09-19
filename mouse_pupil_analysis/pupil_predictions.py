@@ -24,10 +24,15 @@ from PIL import Image, ImageDraw
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from mouse_pupil_analysis.extract_frames import ExtractedFrame
+from mouse_pupil_analysis.extract_frames import (
+    ExtractedFrame,
+    iter_video_images,
+    video_frame_size,
+)
 from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
+    VideoFrameDataset,
     model_to_input_length,
     resize_with_pad,
 )
@@ -317,18 +322,25 @@ def _save_mask_overlays(
     output_mask_dir: Path,
     mask_transparency: float,
     tracking_dataframe: pd.DataFrame | None = None,
+    video_path: Path | None = None,
 ) -> None:
     output_mask_dir.mkdir(parents=True, exist_ok=True)
     tracking_rows = {}
     if tracking_dataframe is not None:
         tracking_rows = tracking_dataframe.set_index("image_name").to_dict(orient="index")
 
-    for frame in image_frames:
+    if video_path is None:
+        image_source = (
+            (frame, Image.open(frame.image_path).convert("L")) for frame in image_frames
+        )
+    else:
+        image_source = iter_video_images(video_path, image_frames)
+
+    for frame, original in image_source:
         image_name = frame.image_path.name
         if image_name not in confidence_maps:
             continue
 
-        original = Image.open(frame.image_path).convert("L")
         resized = resize_with_pad(original, target_size=MODEL_IMAGE_SIZE)
         grayscale = np.asarray(resized, dtype=np.uint8)
         rgb = np.stack([grayscale] * 3, axis=-1)
@@ -408,6 +420,7 @@ class MaskOverlayAccumulator:
         self,
         image_frames: list[ExtractedFrame],
         tracking_dataframe: pd.DataFrame | None = None,
+        video_path: Path | None = None,
     ) -> None:
         """Write all accumulated overlays, optionally with tracking markers."""
         _save_mask_overlays(
@@ -416,6 +429,7 @@ class MaskOverlayAccumulator:
             self.output_mask_dir,
             self.mask_transparency,
             tracking_dataframe=tracking_dataframe,
+            video_path=video_path,
         )
 
 
@@ -427,6 +441,7 @@ def iter_pupil_predictions(
     num_workers: int | None = None,
     prefer_central_component: bool = False,
     show_progress: bool = False,
+    video_path: Path | None = None,
 ) -> Iterator[PupilPrediction]:
     """Yield predictions from one model pass without retaining float maps.
 
@@ -439,17 +454,25 @@ def iter_pupil_predictions(
     if not image_frames:
         raise FileNotFoundError("No PNG images were provided for pupil analysis.")
 
-    image_paths = [frame.image_path for frame in image_frames]
     frame_by_name = {frame.image_path.name: frame for frame in image_frames}
-    # Read each header once here so tracking and diameter conversion share the
-    # lookup instead of reopening every frame downstream.
-    size_by_name = {}
-    for frame in image_frames:
-        with Image.open(frame.image_path) as original:
-            size_by_name[frame.image_path.name] = original.size
+    if video_path is not None:
+        # one sequential decode, in this process; every frame is a full video frame
+        if num_workers:
+            logger.info("Streaming from video decodes in the main process; num_workers ignored.")
+        num_workers = 0
+        frame_size = video_frame_size(video_path)
+        size_by_name = {name: frame_size for name in frame_by_name}
+        test_dataset = VideoFrameDataset(video_path, image_frames)
+    else:
+        # Read each header once here so tracking and diameter conversion share the
+        # lookup instead of reopening every frame downstream.
+        size_by_name = {}
+        for frame in image_frames:
+            with Image.open(frame.image_path) as original:
+                size_by_name[frame.image_path.name] = original.size
+        test_dataset = InferenceDataset([frame.image_path for frame in image_frames])
 
     logger.info("Building dataloader with batch size = %d.", batch_size)
-    test_dataset = InferenceDataset(image_paths)
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
