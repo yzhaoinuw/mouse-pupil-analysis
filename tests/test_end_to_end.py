@@ -177,6 +177,66 @@ def test_streamed_velocity_mode_writes_overlays(synthetic_video: Path, tmp_path:
     ]
 
 
+def test_velocity_mode_writes_demo_video(synthetic_video: Path, tmp_path: Path):
+    result = analyze_video(
+        synthetic_video,
+        out_dir=tmp_path / "frames",
+        result_dir=tmp_path / "result",
+        output_video=tmp_path / "demo.mp4",
+        calculate_velocity=True,
+        acquisition_fps=VIDEO_FPS,
+        num_workers=0,
+    )
+
+    assert result.video_path == tmp_path / "demo.mp4"
+    assert result.video_path.is_file()
+
+    capture = cv2.VideoCapture(str(result.video_path))
+    assert capture.isOpened()
+    try:
+        assert int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) == FRAME_COUNT // 3
+        # the source frame, not a figure around it
+        assert int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) == FRAME_WIDTH
+        assert int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) == FRAME_HEIGHT
+        # loose: the container rounds a non-terminating rate, storing 10/3 as 3.33
+        assert capture.get(cv2.CAP_PROP_FPS) == pytest.approx(VIDEO_FPS / 3, rel=1e-2)
+    finally:
+        capture.release()
+
+    # the video is not a second producer of overlay images
+    assert not list(tmp_path.glob("**/*overlay*"))
+
+
+def test_streamed_demo_video_matches_written_frames(synthetic_video: Path, tmp_path: Path):
+    """A streamed run has no PNG to read back, and must still draw the same video."""
+    written = analyze_video(
+        synthetic_video,
+        out_dir=tmp_path / "frames",
+        result_dir=tmp_path / "result_written",
+        output_video=tmp_path / "written.mp4",
+        calculate_velocity=True,
+        acquisition_fps=VIDEO_FPS,
+        num_workers=0,
+    )
+    streamed = analyze_video(
+        synthetic_video,
+        result_dir=tmp_path / "result_streamed",
+        output_video=tmp_path / "streamed.mp4",
+        calculate_velocity=True,
+        stream_video=True,
+        num_workers=0,
+    )
+
+    assert written.video_path.read_bytes() == streamed.video_path.read_bytes()
+
+
+def test_demo_video_needs_a_rate_with_a_frame_directory(tmp_path: Path):
+    from mouse_pupil_analysis import AnalysisConfig
+
+    with pytest.raises(ValueError, match="records no rate"):
+        AnalysisConfig(image_dir=tmp_path, output_video=tmp_path / "demo.mp4").validate()
+
+
 def test_stream_video_rejects_image_dir_and_out_dir(tmp_path: Path):
     from mouse_pupil_analysis import AnalysisConfig
 

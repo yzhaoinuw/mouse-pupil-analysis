@@ -14,6 +14,7 @@ from pathlib import Path
 import cv2
 import pandas as pd
 
+from mouse_pupil_analysis.demo_video import DemoVideoWriter, analyzed_frame_rate
 from mouse_pupil_analysis.extract_frames import (
     ExtractedFrame,
     extract_selected_frames,
@@ -57,6 +58,8 @@ class AnalysisConfig:
     num_workers: int | None = None
     # Decode frames as they are analyzed; no PNG is written and out_dir has no meaning.
     stream_video: bool = False
+    # The demo video: the segmentation drawn on the eye, as one .mp4, written as the run ends.
+    output_video: Path | None = None
     # Off by default: a library should not write to stderr unless asked. The
     # console scripts set this to True.
     show_progress: bool = False
@@ -69,6 +72,7 @@ class AnalysisConfig:
             "result_dir",
             "checkpoint",
             "output_mask_dir",
+            "output_video",
         ):
             value = getattr(self, name)
             if value is not None:
@@ -92,6 +96,12 @@ class AnalysisConfig:
             raise ValueError("stream_video requires video_path.")
         if self.stream_video and self.out_dir is not None:
             raise ValueError("out_dir has no effect with stream_video; no frames are written.")
+        if self.output_video is not None:
+            if self.image_dir is not None and self.acquisition_fps is None:
+                raise ValueError(
+                    "acquisition_fps is required with image_dir when writing output_video: "
+                    "a frame directory records no rate, so the video has none to play at."
+                )
 
 
 @dataclass
@@ -105,6 +115,7 @@ class AnalysisResult:
     prediction_threshold: float = 0.7
     segmentation_dataframe: pd.DataFrame | None = field(default=None, repr=False)
     tracking_dataframe: pd.DataFrame | None = field(default=None, repr=False)
+    video_path: Path | None = None
 
 
 def read_encoded_video_fps(video_path: Path) -> float:
@@ -200,6 +211,12 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
             mask_transparency=config.mask_transparency,
         )
 
+    video_writer = None
+    if config.output_video is not None:
+        # made before the model pass, so an unusable destination is found early
+        config.output_video.parent.mkdir(parents=True, exist_ok=True)
+        video_writer = DemoVideoWriter(config.output_video, pred_thresh=prediction_threshold)
+
     stream_source = config.video_path if config.stream_video else None
     results = []
     for prediction in iter_pupil_predictions(
@@ -222,6 +239,8 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         segmentation_accumulator.add(prediction)
         if overlay_accumulator is not None:
             overlay_accumulator.add(prediction)
+        if video_writer is not None:
+            video_writer.add(prediction)
 
     segmentation_dataframe = segmentation_accumulator.build_dataframe()
     tracking_dataframe = segmentation_dataframe if config.calculate_velocity else None
@@ -245,6 +264,19 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         tracking_dataframe=tracking_dataframe,
     )
 
+    video_path = None
+    if video_writer is not None:
+        # A sampled run's frames are spaced apart, so the rate comes from the frames.
+        source_fps = config.acquisition_fps
+        if source_fps is None:
+            source_fps = read_encoded_video_fps(config.video_path)
+        video_path = video_writer.save(
+            image_frames,
+            segmentation_dataframe,
+            analyzed_frame_rate(image_frames, source_fps),
+            video_path=stream_source,
+        )
+
     return AnalysisResult(
         analysis_table=analysis_table,
         csv_path=csv_path,
@@ -253,6 +285,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         prediction_threshold=prediction_threshold,
         segmentation_dataframe=segmentation_dataframe,
         tracking_dataframe=tracking_dataframe,
+        video_path=video_path,
     )
 
 

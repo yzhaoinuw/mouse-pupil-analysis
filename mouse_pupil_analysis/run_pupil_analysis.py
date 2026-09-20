@@ -99,6 +99,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--output_video",
+        type=Path,
+        default=None,
+        help=(
+            "Write a demo .mp4: the confidence heatmap and the measured center drawn on "
+            "the eye, at the size the camera recorded."
+        ),
+    )
+    parser.add_argument(
         "--stream_video",
         action="store_true",
         help=(
@@ -132,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         calculate_velocity=args.calculate_velocity,
         acquisition_fps=args.acquisition_fps,
         stream_video=args.stream_video,
+        output_video=args.output_video,
         show_progress=True,
     )
 
@@ -168,6 +178,7 @@ if __name__ == "__main__":
     calculate_velocity = False
     acquisition_fps = None
     stream_video = False  # True decodes frames from video_path as they are analyzed.
+    output_video = None  # A path writes the demo .mp4 beside the other outputs.
 
     run_analysis(
         AnalysisConfig(
@@ -187,6 +198,7 @@ if __name__ == "__main__":
             calculate_velocity=calculate_velocity,
             acquisition_fps=acquisition_fps,
             stream_video=stream_video,
+            output_video=output_video,
             show_progress=True,
         )
     )

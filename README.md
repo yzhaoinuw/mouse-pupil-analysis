@@ -87,6 +87,7 @@ run-pupil-analysis \
   | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
   | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
   | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
+  | `--output_video` | Write a demo `.mp4`: the mask on the eye at the size the camera recorded, its boundary outlined in green and its high-confidence core in red, with a cross at the measured center. |
   | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
   | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
   | `--calculate_velocity` | Analyze every encoded source frame and append pupil-center, speed, and segmentation-quality fields and plot panels to the analysis outputs. |
@@ -124,6 +125,7 @@ The result files contain:
 | `*_pupil_analysis.csv` | The per-frame table, columns below. |
 | `*_pupil_analysis.png` | Frame-indexed diameter plot with valid/warning/invalid points. Velocity mode adds center, speed, and a dedicated quality-control panel. |
 | Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. |
+| The `--output_video` file | Optional. The same segmentation as the mask images, mapped back onto the full-size source frame with its boundary and high-confidence core outlined, as one H.264 video, one frame per three analyzed. Tens of megabytes for a 30-minute recording, scaling with the frame size and how much the eye moves. |
 
 Segmentation visibility and quality are written for every run. Timestamp, center, speed,
 and `tracking_status` are added in velocity mode:
