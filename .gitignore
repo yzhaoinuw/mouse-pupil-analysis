@@ -28,6 +28,7 @@ codegen/
 
 # Cache files
 *.slxc
+*.pyc
 
 # Cloud based storage dotfile
 .MATLABDriveTag
@@ -79,3 +80,7 @@ sketch*.py
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# local: our own trained weights live at the repo root, outside the
+# package. Upstream ignores only checkpoints_exp/, so this rule is ours.
+checkpoints/

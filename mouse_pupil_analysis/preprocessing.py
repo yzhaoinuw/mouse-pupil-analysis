@@ -10,9 +10,12 @@ from pathlib import Path
 
 import torchvision.transforms.v2 as transforms
 from PIL import Image
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset, get_worker_info
+
+from mouse_pupil_analysis.extract_frames import ExtractedFrame, iter_video_images
 
 MODEL_IMAGE_SIZE = 148
+_PIL_TO_TENSOR = transforms.PILToTensor()
 
 
 def resize_with_pad(
@@ -90,13 +93,18 @@ def model_to_input_length(
     return float(model_length / math.sqrt(scale_x * scale_y))
 
 
+def prepare_image(image: Image.Image, target_size: int = MODEL_IMAGE_SIZE):
+    """Turn a grayscale PIL image into the float tensor the model takes."""
+    padded = resize_with_pad(image, target_size=target_size, resample=Image.BILINEAR)
+    return _PIL_TO_TENSOR(padded).float() / 255.0
+
+
 class InferenceDataset(Dataset):
     """Yield ``(image_tensor, image_name)`` pairs for segmentation inference."""
 
     def __init__(self, image_paths, target_size: int = MODEL_IMAGE_SIZE):
         self.image_paths = [Path(path) for path in image_paths]
         self.target_size = target_size
-        self.pil_to_tensor = transforms.PILToTensor()
 
     def __len__(self):
         return len(self.image_paths)
@@ -104,5 +112,25 @@ class InferenceDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         image = Image.open(image_path).convert("L")
-        image = resize_with_pad(image, target_size=self.target_size, resample=Image.BILINEAR)
-        return self.pil_to_tensor(image).float() / 255.0, image_path.name
+        return prepare_image(image, self.target_size), image_path.name
+
+
+class VideoFrameDataset(IterableDataset):
+    """Yield ``(image_tensor, image_name)`` pairs decoded from a video in one pass."""
+
+    def __init__(
+        self, video_path, frames: list[ExtractedFrame], target_size: int = MODEL_IMAGE_SIZE
+    ):
+        self.video_path = Path(video_path)
+        self.frames = list(frames)
+        self.target_size = target_size
+
+    def __len__(self):
+        return len(self.frames)
+
+    def __iter__(self):
+        worker = get_worker_info()
+        if worker is not None and worker.num_workers > 1:
+            raise ValueError("VideoFrameDataset decodes sequentially; use num_workers=0 or 1.")
+        for frame, image in iter_video_images(self.video_path, self.frames):
+            yield prepare_image(image, self.target_size), frame.image_path.name

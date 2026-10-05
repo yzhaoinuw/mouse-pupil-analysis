@@ -34,6 +34,7 @@ dependencies = [
   "pandas>=2.3",
   "Pillow>=11.0",
   "matplotlib>=3.10",
+  "imageio[ffmpeg]>=2.33",
   "torch>=2.8",
   "torchvision>=0.23",
 ]

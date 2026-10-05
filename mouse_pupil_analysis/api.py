@@ -14,7 +14,12 @@ from pathlib import Path
 import cv2
 import pandas as pd
 
-from mouse_pupil_analysis.extract_frames import ExtractedFrame, extract_selected_frames
+from mouse_pupil_analysis.demo_video import DemoVideoWriter, analyzed_frame_rate
+from mouse_pupil_analysis.extract_frames import (
+    ExtractedFrame,
+    extract_selected_frames,
+    select_stream_frames,
+)
 from mouse_pupil_analysis.pupil_predictions import (
     MaskOverlayAccumulator,
     find_default_checkpoint,
@@ -51,6 +56,10 @@ class AnalysisConfig:
     calculate_velocity: bool = False
     acquisition_fps: float | None = None
     num_workers: int | None = None
+    # Decode frames as they are analyzed; no PNG is written and out_dir has no meaning.
+    stream_video: bool = False
+    # The demo video: the segmentation drawn on the eye, as one .mp4, written as the run ends.
+    output_video: Path | None = None
     # Off by default: a library should not write to stderr unless asked. The
     # console scripts set this to True.
     show_progress: bool = False
@@ -63,6 +72,7 @@ class AnalysisConfig:
             "result_dir",
             "checkpoint",
             "output_mask_dir",
+            "output_video",
         ):
             value = getattr(self, name)
             if value is not None:
@@ -82,6 +92,16 @@ class AnalysisConfig:
             raise ValueError("num_workers cannot be negative.")
         if self.calculate_velocity and self.image_dir is not None and self.acquisition_fps is None:
             raise ValueError("acquisition_fps is required with image_dir in velocity mode.")
+        if self.stream_video and self.video_path is None:
+            raise ValueError("stream_video requires video_path.")
+        if self.stream_video and self.out_dir is not None:
+            raise ValueError("out_dir has no effect with stream_video; no frames are written.")
+        if self.output_video is not None:
+            if self.image_dir is not None and self.acquisition_fps is None:
+                raise ValueError(
+                    "acquisition_fps is required with image_dir when writing output_video: "
+                    "a frame directory records no rate, so the video has none to play at."
+                )
 
 
 @dataclass
@@ -95,6 +115,7 @@ class AnalysisResult:
     prediction_threshold: float = 0.7
     segmentation_dataframe: pd.DataFrame | None = field(default=None, repr=False)
     tracking_dataframe: pd.DataFrame | None = field(default=None, repr=False)
+    video_path: Path | None = None
 
 
 def read_encoded_video_fps(video_path: Path) -> float:
@@ -111,7 +132,15 @@ def read_encoded_video_fps(video_path: Path) -> float:
 
 def _resolve_frames(config: AnalysisConfig) -> tuple[list[ExtractedFrame], AnalysisConfig]:
     """Extract frames from video when needed and settle the derived paths."""
-    if config.video_path is not None:
+    if config.video_path is not None and config.stream_video:
+        logger.info("Video path provided - streaming frames, bypassing .png saving...")
+        image_frames = select_stream_frames(
+            config.video_path,
+            config.extraction_fps,
+            config.max_frames,
+            extract_all=config.calculate_velocity,
+        )
+    elif config.video_path is not None:
         logger.info("Video path provided - extracting frames first...")
         if config.out_dir is None:
             config.out_dir = config.video_path.parent / f"{config.video_path.stem}_frames"
@@ -126,18 +155,19 @@ def _resolve_frames(config: AnalysisConfig) -> tuple[list[ExtractedFrame], Analy
             show_progress=config.show_progress,
         )
         config.image_dir = config.out_dir
-
-        if config.calculate_velocity and config.acquisition_fps is None:
-            config.acquisition_fps = read_encoded_video_fps(config.video_path)
-            logger.info(
-                "No acquisition FPS override provided. Using encoded video rate: %.6g fps",
-                config.acquisition_fps,
-            )
     else:
         image_frames = frames_from_image_directory(config.image_dir)
 
+    if config.calculate_velocity and config.acquisition_fps is None:
+        config.acquisition_fps = read_encoded_video_fps(config.video_path)
+        logger.info(
+            "No acquisition FPS override provided. Using encoded video rate: %.6g fps",
+            config.acquisition_fps,
+        )
+
     if not image_frames:
-        raise FileNotFoundError(f"No PNG files found in {config.image_dir}")
+        source = config.video_path if config.stream_video else config.image_dir
+        raise FileNotFoundError(f"No frames found in {source}")
     return image_frames, config
 
 
@@ -181,6 +211,13 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
             mask_transparency=config.mask_transparency,
         )
 
+    video_writer = None
+    if config.output_video is not None:
+        # made before the model pass, so an unusable destination is found early
+        config.output_video.parent.mkdir(parents=True, exist_ok=True)
+        video_writer = DemoVideoWriter(config.output_video, pred_thresh=prediction_threshold)
+
+    stream_source = config.video_path if config.stream_video else None
     results = []
     for prediction in iter_pupil_predictions(
         checkpoint,
@@ -190,6 +227,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         num_workers=config.num_workers,
         prefer_central_component=config.prefer_central_component,
         show_progress=config.show_progress,
+        video_path=stream_source,
     ):
         results.append(
             DiameterRow(
@@ -201,6 +239,8 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         segmentation_accumulator.add(prediction)
         if overlay_accumulator is not None:
             overlay_accumulator.add(prediction)
+        if video_writer is not None:
+            video_writer.add(prediction)
 
     segmentation_dataframe = segmentation_accumulator.build_dataframe()
     tracking_dataframe = segmentation_dataframe if config.calculate_velocity else None
@@ -208,6 +248,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         overlay_accumulator.save(
             image_frames,
             tracking_dataframe=segmentation_dataframe,
+            video_path=stream_source,
         )
 
     result_dir = _resolve_result_dir(config)
@@ -223,6 +264,19 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         tracking_dataframe=tracking_dataframe,
     )
 
+    video_path = None
+    if video_writer is not None:
+        # A sampled run's frames are spaced apart, so the rate comes from the frames.
+        source_fps = config.acquisition_fps
+        if source_fps is None:
+            source_fps = read_encoded_video_fps(config.video_path)
+        video_path = video_writer.save(
+            image_frames,
+            segmentation_dataframe,
+            analyzed_frame_rate(image_frames, source_fps),
+            video_path=stream_source,
+        )
+
     return AnalysisResult(
         analysis_table=analysis_table,
         csv_path=csv_path,
@@ -231,6 +285,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         prediction_threshold=prediction_threshold,
         segmentation_dataframe=segmentation_dataframe,
         tracking_dataframe=tracking_dataframe,
+        video_path=video_path,
     )
 
 

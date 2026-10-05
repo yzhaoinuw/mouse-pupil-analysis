@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--output_video` writes a demo `.mp4` as the run finishes: the mask drawn on the eye at the
+  size the camera recorded, its boundary and its high-confidence core outlined, with the
+  measured center; one frame per three analyzed. It writes no PNG frames of its own.
+- `--stream_video` (`stream_video=True` in `AnalysisConfig`) analyzes a video without writing
+  PNG frames: frames are chosen from the header exactly as extraction would choose them,
+  decoded in one sequential pass, and named as the extracted files would have been. Overlays
+  decode the video a second time. Results match the extracted-frame path.
+
 ## [0.3.0] - 2026-08-26
 
 ### Added

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from PIL import Image
 from tqdm import tqdm
 
 from mouse_pupil_analysis.logging_utils import configure_cli_logging
@@ -149,6 +150,83 @@ def extract_selected_frames(
     cap.release()
     logger.info("Extracted %d frames into %s", len(extracted_frames), out_dir)
     return extracted_frames
+
+
+def video_frame_size(video_path) -> tuple[int, int]:
+    """Return ``(width, height)`` of a decoded frame, from the video header."""
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open {video_path}")
+    size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    cap.release()
+    return size
+
+
+def select_stream_frames(
+    video_path,
+    extraction_fps=5,
+    max_frames=10000,
+    extract_all=False,
+) -> list[ExtractedFrame]:
+    """Name the frames a streamed run will analyze, from the header alone, writing nothing."""
+    video_path = Path(video_path)
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open {video_path}")
+
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    logger.info("Total frames: %d. Original FPS: %.2f", frame_count, fps)
+
+    selected_frames = select_frame_indices(
+        frame_count,
+        fps,
+        extraction_fps=extraction_fps,
+        max_frames=max_frames,
+        extract_all=extract_all,
+    )
+    if extract_all and len(selected_frames) < frame_count:
+        logger.warning(
+            "--max_frames limits full-frame analysis to the first %d of %d source frames.",
+            len(selected_frames),
+            frame_count,
+        )
+    logger.info("Streaming %d of %d frames from %s", len(selected_frames), frame_count, video_path)
+
+    video_name = video_path.stem
+    return [
+        ExtractedFrame(
+            image_path=Path(source_frame_image_name(video_name, int(frame_idx))),
+            source_frame_index=int(frame_idx),
+            extraction_index=extraction_index,
+        )
+        for extraction_index, frame_idx in enumerate(selected_frames)
+    ]
+
+
+def iter_video_images(video_path, frames):
+    """Decode ``frames`` from the video as grayscale PIL images, in increasing source order."""
+    frames = list(frames)
+    if not frames:
+        return
+    sequential_read = [frame.source_frame_index for frame in frames] == list(range(len(frames)))
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open {video_path}")
+    try:
+        for frame in frames:
+            if not sequential_read:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, int(frame.source_frame_index))
+            ok, bgr = cap.read()
+            if not ok:
+                logger.warning("Could not read frame %s", frame.source_frame_index)
+                continue
+            image = Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)).convert("L")
+            yield frame, image
+    finally:
+        cap.release()
 
 
 def main():
