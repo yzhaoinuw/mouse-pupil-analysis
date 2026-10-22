@@ -5,12 +5,27 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
 
 ## Currently Hot
 
+- [Treaty v0.9.1 feedback](#treaty-v091-feedback) — feedback posted; revisit the
+  upstream fix when planning the next treaty update.
 - [Cross-recording generalization](#cross-recording-generalization) — diagnose the
   Purple-sleep failure and test the component-selection guard on new sessions.
 - [Velocity quality control](#velocity-quality-control) — measure a mouse PLR constriction
   bound, then validate the quality thresholds on more recordings.
 - [Frame recommendation](#frame-recommendation) — make its completed-CV-committee prerequisite
   clear wherever a fresh-clone user encounters it.
+
+## Treaty v0.9.1 Feedback
+
+Status: template update applied locally; preview and apply matched without conflicts.
+Evidence and reproducible rough edges are in
+[`reports/treaty_v0.9.1_test_drive_2026-10-21.md`](reports/treaty_v0.9.1_test_drive_2026-10-21.md).
+
+Feedback posted: [bug #30](https://github.com/yzhaoinuw/agent_collab_treaty/issues/30)
+and a [diagnostic follow-up on #15](https://github.com/yzhaoinuw/agent_collab_treaty/issues/15#issuecomment-6328064722).
+The [`reporting record`](reports/treaty_v0.9.1_upstream_feedback_2026-10-21.md)
+contains the evidence and scope. Next action: recheck #30 when planning the next
+treaty update. The traceback suggestion remains deferred; no local runtime work
+or upstream PR is pending from this test drive.
 
 ## Cross-Recording Generalization
 

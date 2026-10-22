@@ -19,11 +19,17 @@ A session is worth logging when it produced any of:
 
 Skip: casual Q&A, explanation-only exchanges that leave no lasting project state, routine changes the diff already explains, and one-off commands with no future coordination value.
 
+Decisions made while editing content still count as decisions: a title chosen, authorship or credit settled, wording picked for a stated reason. The edit is content the diff explains; the reason for it is not.
+
+**Check the log before you push, not only when the session ends.** A long chat has no clear end, so "end of session" may never arrive. A push or merge into `main` or the release branch always does: before either, make sure `work_log.md` covers the work going out, or say in your reply why it needs no entry.
+
 Log experiments even when the change is reverted, as long as they leave reusable evidence, a decision, or a warning. Skip pure scratch work, and skip anything the user asks to keep off the book.
 
 Each session entry records the model + version, effort/thinking mode, and token budget if known, and ends with a `- Verification:` subsection naming the commands actually run.
 
 When a session creates or changes future work, update `next_steps.md` in the same pass: add concrete follow-ups, remove completed items, and keep "Currently Hot" accurate.
+
+`next_steps.md` is laid out by heading level. An active thread is a `##` section between "Currently Hot" and "Background / Paused"; a paused one is a `###` under "Background / Paused". Moving a thread between the two means changing its heading level, not just where it sits. Keep the file to follow-ups: once a feature ships, its design detail belongs in `project_overview.md`.
 
 ## Work Log Rotation And Dating
 
@@ -45,6 +51,8 @@ grep -n '^## ' <any-structured-doc>
 ## Branch Handoff
 
 Before switching away from an experimental or feature branch, confirm the branch holds all intended changes, that they are committed, and whether the user expects them merged, pushed, or intentionally parked.
+
+Before pushing or merging into `main`, check that `work_log.md` covers the work going out (see [Work Log Discipline](#work-log-discipline)).
 
 Useful checks before switching or merging (portable git commands; run in any shell):
 
@@ -80,6 +88,8 @@ If a ref is missing or points at the wrong commit after the push, fix it before 
 ## Updating The Treaty
 
 Pulling upstream treaty refinements into this project is a maintainer's call — only do it when asked. This is distinct from updating `work_log.md` / `next_steps.md` content.
+
+All of it runs off `.copier-answers.yml` at the repo root — Copier's record of the answers this project was installed with and the template version it is pinned to. It stays at the root whatever layout the docs use, because it is the file that records the layout. Keep it committed: if git ignores it, `treaty update` and `treaty diff` have nothing to read and cannot run.
 
 1. Commit or stash local changes first. `treaty update` requires a clean, git-tracked working tree and refuses to run on a dirty one.
 2. `treaty diff` shows, section by section, how far this project has drifted from the template version it is pinned to — that is the conflict exposure before you touch anything.
