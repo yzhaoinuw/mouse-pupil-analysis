@@ -116,6 +116,7 @@ def all_labeled_training_config(summary: Path, results: list[dict], config, trai
         "batch_size": config.batch_size,
         "seed": config.seed,
         "use_attention": config.use_attention,
+        "loss": config.loss,
         "sampling": "natural",
         "prediction_threshold": selected_threshold,
         "finetune_checkpoint": (

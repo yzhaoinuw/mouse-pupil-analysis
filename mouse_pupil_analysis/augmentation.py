@@ -128,27 +128,42 @@ class RandomAffinePair:
         self.fill_img = fill_img
         self.fill_mask = fill_mask
         self.p = p
+        self._rotation_override = None
+        self.rotation_draws = 0
+        self.rotations_applied = 0
+        self.max_abs_rotation = 0.0
+
+    def override_rotation(self, degrees: float, probability: float, seed: int) -> None:
+        """Draw rotations independently while preserving the original scale draws."""
+        self._rotation_override = (degrees, probability, random.Random(f"rotation:{seed}"))
 
     def __call__(self, img, mask):
-        if random.random() > self.p:
+        apply_base = random.random() <= self.p
+        angle, translations, sc, shear = 0.0, (0, 0), 1.0, None
+        if apply_base:
+            # Consume the original draws in the same order, including the angle.
+            angle = random.uniform(-self.degrees, self.degrees)
+            max_dx = self.translate[0] * img.size[0]
+            max_dy = self.translate[1] * img.size[1]
+            translations = (
+                int(round(random.uniform(-max_dx, max_dx))),
+                int(round(random.uniform(-max_dy, max_dy))),
+            )
+            sc = random.uniform(self.scale[0], self.scale[1])
+            shear = self.shear
+            if isinstance(shear, (tuple, list)) and len(shear) == 2:
+                shear = random.uniform(shear[0], shear[1])
+
+        if self._rotation_override is not None:
+            degrees, probability, rng = self._rotation_override
+            self.rotation_draws += 1
+            angle = 0.0
+            if rng.random() < probability:
+                angle = rng.uniform(-degrees, degrees)
+                self.rotations_applied += 1
+                self.max_abs_rotation = max(self.max_abs_rotation, abs(angle))
+        if not apply_base and not angle:
             return img, mask
-
-        angle = random.uniform(-self.degrees, self.degrees)
-
-        # translate is specified as fraction of image size
-        max_dx = self.translate[0] * img.size[0]
-        max_dy = self.translate[1] * img.size[1]
-        translations = (
-            int(round(random.uniform(-max_dx, max_dx))),
-            int(round(random.uniform(-max_dy, max_dy))),
-        )
-
-        sc = random.uniform(self.scale[0], self.scale[1])
-
-        # shear can be None, float, or (min,max). Keep None unless you have a reason.
-        shear = self.shear
-        if isinstance(shear, (tuple, list)) and len(shear) == 2:
-            shear = random.uniform(shear[0], shear[1])
 
         img2 = TF.affine(
             img,

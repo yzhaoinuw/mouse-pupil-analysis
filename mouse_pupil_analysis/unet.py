@@ -61,7 +61,7 @@ class UNet(nn.Module):
         self.conv2 = DoubleConv(64, 32)
         self.outc = nn.Conv2d(32, out_channels, kernel_size=1)
 
-    def forward(self, x):
+    def _encode(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
@@ -69,8 +69,14 @@ class UNet(nn.Module):
         if self.use_attention:
             x3 = self.att(x3)
 
+        return x1, x2, x3
+
+    def _decode(self, x1, x2, x3):
         x = self.up1(x3)
         x = self.conv1(torch.cat([x, x2], dim=1))
         x = self.up2(x)
         x = self.conv2(torch.cat([x, x1], dim=1))
         return self.outc(x)
+
+    def forward(self, x):
+        return self._decode(*self._encode(x))

@@ -29,7 +29,7 @@ from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
     model_to_input_length,
-    resize_with_pad,
+    resize_scale,
 )
 from mouse_pupil_analysis.unet import UNet
 
@@ -329,27 +329,58 @@ def _save_mask_overlays(
             continue
 
         original = Image.open(frame.image_path).convert("L")
-        resized = resize_with_pad(original, target_size=MODEL_IMAGE_SIZE)
-        grayscale = np.asarray(resized, dtype=np.uint8)
+        original_width, original_height = original.size
+        crop_left = (original_width - MODEL_IMAGE_SIZE) // 2
+        crop_top = (original_height - MODEL_IMAGE_SIZE) // 2
+        display_image = original.crop(
+            (
+                crop_left,
+                crop_top,
+                crop_left + MODEL_IMAGE_SIZE,
+                crop_top + MODEL_IMAGE_SIZE,
+            )
+        )
+        grayscale = np.asarray(display_image, dtype=np.uint8)
         rgb = np.stack([grayscale] * 3, axis=-1)
         confidence_map = confidence_maps[image_name]
-        if confidence_map.shape != grayscale.shape:
-            raise ValueError("Confidence map shape must match the resized image shape.")
-        mask = confidence_map > 0
+        if confidence_map.shape != (MODEL_IMAGE_SIZE, MODEL_IMAGE_SIZE):
+            raise ValueError("Confidence map must match the model-image shape.")
+        scale_x, scale_y, pad_left, pad_top = resize_scale(
+            original_width,
+            original_height,
+            MODEL_IMAGE_SIZE,
+        )
+        x_coordinates = np.rint(
+            pad_left + (crop_left + np.arange(MODEL_IMAGE_SIZE) + 0.5) * scale_x - 0.5
+        ).astype(int)
+        y_coordinates = np.rint(
+            pad_top + (crop_top + np.arange(MODEL_IMAGE_SIZE) + 0.5) * scale_y - 0.5
+        ).astype(int)
+        valid_x = (x_coordinates >= 0) & (x_coordinates < MODEL_IMAGE_SIZE)
+        valid_y = (y_coordinates >= 0) & (y_coordinates < MODEL_IMAGE_SIZE)
+        display_confidence = np.zeros((MODEL_IMAGE_SIZE, MODEL_IMAGE_SIZE), dtype=np.uint8)
+        display_confidence[np.ix_(valid_y, valid_x)] = confidence_map[
+            np.ix_(y_coordinates[valid_y], x_coordinates[valid_x])
+        ]
+        mask = display_confidence > 0
 
         tracking_row = tracking_rows.get(image_name)
         is_valid = tracking_row is None or bool(tracking_row["segmentation_valid"])
         blended = rgb.copy()
         if mask.any():
-            heatmap_colors = _confidence_heatmap_colors(confidence_map[mask])
+            heatmap_colors = _confidence_heatmap_colors(display_confidence[mask])
             blended[mask] = (
                 (1 - mask_transparency) * rgb[mask] + mask_transparency * heatmap_colors
             ).astype(np.uint8)
         overlay_image = Image.fromarray(blended)
 
         if tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
-            center_x = float(tracking_row["raw_center_x_model_pixels"])
-            center_y = float(tracking_row["raw_center_y_model_pixels"])
+            center_x = (
+                float(tracking_row["raw_center_x_model_pixels"]) - pad_left
+            ) / scale_x - crop_left
+            center_y = (
+                float(tracking_row["raw_center_y_model_pixels"]) - pad_top
+            ) / scale_y - crop_top
             center_color = "cyan" if is_valid else "yellow"
             marker_layer = overlay_image.copy()
             draw = ImageDraw.Draw(marker_layer)
@@ -571,9 +602,14 @@ def generate_pupil_mask_prediction(
 if __name__ == "__main__":
     # Edit these values, then run this file directly.
     project_root = Path(__file__).resolve().parents[1]
-    image_dir = project_root / "images_test_1"
+    image_dir = project_root / "images_test" / "images_test_1"
     checkpoint_path = find_default_checkpoint()
-    output_mask_dir = project_root / "predictions_test"
+    output_mask_dir = (
+        project_root
+        / "images_test_prediction"
+        / "unet_attention"
+        / f"predicted_masks_{image_dir.name}"
+    )
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.
     batch_size = 32
     mask_transparency = 0.05

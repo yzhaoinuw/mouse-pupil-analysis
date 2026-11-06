@@ -27,6 +27,7 @@ from mouse_pupil_analysis.pupil_predictions import load_unet_checkpoint
 from mouse_pupil_analysis.unet import UNet
 
 from . import prepare_splits as data_splits
+from ._geometry import GEOMETRY_LOSS_WEIGHT, GeometryUNet, circle_regression_loss
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LABELED_FRAMES_DIR = PROJECT_ROOT / "labeled_frames"
@@ -69,6 +70,7 @@ class TrainingConfig:
     lr_milestones: tuple[int, ...] = ()
     prediction_threshold: float = 0.5
     use_attention: bool = True
+    loss: str = "bce"
     batch_size: int = 8
     scratch_learning_rate: float = 1e-3
     finetune_learning_rate: float = 1e-4
@@ -113,8 +115,24 @@ class TrainingConfig:
     console_interval: int = 10
     seed: int = 0
     device: str = "auto"
+    edge_obstruction_probability: float = 0.0
+    rotation_override: tuple[float, float] | None = None
 
     def __post_init__(self) -> None:
+        if self.rotation_override is not None:
+            degrees, probability = self.rotation_override
+            if not 0 < degrees <= 180 or not 0 <= probability <= 1:
+                raise ValueError(
+                    "rotation_override needs degrees in (0, 180] and probability in [0, 1]."
+                )
+            if self.train_all_labeled_frames:
+                raise ValueError("The rotation experiment requires validation-backed training.")
+        if not 0 <= self.edge_obstruction_probability <= 1:
+            raise ValueError("edge_obstruction_probability must be between 0 and 1.")
+        if self.edge_obstruction_probability and self.train_all_labeled_frames:
+            raise ValueError("The edge obstruction experiment requires validation-backed training.")
+        if self.loss not in ("bce", "bce_dice"):
+            raise ValueError("loss must be bce or bce_dice.")
         if self.device not in DEVICE_CHOICES:
             raise ValueError(f"device must be one of {', '.join(DEVICE_CHOICES)}.")
         if self.fold is not None and self.split_manifest is None:
@@ -174,6 +192,31 @@ class ValidationReport:
     balanced_iou: float
     size_iou: dict[str, float | None]
     low_circularity_iou: float | None
+
+
+class BCESoftDiceLoss(nn.Module):
+    """BCE on all pixels plus mean per-image soft Dice on nonempty targets.
+
+    Empty targets contribute BCE only, including in all-empty batches. Dice uses
+    sigmoid probabilities without thresholding, with equal weight per positive
+    image rather than pooling foreground across the batch. Both terms have weight 1.
+    """
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        bce = nn.functional.binary_cross_entropy_with_logits(logits, targets)
+        probabilities = torch.sigmoid(logits).flatten(1)
+        targets = targets.flatten(1)
+        area = targets.sum(dim=1)
+        intersection = (probabilities * targets).sum(dim=1)
+        dice = (2 * intersection + 1e-6) / (probabilities.sum(dim=1) + area + 1e-6)
+        nonempty = (area > 0).to(dice.dtype)
+        dice_loss = ((1 - dice) * nonempty).sum() / nonempty.sum().clamp_min(1)
+        return bce + dice_loss
+
+
+def make_criterion(config: TrainingConfig) -> nn.Module:
+    """Construct the configured training/validation loss; BCE remains the default."""
+    return BCESoftDiceLoss() if config.loss == "bce_dice" else nn.BCEWithLogitsLoss()
 
 
 def make_split_datasets(
@@ -536,7 +579,7 @@ def evaluate_checkpoint(
     val_loss, probabilities, targets = _collect_validation(
         model,
         val_loader,
-        nn.BCEWithLogitsLoss(),
+        make_criterion(config),
         device,
     )
     report = evaluate_thresholds(
@@ -551,10 +594,12 @@ def evaluate_checkpoint(
     return val_loss, report
 
 
-def run_all_labeled_training(config: TrainingConfig) -> Path:
+def run_all_labeled_training(config: TrainingConfig, *, geometry_head: bool = False) -> Path:
     """Train every labeled session with a CV-generated fixed configuration."""
     if not config.train_all_labeled_frames:
         raise ValueError("run_all_labeled_training needs train_all_labeled_frames=True.")
+    if geometry_head and (config.finetune_checkpoint is not None or config.loss != "bce"):
+        raise ValueError("The geometry refit requires scratch training with BCE.")
 
     random.seed(config.seed)
     np.random.seed(config.seed)
@@ -572,7 +617,9 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
         pin_memory=device.type == "cuda",
     )
     learning_rate = initial_learning_rate(config)
-    if config.finetune_checkpoint is None:
+    if geometry_head:
+        model = GeometryUNet(use_attention=config.use_attention).to(device)
+    elif config.finetune_checkpoint is None:
         model = UNet(use_attention=config.use_attention).to(device)
     else:
         model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
@@ -584,7 +631,7 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
     print(f"Run directory: {run_dir}")
     print(f"Device: {device.type}")
 
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = make_criterion(config)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     milestones = config.lr_milestones
     scheduler = (
@@ -598,6 +645,8 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
             "prediction_threshold": config.prediction_threshold,
             "lr_milestones": milestones,
         }
+        if geometry_head:
+            header["geometry_loss_weight"] = GEOMETRY_LOSS_WEIGHT
         log_file.write(json.dumps(header, sort_keys=True) + "\n")
         for epoch in range(1, config.max_epochs + 1):
             model.train()
@@ -606,7 +655,13 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
             for images, masks in train_loader:
                 images, masks = images.to(device), masks.to(device)
                 optimizer.zero_grad(set_to_none=True)
-                loss = criterion(model(images), masks)
+                if geometry_head:
+                    logits, circles = model.forward_with_geometry(images)
+                    loss = criterion(logits, masks) + GEOMETRY_LOSS_WEIGHT * circle_regression_loss(
+                        circles, masks
+                    )
+                else:
+                    loss = criterion(model(images), masks)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item() * len(images)
@@ -620,7 +675,20 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
                 print(log_line)
             log_file.write(log_line + "\n")
 
-    torch.save(model.state_dict(), checkpoint_path)
+    weights = model.state_dict()
+    geometry_metadata = {}
+    if geometry_head:
+        geometry_path = run_dir / "all_data_geometry.pth"
+        torch.save(weights, geometry_path)
+        geometry_metadata = {
+            "geometry_head": True,
+            "geometry_loss_weight": GEOMETRY_LOSS_WEIGHT,
+            "geometry_checkpoint_sha256": file_sha256(geometry_path),
+        }
+        weights = {
+            key: value for key, value in weights.items() if not key.startswith("geometry_head.")
+        }
+    torch.save(weights, checkpoint_path)
     payload = {
         "run_name": run_dir.name,
         "workflow": "all_labeled_training",
@@ -637,6 +705,7 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
         ),
         "checkpoint_sha256": file_sha256(checkpoint_path),
         "config": _jsonable_config(config),
+        **geometry_metadata,
     }
     metadata_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(f"All-labeled weights: {checkpoint_path}")
@@ -644,8 +713,14 @@ def run_all_labeled_training(config: TrainingConfig) -> Path:
     return checkpoint_path
 
 
-def run_training(config: TrainingConfig) -> Path:
+def run_training(config: TrainingConfig, *, geometry_head: bool = False) -> Path:
     """Run training and return the stable path holding the best model weights."""
+    if geometry_head and (
+        config.train_all_labeled_frames or config.finetune_checkpoint or config.loss != "bce"
+    ):
+        raise ValueError(
+            "Geometry experiments require validation-backed scratch training with BCE."
+        )
     if config.train_all_labeled_frames:
         return run_all_labeled_training(config)
 
@@ -654,6 +729,18 @@ def run_training(config: TrainingConfig) -> Path:
     torch.manual_seed(config.seed)
 
     train_dataset, val_dataset = make_split_datasets(config)
+    rotation_transform = None
+    if config.rotation_override is not None:
+        rotation_transform = train_dataset.affine_pair
+        rotation_transform.override_rotation(*config.rotation_override, seed=config.seed)
+    obstruction_dataset = None
+    if config.edge_obstruction_probability:
+        from ._edge_obstruction import EdgeObstructionDataset
+
+        obstruction_dataset = EdgeObstructionDataset(
+            train_dataset, config.edge_obstruction_probability, config.seed
+        )
+        train_dataset = obstruction_dataset
     split = split_description(config)
     print(f"Fold assignment: {split}")
 
@@ -675,7 +762,9 @@ def run_training(config: TrainingConfig) -> Path:
     )
 
     learning_rate = initial_learning_rate(config)
-    if config.finetune_checkpoint is None:
+    if geometry_head:
+        model = GeometryUNet(use_attention=config.use_attention).to(device)
+    elif config.finetune_checkpoint is None:
         model = UNet(use_attention=config.use_attention).to(device)
     else:
         model = load_unet_checkpoint(Path(config.finetune_checkpoint), device)
@@ -687,7 +776,7 @@ def run_training(config: TrainingConfig) -> Path:
     print(f"Run directory: {run_dir}")
     print(f"Device: {device.type}")
 
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = make_criterion(config)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -701,17 +790,23 @@ def run_training(config: TrainingConfig) -> Path:
     best_selection_score = -math.inf
     patience_counter = 0
     with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-        log_file.write(
-            json.dumps(run_header(config, training_examples, device), sort_keys=True) + "\n"
-        )
+        header = run_header(config, training_examples, device)
+        if geometry_head:
+            header["geometry_loss_weight"] = GEOMETRY_LOSS_WEIGHT
+        log_file.write(json.dumps(header, sort_keys=True) + "\n")
         for epoch in range(1, config.max_epochs + 1):
             model.train()
             total_train_loss = 0.0
             total_train_images = 0
             for images, masks in train_loader:
                 images, masks = images.to(device), masks.to(device)
-                logits = model(images)
-                loss = criterion(logits, masks)
+                if geometry_head:
+                    logits, circles = model.forward_with_geometry(images)
+                    loss = criterion(logits, masks) + GEOMETRY_LOSS_WEIGHT * circle_regression_loss(
+                        circles, masks
+                    )
+                else:
+                    loss = criterion(model(images), masks)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -798,6 +893,20 @@ def run_training(config: TrainingConfig) -> Path:
                 if patience_counter >= config.early_stopping_patience:
                     print("Early stopping triggered; the best checkpoint remains saved.")
                     break
+
+    if obstruction_dataset is not None:
+        (run_dir / "edge_obstruction_stats.json").write_text(
+            json.dumps(obstruction_dataset.stats(), indent=2) + "\n", encoding="utf-8"
+        )
+    if rotation_transform is not None:
+        rotation_stats = {
+            "draws": rotation_transform.rotation_draws,
+            "applied": rotation_transform.rotations_applied,
+            "max_abs_degrees": rotation_transform.max_abs_rotation,
+        }
+        (run_dir / "rotation_stats.json").write_text(
+            json.dumps(rotation_stats, indent=2) + "\n", encoding="utf-8"
+        )
 
     # The calibrated threshold landing on the grid edge means the optimum is somewhere
     # outside it. At the low edge that reflects the image-weighted majority of the

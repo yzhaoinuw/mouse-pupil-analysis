@@ -57,7 +57,7 @@ def _build_cli_parser() -> argparse.ArgumentParser:
 
 def _training_config(
     config_path: Path, labeled_frames_dir: Path, checkpoint_dir: Path | None
-) -> trainer.TrainingConfig:
+) -> tuple[trainer.TrainingConfig, bool]:
     """Load the cross-validation hand-off recipe for all-labeled training."""
     config_path = Path(config_path).resolve()
     try:
@@ -68,13 +68,16 @@ def _training_config(
         raise ValueError(f"Training configuration is not valid JSON: {config_path}") from error
     if payload.get("schema_version") != 1:
         raise ValueError("Training configuration must use schema_version 1.")
+    geometry_head = payload.get("geometry_head", False)
+    if not isinstance(geometry_head, bool):
+        raise ValueError("The recipe's geometry_head setting must be true or false.")
 
     finetune_checkpoint = payload.get("finetune_checkpoint")
     learning_rate = float(payload["learning_rate"])
     learning_rate_key = (
         "finetune_learning_rate" if finetune_checkpoint is not None else "scratch_learning_rate"
     )
-    return trainer.TrainingConfig(
+    config = trainer.TrainingConfig(
         labeled_frames_dir=labeled_frames_dir,
         checkpoint_dir=checkpoint_dir,
         finetune_checkpoint=None if finetune_checkpoint is None else Path(finetune_checkpoint),
@@ -83,11 +86,13 @@ def _training_config(
         lr_milestones=tuple(payload["lr_milestones"]),
         prediction_threshold=float(payload["prediction_threshold"]),
         use_attention=bool(payload["use_attention"]),
+        loss=payload.get("loss", "bce"),
         batch_size=int(payload["batch_size"]),
         max_epochs=int(payload["max_epochs"]),
         seed=int(payload["seed"]),
         **{learning_rate_key: learning_rate},
     )
+    return config, geometry_head
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             f"--labeled_frames_dir must name a labeled_frames folder; got {labeled_frames_dir}."
         )
     checkpoint_dir = args.checkpoint_dir.resolve() if args.checkpoint_dir is not None else None
+    geometry_head = False
     if args.training_config_path is not None:
         conflicting = [
             name
@@ -114,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
                 + ", ".join(conflicting)
                 + "."
             )
-        config = _training_config(
+        config, geometry_head = _training_config(
             args.training_config_path,
             labeled_frames_dir,
             checkpoint_dir,
@@ -133,7 +139,10 @@ def main(argv: list[str] | None = None) -> int:
             finetune_checkpoint=args.finetune_checkpoint,
             split_manifest=manifest,
         )
-    trainer.run_training(config)
+    if geometry_head:
+        trainer.run_all_labeled_training(config, geometry_head=True)
+    else:
+        trainer.run_training(config)
     return 0
 
 

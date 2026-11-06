@@ -57,6 +57,8 @@ build/
 # generated training, inference, and labeling artifacts
 checkpoints_exp/
 images_test*/
+# Model-specific predictions are local generated artifacts.
+/images_test_prediction/
 images_test*_result/
 /labeled_frames/
 /media/readme_demo/

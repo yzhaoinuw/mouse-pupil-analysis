@@ -275,6 +275,10 @@ threshold) through orange to red (near-certain). Inference normally uses the cal
 stored with the checkpoint. If the mask spills past the pupil, override it with a higher
 `--pred_thresh`; if it catches only part of the pupil, try a lower value.
 
+Overlay PNGs are a centered 148 x 148 source-image display crop, with the model prediction
+mapped onto that crop. This diagnostic presentation does not change the resize-and-pad
+preprocessing used for inference or the reported measurements.
+
 `pupil_visibility` and the status/reason columns distinguish a clean segmentation from an
 empty, low-confidence, border-touching, or low-circularity candidate. A narrow visible sliver
 may be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.

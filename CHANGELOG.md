@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- An experimental BCE plus soft Dice training loss and a matched, session-held-out
+  comparison runner with per-session scores and raw-mask review galleries.
+- Experimental pupil center and radius supervision, four-fold geometry training,
+  and whole-component selection using the predicted center.
+
+### Changed
+
+- Diagnostic mask overlays use a centered source-image crop.
+
 ## [0.3.0] - 2026-08-26
 
 ### Added

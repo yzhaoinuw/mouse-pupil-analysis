@@ -29,6 +29,47 @@ def test_grouped_training_defaults_to_macro_iou_selection():
     assert TrainingConfig().selection_metric == "macro_iou"
 
 
+def test_bce_dice_uses_equal_weight_per_nonempty_image():
+    logits = torch.zeros((3, 1, 2, 2), requires_grad=True)
+    targets = torch.zeros_like(logits)
+    targets[0, 0, 0, 0] = 1
+    targets[1] = 1
+    loss = TRAINING["BCESoftDiceLoss"]()(logits, targets)
+    # p=0.5: Dice is 1/3 for the one-pixel target and 2/3 for the full target.
+    assert float(loss.detach()) == pytest.approx(float(torch.log(torch.tensor(2.0))) + 0.5)
+    loss.backward()
+    assert torch.isfinite(logits.grad).all()
+    assert (logits.grad[targets.bool()] < 0).all()
+    assert (logits.grad[~targets.bool()] > 0).all()
+
+
+def test_bce_dice_empty_batch_keeps_bce_and_its_false_positive_gradient():
+    logits = torch.full((2, 1, 4, 4), 10.0, requires_grad=True)
+    targets = torch.zeros_like(logits)
+    loss = TRAINING["BCESoftDiceLoss"]()(logits, targets)
+    assert (
+        loss.detach()
+        == torch.nn.functional.binary_cross_entropy_with_logits(logits, targets).detach()
+    )
+    loss.backward()
+    assert torch.isfinite(logits.grad).all()
+    assert (logits.grad > 0).all()
+
+
+def test_bce_dice_rewards_correct_foreground_and_penalizes_spurious_regions():
+    targets = torch.zeros((1, 1, 8, 8))
+    targets[:, :, 3:5, 3:5] = 1
+    perfect = torch.where(targets > 0, 20.0, -20.0)
+    spurious = perfect.clone()
+    spurious[:, :, :2, :2] = 20
+    criterion = TRAINING["BCESoftDiceLoss"]()
+    assert float(criterion(perfect, targets)) < 1e-6
+    assert criterion(spurious, targets) > criterion(perfect, targets)
+    assert isinstance(TRAINING["make_criterion"](TrainingConfig()), torch.nn.BCEWithLogitsLoss)
+    with pytest.raises(ValueError, match="loss must be"):
+        TrainingConfig(loss="invalid")
+
+
 def test_normal_manifest_run_uses_the_validation_session(monkeypatch, tmp_path):
     development = ([tmp_path / "dev.png"], [tmp_path / "dev_mask.png"])
     validation = ([tmp_path / "validation.png"], [tmp_path / "validation_mask.png"])
@@ -178,6 +219,7 @@ def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tm
                 "batch_size": 8,
                 "seed": 0,
                 "use_attention": True,
+                "loss": "bce_dice",
                 "prediction_threshold": 0.5,
                 "finetune_checkpoint": None,
             }
@@ -204,6 +246,7 @@ def test_training_config_path_owns_all_labeled_training_settings(monkeypatch, tm
     assert config.max_epochs == 115
     assert config.lr_milestones == (57, 86)
     assert config.prediction_threshold == pytest.approx(0.5)
+    assert config.loss == "bce_dice"
 
 
 def test_tracked_default_all_labeled_recipe_loads(monkeypatch, tmp_path):
@@ -257,6 +300,7 @@ def test_cv_writes_a_complete_all_labeled_training_recipe(tmp_path):
         batch_size=8,
         seed=0,
         use_attention=True,
+        loss="bce_dice",
         finetune_checkpoint=None,
     )
     trainer = SimpleNamespace(
@@ -278,13 +322,16 @@ def test_cv_writes_a_complete_all_labeled_training_recipe(tmp_path):
     assert recipe["lr_milestones"] == [100, 150]
     assert recipe["prediction_threshold"] == pytest.approx(0.55)
     assert recipe["sampling"] == "natural"
+    assert recipe["loss"] == "bce_dice"
     assert recipe["source_cv_summary"] == "cv_s0_summary.json"
 
 
 def test_cv_recipe_rounds_epoch_budget_up_to_the_next_hundred(tmp_path):
     summary = tmp_path / "summary.json"
     summary.write_text("{}", encoding="utf-8")
-    config = SimpleNamespace(batch_size=8, seed=0, use_attention=True, finetune_checkpoint=None)
+    config = SimpleNamespace(
+        batch_size=8, seed=0, use_attention=True, loss="bce", finetune_checkpoint=None
+    )
     trainer = SimpleNamespace(
         initial_learning_rate=lambda _: 0.001,
         file_sha256=lambda _: "summary-hash",

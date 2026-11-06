@@ -148,7 +148,12 @@ if __name__ == "__main__":
     out_dir = None
     result_dir = test_dir / f"results_{test_folder_name}"
     checkpoint = None  # Use the packaged checkpoint with the highest encoded IoU.
-    output_mask_dir = test_dir / f"predicted_masks_{test_folder_name}"
+    output_mask_dir = (
+        PROJECT_ROOT
+        / "images_test_prediction"
+        / "unet_attention"
+        / f"predicted_masks_{test_folder_name}"
+    )
     batch_size = 32
     num_workers = None
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.

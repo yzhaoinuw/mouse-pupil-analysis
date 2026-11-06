@@ -35,7 +35,23 @@ pupil. Augmentation alone cannot resolve this semantic error.
 Next actions:
 
 - Collect and label diverse dark-aperture recordings.
-- Compare the existing center-favored component selector across sessions.
+- The fold-2 geometry-head screen is complete. With the gate off, auxiliary
+  circle supervision raised equal-session IoU from 0.628 to 0.661 and reduced
+  detached foreground. The learned gate lowered IoU to 0.575 by clipping
+  true pupil pixels, especially in HQL086. Four-fold geometry CV is now
+  complete at seed 0. Its recipe selected 100 epochs and threshold 0.525.
+  One all-615 refit is ready for the maintainer's visual comparison with the
+  shipped model. Open the local
+  `images_test_prediction/geometry_release_review_2026-11-06/index.html`.
+  Full candidate overlays in the shipped v0.3.0 style are available under
+  `images_test_prediction/geometry_release_2026-11-06/`.
+  A learned-center selector raised four-fold mean per-session IoU to 0.698
+  versus 0.671 raw and 0.699 with the existing selector. Compare its overlays
+  under `images_test_prediction/geometry_center_2026-11-06/` before deciding
+  whether to apply component selection. The manifest identifies changed frames.
+  Review the candidate's visible boundaries and empty-frame behavior before
+  deciding on promotion.
+  See the [work log](work_log.md#complete-geometry-cv-and-train-the-release-candidate-codex-gpt-6-effort-and-token-budget-not-exposed).
 - Run any loss, threshold, or architecture experiment against the same labeled pool and report
   results for each session.
 

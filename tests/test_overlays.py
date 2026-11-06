@@ -67,3 +67,25 @@ def test_confidence_heatmap_can_be_limited_to_a_selected_component():
 
     assert confidence_map[2, 2] == 0
     assert confidence_map[7, 7] > 0
+
+
+def test_overlay_uses_a_centered_source_image_crop(tmp_path: Path):
+    source = np.indices((200, 200), dtype=np.uint8)[0]
+    frame_path = tmp_path / "eye_00001.png"
+    Image.fromarray(source).save(frame_path)
+    frame = ExtractedFrame(frame_path, source_frame_index=0, extraction_index=0)
+    confidence_map = np.zeros((148, 148), dtype=np.uint8)
+    confidence_map[74, 74] = 255
+
+    _save_mask_overlays(
+        [frame],
+        {frame_path.name: confidence_map},
+        tmp_path / "overlays",
+        mask_transparency=0.1,
+    )
+
+    overlay = np.asarray(Image.open(tmp_path / "overlays" / frame_path.name).convert("RGB"))
+    assert overlay.shape == (148, 148, 3)
+    np.testing.assert_array_equal(overlay[0, 0], [26, 26, 26])
+    np.testing.assert_array_equal(overlay[-1, -1], [173, 173, 173])
+    np.testing.assert_array_equal(overlay[74, 74], [115, 90, 90])
