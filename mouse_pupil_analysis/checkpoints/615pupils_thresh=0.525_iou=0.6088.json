@@ -7,7 +7,7 @@
   "macro_dice": null,
   "size_iou": null,
   "low_circularity_iou": null,
-  "validation_note": "All-labeled refit on 615 pairs with auxiliary pupil center and radius supervision. Ungated mask export. Threshold 0.525 is the median of the four calibrated CV thresholds. Filename IoU 0.6088 is the mean four-fold image-mean CV IoU used for recipe selection.",
+  "validation_note": "All-labeled refit on 615 pairs with pupil center and radius supervision. Full two-head checkpoint; inference thresholds the segmentation at 0.525 and selects one whole component using confidence, area support, and the predicted center. Radius is diagnostic, not a clipping gate. Threshold 0.525 is the median of the four calibrated CV thresholds. Filename IoU 0.6088 is the mean four-fold raw-mask image-mean CV IoU used for recipe selection; it does not score this final checkpoint or the component selector.",
   "training": {
     "mode": "scratch",
     "source_checkpoint": null,

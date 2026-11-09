@@ -135,9 +135,18 @@ jobs:
           python -m venv /tmp/smoke
           /tmp/smoke/bin/python -m pip install -U pip
           /tmp/smoke/bin/python -m pip install dist/*.whl
+          # Import the installed wheel, without the source checkout shadowing it.
+          cd /tmp
           /tmp/smoke/bin/python -c "import mouse_pupil_analysis; print('version', mouse_pupil_analysis.__version__)"
           /tmp/smoke/bin/run-pupil-analysis --help
           /tmp/smoke/bin/extract-frames --help
+          /tmp/smoke/bin/python - <<'PY'
+          import torch
+          from mouse_pupil_analysis.geometry import GeometryUNet
+          from mouse_pupil_analysis.pupil_predictions import find_default_checkpoint, load_unet_checkpoint
+          model = load_unet_checkpoint(find_default_checkpoint(), torch.device("cpu"))
+          assert isinstance(model, GeometryUNet), "Release checkpoint must retain both heads."
+          PY
 
       - uses: actions/upload-artifact@v4
         with:

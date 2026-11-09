@@ -12,6 +12,12 @@ UNet ships inside the package, so there is no model to download. It targets the 
 low-resolution frames that rodent eye cameras actually produce. With `--calculate_velocity`,
 it also tracks pupil center, speed, and per-frame segmentation quality.
 
+The default model predicts segmentation and pupil geometry in one pass. After
+thresholding the segmentation, confidence, area support, and the predicted center
+select one whole connected component as the final mask. Diameter is measured from
+that final mask's area. The predicted radius is available for inspection and does
+not clip the mask.
+
 ## Contents
 
 - [Install](#install)
@@ -55,6 +61,95 @@ To save confidence overlays on the original images:
 run-pupil-analysis --video_path data/mouse1.avi --output_mask_dir data/predicted_masks_mouse1
 ```
 
+<details>
+<summary>Inspect the segmentation output</summary>
+
+Inspect the segmentation head before geometry-based component selection:
+
+```bash
+run-pupil-analysis --image_dir movie_frames/ --output_mask_dir results/mask_overlays/ --raw-segmentation
+```
+
+Open `results/mask_overlays/` to examine the visible-pupil mask. The overlay
+colors show the segmentation probabilities above the calibrated threshold.
+The center marker is calculated from the segmentation.
+
+</details>
+
+<details>
+<summary>Inspect the geometry head independently</summary>
+
+Load the packaged two-head model, print its center and radius, and draw only its
+geometry output. Set the image path to your own frame.
+
+```python
+from pathlib import Path
+
+import numpy as np
+import torch
+from PIL import Image, ImageDraw
+
+from mouse_pupil_analysis.preprocessing import resize_with_pad
+from mouse_pupil_analysis.pupil_predictions import find_default_checkpoint, load_unet_checkpoint
+
+checkpoint = find_default_checkpoint()
+image_path = Path("movie_frames/frame_00001.png")
+model = load_unet_checkpoint(checkpoint, torch.device("cpu"))
+
+with Image.open(image_path) as source:
+    view = resize_with_pad(source.convert("L"))
+images = torch.from_numpy(np.array(view)).float()[None, None] / 255
+with torch.inference_mode():
+    _, circles = model.forward_with_geometry(images)
+x, y, radius = circles[0].tolist()
+print(f"Center ({x:.2f}, {y:.2f}), radius {radius:.2f} model pixels")
+
+overlay = view.convert("RGB")
+draw = ImageDraw.Draw(overlay)
+draw.ellipse((x - radius, y - radius, x + radius, y + radius), outline="yellow")
+draw.line((x - 3, y, x + 3, y), fill="yellow")
+draw.line((x, y - 3, x, y + 3), fill="yellow")
+overlay.save("geometry_preview.png")
+```
+
+Open `geometry_preview.png` to see the predicted circle and center separately
+from the mask. Coordinates refer to the resized and padded 148 x 148 model
+image, with x increasing right and y increasing down. The circle describes
+the visible-pupil region learned during training.
+
+</details>
+
+<details>
+<summary>Show both heads, the retained mask, and discarded blobs</summary>
+
+Save a combined diagnostic overlay using the packaged model:
+
+```bash
+run-pupil-analysis \
+  --image_dir movie_frames/ \
+  --output_mask_dir results/all_heads/ \
+  --show-all-heads \
+  --mask_transparency 0.35
+```
+
+Green shows the retained segmentation, magenta shows discarded segmentation
+pixels (when present), and yellow marks the geometry head's circle and center.
+Together, green and magenta show the complete thresholded segmentation output.
+The circle is projected onto the same centered source-image crop as the mask.
+
+Geometry-based component selection runs by default. `--show-all-heads` changes
+the overlay only; it shows the same final mask used for diameter and tracking.
+Add `--raw-segmentation` to inspect the unfiltered segmentation instead; all
+threshold-passing pixels are then green. `--prefer_central_component` overrides
+the geometry selector with the existing image-center selector.
+
+Custom checkpoints can be supplied with `--checkpoint`. Legacy mask-only
+checkpoints still support ordinary inference, but cannot show a geometry output.
+For custom training output named `all_data_geometry.pth`, threshold calibration
+is read from `all_data.json` in the same directory. Use `--pred_thresh` to override it.
+
+</details>
+
 To track the pupil center and its speed:
 
 ```bash
@@ -85,6 +180,9 @@ run-pupil-analysis \
   | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
   | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
   | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
+  | `--prefer_geometry_component` | Keep one whole component using confidence, area support, and the geometry head's predicted center. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
+  | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
+  | `--show-all-heads` | Diagnostic overlay: retained segmentation in green, discarded segmentation in magenta, geometry circle and center in yellow. Requires `--output_mask_dir`; works with the packaged two-head model. Does not change measurements. Also accepts `--show_all_heads`. |
   | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
   | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
   | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |
@@ -122,7 +220,7 @@ The result files contain:
 |------|--------------|
 | `*_pupil_analysis.csv` | The per-frame table, columns below. |
 | `*_pupil_analysis.png` | Frame-indexed diameter plot with valid/warning/invalid points. Velocity mode adds center, speed, and a dedicated quality-control panel. |
-| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. |
+| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. With `--show-all-heads`, colors instead distinguish retained/discarded segmentation and the geometry circle, as described above. |
 
 Segmentation visibility and quality are written for every run. Timestamp, center, speed,
 and `tracking_status` are added in velocity mode:

@@ -83,6 +83,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep the confidence-weighted component nearest the image center. Off by default.",
     )
     parser.add_argument("--mask_transparency", type=float, default=0.05)
+    parser.add_argument(
+        "--show-all-heads",
+        "--show_all_heads",
+        action="store_true",
+        help=(
+            "Show retained mask (green), discarded mask (magenta), and geometry circle "
+            "(yellow). Requires --output_mask_dir and geometry weights (packaged by default). "
+            "Changes overlays only."
+        ),
+    )
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument(
+        "--prefer_geometry_component",
+        "--prefer-geometry-component",
+        action="store_true",
+        default=None,
+        help=(
+            "Keep one whole mask component using confidence, area, and the predicted "
+            "center. Enabled automatically for geometry checkpoints."
+        ),
+    )
+    selection.add_argument(
+        "--raw-segmentation",
+        "--raw_segmentation",
+        dest="prefer_geometry_component",
+        action="store_false",
+        help="Inspect the thresholded segmentation without geometry component selection.",
+    )
     parser.add_argument("--extraction_fps", type=float, default=5)
     parser.add_argument("--max_frames", type=int, default=10000)
     parser.add_argument(
@@ -118,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
         num_workers=args.num_workers,
         pred_thresh=args.pred_thresh,
         prefer_central_component=args.prefer_central_component,
+        prefer_geometry_component=args.prefer_geometry_component,
+        show_all_heads=args.show_all_heads,
         mask_transparency=args.mask_transparency,
         extraction_fps=args.extraction_fps,
         max_frames=args.max_frames,
@@ -127,11 +157,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        config.validate()
+        run_analysis(config)
     except ValueError as error:
         parser.error(str(error))
 
-    run_analysis(config)
     return 0
 
 
@@ -158,6 +187,8 @@ if __name__ == "__main__":
     num_workers = None
     pred_thresh = None  # Use checkpoint calibration; set a float to override it.
     prefer_central_component = False  # Keep one centre-favoured component when needed.
+    prefer_geometry_component = None  # Auto-enable with geometry weights; False gives raw mask.
+    show_all_heads = False  # Also requires output_mask_dir.
     mask_transparency = 0.05
     extraction_fps = 5.0
     max_frames = 10000
@@ -176,6 +207,8 @@ if __name__ == "__main__":
             num_workers=num_workers,
             pred_thresh=pred_thresh,
             prefer_central_component=prefer_central_component,
+            prefer_geometry_component=prefer_geometry_component,
+            show_all_heads=show_all_heads,
             mask_transparency=mask_transparency,
             extraction_fps=extraction_fps,
             max_frames=max_frames,

@@ -93,6 +93,12 @@ Zenodo mints two kinds of DOI:
    - the tagged commit is an ancestor of `origin/main`, so a published version always
      corresponds to code that reached the default branch;
    - the wheel installs and runs in a clean environment.
+   - the installed checkpoint retains both segmentation and geometry heads.
+
+   Geometry refits must package `all_data_geometry.pth`, not the mask-only
+   `all_data.pth` export. Ordinary inference uses the learned center to select
+   the final mask. The regression suite checks this default on real frames;
+   the release smoke test checks the installed wheel outside the source tree.
 
    Only then does it publish to PyPI. Because the checkpoint check resolves the single
    packaged `.pth` rather than accepting any `.pth`, changing the packaging policy to

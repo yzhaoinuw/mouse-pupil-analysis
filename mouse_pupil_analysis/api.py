@@ -45,6 +45,8 @@ class AnalysisConfig:
     batch_size: int = 32
     pred_thresh: float | None = None
     prefer_central_component: bool = False
+    prefer_geometry_component: bool | None = None
+    show_all_heads: bool = False
     mask_transparency: float = 0.05
     extraction_fps: float = 5.0
     max_frames: int = 10000
@@ -80,6 +82,10 @@ class AnalysisConfig:
             raise ValueError("acquisition_fps must be positive.")
         if self.num_workers is not None and self.num_workers < 0:
             raise ValueError("num_workers cannot be negative.")
+        if self.show_all_heads and self.output_mask_dir is None:
+            raise ValueError("show_all_heads requires output_mask_dir.")
+        if self.prefer_geometry_component and self.prefer_central_component:
+            raise ValueError("Choose only one component-selection method.")
         if self.calculate_velocity and self.image_dir is not None and self.acquisition_fps is None:
             raise ValueError("acquisition_fps is required with image_dir in velocity mode.")
 
@@ -179,6 +185,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
             config.output_mask_dir,
             pred_thresh=prediction_threshold,
             mask_transparency=config.mask_transparency,
+            show_all_heads=config.show_all_heads,
         )
 
     results = []
@@ -189,6 +196,8 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         prefer_central_component=config.prefer_central_component,
+        prefer_geometry_component=config.prefer_geometry_component,
+        require_geometry=config.show_all_heads,
         show_progress=config.show_progress,
     ):
         results.append(

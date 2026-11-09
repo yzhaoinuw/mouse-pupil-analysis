@@ -25,6 +25,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from mouse_pupil_analysis.extract_frames import ExtractedFrame
+from mouse_pupil_analysis.geometry import GeometryUNet, select_predicted_center_component
 from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
@@ -104,6 +105,7 @@ class PupilPrediction:
     binary_mask: np.ndarray
     estimated_pupil_diameter: float
     original_size: tuple[int, int]
+    geometry_circle: tuple[float, float, float] | None = None
 
     @property
     def image_name(self) -> str:
@@ -175,6 +177,8 @@ def resolve_prediction_threshold(
         return threshold
 
     metadata_path = checkpoint_path.with_suffix(".json")
+    if not metadata_path.is_file() and checkpoint_path.name == "all_data_geometry.pth":
+        metadata_path = checkpoint_path.with_name("all_data.json")
     if metadata_path.is_file():
         try:
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -226,7 +230,9 @@ def load_unet_checkpoint(checkpoint_path: Path, device: torch.device) -> UNet:
         )
 
     use_attention = any(key.startswith("att.") for key in state_dict)
-    model = UNet(use_attention=use_attention)
+    has_geometry = any(key.startswith("geometry_head.") for key in state_dict)
+    model_type = GeometryUNet if has_geometry else UNet
+    model = model_type(use_attention=use_attention)
     try:
         model.load_state_dict(state_dict)
     except RuntimeError as error:
@@ -317,6 +323,7 @@ def _save_mask_overlays(
     output_mask_dir: Path,
     mask_transparency: float,
     tracking_dataframe: pd.DataFrame | None = None,
+    geometry_circles: dict[str, tuple[float, float, float]] | None = None,
 ) -> None:
     output_mask_dir.mkdir(parents=True, exist_ok=True)
     tracking_rows = {}
@@ -368,13 +375,39 @@ def _save_mask_overlays(
         is_valid = tracking_row is None or bool(tracking_row["segmentation_valid"])
         blended = rgb.copy()
         if mask.any():
-            heatmap_colors = _confidence_heatmap_colors(display_confidence[mask])
+            if geometry_circles is not None:
+                heatmap_colors = np.where(
+                    (display_confidence[mask] == 1)[:, None],
+                    np.array([0, 255, 0]),
+                    np.array([255, 0, 255]),
+                )
+            else:
+                heatmap_colors = _confidence_heatmap_colors(display_confidence[mask])
             blended[mask] = (
                 (1 - mask_transparency) * rgb[mask] + mask_transparency * heatmap_colors
             ).astype(np.uint8)
         overlay_image = Image.fromarray(blended)
 
-        if tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
+        if geometry_circles is not None:
+            x, y, radius = geometry_circles[image_name]
+            # Invert the same pixel-center resize used to project the mask.
+            center_x = (x - pad_left + 0.5) / scale_x - 0.5 - crop_left
+            center_y = (y - pad_top + 0.5) / scale_y - 0.5 - crop_top
+            radius_x, radius_y = radius / scale_x, radius / scale_y
+            draw = ImageDraw.Draw(overlay_image)
+            draw.ellipse(
+                (
+                    center_x - radius_x,
+                    center_y - radius_y,
+                    center_x + radius_x,
+                    center_y + radius_y,
+                ),
+                outline="yellow",
+                width=1,
+            )
+            draw.line((center_x - 3, center_y, center_x + 3, center_y), fill="yellow")
+            draw.line((center_x, center_y - 3, center_x, center_y + 3), fill="yellow")
+        elif tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
             center_x = (
                 float(tracking_row["raw_center_x_model_pixels"]) - pad_left
             ) / scale_x - crop_left
@@ -421,14 +454,27 @@ class MaskOverlayAccumulator:
         output_mask_dir: Path,
         pred_thresh: float,
         mask_transparency: float,
+        show_all_heads: bool = False,
     ) -> None:
         self.output_mask_dir = Path(output_mask_dir)
         self.pred_thresh = pred_thresh
         self.mask_transparency = mask_transparency
         self.confidence_maps: dict[str, np.ndarray] = {}
+        self.geometry_circles: dict[str, tuple[float, float, float]] | None = (
+            {} if show_all_heads else None
+        )
 
     def add(self, prediction: PupilPrediction) -> None:
         """Encode one float probability map as a compact uint8 confidence map."""
+        if self.geometry_circles is not None:
+            if prediction.geometry_circle is None:
+                raise ValueError("All-head overlays require geometry predictions.")
+            self.geometry_circles[prediction.image_name] = prediction.geometry_circle
+            labels = np.zeros(prediction.binary_mask.shape, dtype=np.uint8)
+            labels[prediction.probability_map > self.pred_thresh] = 2
+            labels[prediction.binary_mask] = 1
+            self.confidence_maps[prediction.image_name] = labels
+            return
         self.confidence_maps[prediction.image_name] = _encode_thresholded_confidence(
             prediction.probability_map,
             self.pred_thresh,
@@ -447,6 +493,7 @@ class MaskOverlayAccumulator:
             self.output_mask_dir,
             self.mask_transparency,
             tracking_dataframe=tracking_dataframe,
+            geometry_circles=self.geometry_circles,
         )
 
 
@@ -458,6 +505,8 @@ def iter_pupil_predictions(
     num_workers: int | None = None,
     prefer_central_component: bool = False,
     show_progress: bool = False,
+    prefer_geometry_component: bool | None = None,
+    require_geometry: bool = False,
 ) -> Iterator[PupilPrediction]:
     """Yield predictions from one model pass without retaining float maps.
 
@@ -493,6 +542,20 @@ def iter_pupil_predictions(
     device = torch.device(device_name)
     logger.info("Using inference device: %s.", device)
     model = load_unet_checkpoint(checkpoint_path, device)
+    has_geometry = isinstance(model, GeometryUNet)
+    if prefer_geometry_component and prefer_central_component:
+        raise ValueError("Choose only one component-selection method.")
+    use_geometry_selection = (
+        has_geometry and not prefer_central_component
+        if prefer_geometry_component is None
+        else prefer_geometry_component
+    )
+    if (require_geometry or use_geometry_selection) and not has_geometry:
+        raise ValueError(
+            "This option requires a full geometry checkpoint. Pass --checkpoint pointing to "
+            "a checkpoint containing geometry_head weights."
+        )
+    logger.info("Geometry-based component selection: %s.", use_geometry_selection)
 
     progress = tqdm(
         total=len(test_dataset),
@@ -504,10 +567,25 @@ def iter_pupil_predictions(
         with torch.inference_mode():
             for images, names in test_loader:
                 images = images.to(device)
-                probabilities = torch.sigmoid(model(images)).cpu().numpy()
+                circles = None
+                if has_geometry:
+                    logits, geometry = model.forward_with_geometry(images)
+                    circles = geometry.cpu().numpy()
+                else:
+                    logits = model(images)
+                probabilities = torch.sigmoid(logits).cpu().numpy()
                 batch_binary_masks = probabilities > pred_thresh
                 for index, name in enumerate(names):
                     binary_mask = batch_binary_masks[index].squeeze()
+                    circle = (
+                        tuple(float(value) for value in circles[index])
+                        if circles is not None
+                        else None
+                    )
+                    if use_geometry_selection:
+                        binary_mask = select_predicted_center_component(
+                            probabilities[index].squeeze(), binary_mask, circle[:2]
+                        )
                     if prefer_central_component:
                         binary_mask = select_central_component(
                             probabilities[index].squeeze(),
@@ -521,6 +599,7 @@ def iter_pupil_predictions(
                         binary_mask=binary_mask,
                         estimated_pupil_diameter=float(diameter),
                         original_size=size_by_name[name],
+                        geometry_circle=circle,
                     )
                     progress.update(1)
     finally:
@@ -536,8 +615,12 @@ def generate_pupil_predictions(
     mask_transparency: float = 0.05,
     prefer_central_component: bool = False,
     show_progress: bool = False,
+    show_all_heads: bool = False,
+    prefer_geometry_component: bool | None = None,
 ) -> list[tuple[str, float]]:
     """Generate diameter results and optional overlays without tracking."""
+    if show_all_heads and output_mask_dir is None:
+        raise ValueError("show_all_heads requires output_mask_dir.")
     pred_thresh = resolve_prediction_threshold(checkpoint_path, pred_thresh)
     overlay_accumulator = None
     if output_mask_dir is not None:
@@ -545,6 +628,7 @@ def generate_pupil_predictions(
             output_mask_dir,
             pred_thresh,
             mask_transparency,
+            show_all_heads=show_all_heads,
         )
 
     diameter_results = []
@@ -555,6 +639,8 @@ def generate_pupil_predictions(
         batch_size=batch_size,
         prefer_central_component=prefer_central_component,
         show_progress=show_progress,
+        require_geometry=show_all_heads,
+        prefer_geometry_component=prefer_geometry_component,
     ):
         diameter_results.append((prediction.image_name, prediction.estimated_pupil_diameter))
         if overlay_accumulator is not None:

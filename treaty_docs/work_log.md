@@ -4,6 +4,104 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-09
 
+### Save the two-head pipeline on dev (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested commit and push to dev and deferred the selector
+  deep dive. Scope includes the full packaged geometry checkpoint, default
+  learned-center selection, head overlays, independent inspection options,
+  Usage examples, and packaging safeguards. Unrelated local MEYE, augmentation,
+  audit, and earlier documentation edits are excluded from this delivery.
+- Recorded the concrete follow-up: Purple trial 8 frame 03279 keeps the
+  76-pixel left blob (score 0.429) over the closer, more confident 49-pixel right
+  blob (score 0.373). Three discarded components total 68 pixels. Its result is
+  flagged uncertain/invalid. The center influences selection; radius does not.
+  Revisit the scoring rule before publishing a correction to v0.4.0.
+- This handoff targets dev only; no main merge, version bump, tag, or release.
+- Verification:
+  - Rechecked repository-wide Ruff, Black, and whitespace. The unchanged runtime
+    already passed the full 187-test suite, wheel/sdist content and weight-hash
+    checks, and the installed-wheel default pipeline smoke test recorded below.
+    Reviewed the scoped staged diff and remote dev ref before delivery.
+
+### Correct the default two-head pipeline (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer clarified that the intended release already used both heads
+  to finalize its mask. Verified that v0.4.0 instead packaged the mask-only
+  `all_data.pth` export and omitted learned-center component selection during
+  inference. This was an implementation/delivery mistake, not a change requested
+  by the maintainer. The preceding opt-in diagnostic entry describes the earlier
+  local implementation and is superseded by this default-policy correction.
+- Packaged the existing full all-615 checkpoint, SHA256
+  `f1117d2ab135d1fc26edfb52e63eab211db5d590262cf6225f7589a51347641a`.
+  No retraining was needed. Verified every segmentation tensor is identical to
+  the published export; the full file also retains the learned geometry weights.
+  Corrected packaging to select the full file for geometry runs, verify its
+  recorded hash, and fail if it is missing rather than fall back to the export.
+- Two-head checkpoints now use learned-center whole-component selection by
+  default, before diameter and tracking consume the final mask. The radius
+  remains diagnostic and does not clip the mask. Legacy mask-only custom weights
+  still load. Explicit image-center selection overrides automatic geometry
+  selection; `--raw-segmentation` or Python `prefer_geometry_component=False`
+  disables geometry selection for independent inspection.
+- The packaged model supports `--show-all-heads` with only `--output_mask_dir`;
+  no custom checkpoint or extra selection flag is necessary. Updated README,
+  training/packaging guidance, current project context, and Unreleased notes.
+  Strengthened release smoke checks to import from the installed wheel outside
+  the source checkout and reject a default checkpoint missing the geometry head.
+- Verification: the full 187-test suite passed, including regression coverage
+  of default learned-center selection on real public frames and missing/corrupt
+  full-checkpoint packaging. Ruff, Black, and `git diff --check` passed. Built
+  wheel and sdist and matched all three checkpoint files byte for byte. The
+  corrected ordinary CLI produced exactly the earlier explicitly selected
+  two-head diagnostic overlay on a real frame. Verified the built wheel's default
+  path removes the same 68 pixels and preserves one blob, with overlays enabled
+  and no custom checkpoint/selection argument. Existing velocity-fixture
+  landmarks remain valid. Local outputs are under
+  `checkpoints_exp/default_geometry_fix_2026-11-09/`.
+- Delivery: correction remains local on dev. No commit, push, tag, or publication
+  has been performed for this correction; published v0.4.0 remains unchanged.
+
+### Add combined head diagnostics (Codex, GPT-6, effort and token budget not exposed)
+
+- Added `--show-all-heads` (also `--show_all_heads`) to the CLI and
+  `show_all_heads` to the Python API. With overlay output enabled, green marks
+  retained segmentation, magenta marks discarded threshold-passing pixels,
+  and yellow shows the learned circle and center. Rendering uses the existing
+  centered source crop and inverse resize/padding geometry.
+- Kept rendering independent of mask selection. Added opt-in
+  `prefer_geometry_component` to expose the existing learned-center selector
+  through the runtime API and CLI; it preserves the whole winning blob and
+  never clips it to the circle. Ordinary inference defaults are unchanged.
+- Full two-head checkpoints now load in the installed runtime. Moved the model
+  and selector into the package, preserving training import compatibility;
+  their computations and state-dict names are unchanged. Historical experiment
+  source-hash checks remain strict. The packaged v0.4.0 checkpoint remains the
+  mask export, so geometry options require a supplied full checkpoint and
+  report a useful error for mask-only weights. Full refits read calibration
+  from the adjacent `all_data.json` when no same-stem JSON exists.
+- Added foldable Usage instructions and option descriptions. The diagnostic
+  flag changes only visualization; component selection changes measurements.
+- Verification: Ruff and Black passed, as did the full pytest suite. New
+  coverage checks full-weight loading, calibration, invalid option combinations,
+  mask-only checkpoint errors, retained/removed colors and circle projection at
+  two source sizes, and unchanged measurements with diagnostics toggled. Ran
+  the real CLI on four labeled sample frames. Built wheel and sdist, verified
+  the geometry module and all three packaged checkpoint files byte for byte,
+  then ran the extracted wheel on a real frame with 68 discarded pixels and
+  visually inspected the overlay. Outputs are local under
+  `checkpoints_exp/all_heads_2026-11-09/`. Ran `git diff --check`.
+
+### Document independent head inspection (Codex, GPT-6, effort and token budget not exposed)
+
+- Added two foldable Usage examples. The segmentation example uses the
+  installed CLI, and the geometry example loads the full training checkpoint
+  in a source checkout to print center and radius and save a circle preview.
+  Documented the full-weight prerequisite and model-space coordinates.
+- Verification: ran the segmentation CLI on three real sample frames and
+  executed the geometry code block extracted from README with local sample
+  paths. Verified its 148-square output, inspected the circle overlay, and
+  ran `git diff --check`.
+
 ### Publish v0.4.0 and record its DOI (Codex, GPT-6, effort and token budget not exposed)
 
 - Fast-forwarded main to the verified release commit and pushed the annotated

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Optional `--show-all-heads` overlays for full geometry checkpoints: retained
+  segmentation in green, discarded segmentation in magenta, and the predicted
+  circle and center in yellow.
+- `--raw-segmentation` for inspecting the segmentation head before component
+  selection, and combined-head inspection examples in Usage.
+
+### Fixed
+
+- Package the full two-head checkpoint and use the predicted center, confidence,
+  and area support to select the final mask by default. Published v0.4.0
+  incorrectly shipped the segmentation-only export and omitted this inference
+  step. The trained weights and calibration are unchanged; the full geometry
+  weights are now retained. The predicted radius does not clip the mask.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added

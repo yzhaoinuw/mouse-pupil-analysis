@@ -40,17 +40,30 @@ Next actions:
   detached foreground. The learned gate lowered IoU to 0.575 by clipping
   true pupil pixels, especially in HQL086. Four-fold geometry CV is now
   complete at seed 0. Its recipe selected 100 epochs and threshold 0.525.
-  The accepted all-615 refit ships in v0.4.0, published on 2026-11-09,
-  at threshold 0.525. Its mask export is installed for ordinary inference.
+  The accepted all-615 refit was published in v0.4.0 on 2026-11-09 at threshold
+  0.525, but packaging incorrectly retained only the segmentation export and
+  runtime omitted the intended geometry selector. The dev correction
+  packages both heads and enables learned-center component selection by default;
+  publication of that correction remains pending.
+  README Usage includes independent segmentation and geometry inspection examples,
+  plus combined `--show-all-heads` overlays and explicit raw-segmentation inspection.
   The local comparison is available at
   `images_test_prediction/geometry_release_review_2026-11-06/index.html`.
   Full candidate overlays in the shipped v0.3.0 style are available under
   `images_test_prediction/geometry_release_2026-11-06/`.
   A learned-center selector raised four-fold mean per-session IoU to 0.698
-  versus 0.671 raw and 0.699 with the existing selector. Compare its overlays
-  under `images_test_prediction/geometry_center_2026-11-06/` before deciding
-  whether to apply component selection. The manifest identifies changed frames.
+  versus 0.671 raw and 0.699 with the existing selector. The maintainer clarified
+  that this combined pipeline was the intended release behavior. Its overlays
+  remain under `images_test_prediction/geometry_center_2026-11-06/`; the manifest
+  identifies changed frames.
   See the [work log](work_log.md#complete-geometry-cv-and-train-the-release-candidate-codex-gpt-6-effort-and-token-budget-not-exposed).
+- Resume the geometry-selector deep dive before a new release. The predicted
+  center influences blob selection; the radius is currently diagnostic only.
+  Review Purple trial 8 frame 03279: area support makes the 76-pixel left blob
+  score 0.429 and beat the closer, more confident 49-pixel right blob at 0.373.
+  It removes 68 pixels across three components and is flagged uncertain/invalid.
+  Compare confidence, area, center distance, and possible radius information
+  against labeled validation frames before changing the selection rule.
 - Run any loss, threshold, or architecture experiment against the same labeled pool and report
   results for each session.
 

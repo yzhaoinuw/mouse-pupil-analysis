@@ -210,9 +210,12 @@ python training\run_train.py `
 ```
 
 The refit trains from scratch on all labeled pairs and writes
-`all_data_geometry.pth` for two-head analysis and `all_data.pth` for
-ungated mask inference through the existing checkpoint loader. The metadata
-records the recipe and both weight hashes. Review the candidate before promotion.
+`all_data_geometry.pth` with both heads and `all_data.pth` as a mask-only export.
+The runtime automatically uses the geometry center to select one whole component
+when full weights are loaded; `--raw-segmentation` disables this step for inspection.
+Packaging a geometry run selects `all_data_geometry.pth` and verifies its recorded
+hash. The metadata records the recipe and both weight hashes. Review the candidate
+before promotion.
 
 #### Compare learned-center component selection
 

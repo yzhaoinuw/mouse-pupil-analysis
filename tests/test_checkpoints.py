@@ -3,6 +3,7 @@ import json
 import pytest
 import torch
 
+from mouse_pupil_analysis.geometry import GeometryUNet
 from mouse_pupil_analysis.pupil_predictions import (
     find_default_checkpoint,
     load_unet_checkpoint,
@@ -18,6 +19,7 @@ def test_packaged_checkpoint_loads_with_attention():
     model = load_unet_checkpoint(checkpoint, DEVICE)
 
     assert model.use_attention
+    assert isinstance(model, GeometryUNet)
     assert not model.training
     assert checkpoint.name == "615pupils_thresh=0.525_iou=0.6088.pth"
     assert resolve_prediction_threshold(checkpoint) == 0.525

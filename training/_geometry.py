@@ -3,39 +3,15 @@
 import cv2
 import numpy as np
 import torch
-from torch import nn
 from torch.nn import functional as F
 
+from mouse_pupil_analysis.geometry import GeometryUNet as GeometryUNet
 from mouse_pupil_analysis.preprocessing import MODEL_IMAGE_SIZE
-from mouse_pupil_analysis.unet import UNet
 
 GEOMETRY_LOSS_WEIGHT = 1.0
 SMOOTH_L1_BETA_PIXELS = 4.0
 GATE_MARGIN_PIXELS = 2.0
 GATE_FADE_PIXELS = 4.0
-
-
-class GeometryUNet(UNet):
-    """Add a circle head to the bottleneck of the 148-square U-Net."""
-
-    def __init__(self, *, use_attention: bool):
-        super().__init__(use_attention=use_attention)
-        # Preserve the mask-only run's RNG stream for shuffling and augmentation.
-        with torch.random.fork_rng(devices=[]):
-            self.geometry_head = nn.Sequential(
-                nn.Conv2d(128, 16, kernel_size=1),
-                nn.ReLU(),
-                nn.AvgPool2d(kernel_size=10, stride=9),
-                nn.Flatten(),
-                nn.Linear(16 * 4 * 4, 3),
-                nn.Sigmoid(),
-            )
-
-    def forward_with_geometry(self, images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Return mask logits and (x, y, radius) in model pixels."""
-        features = self._encode(images)
-        circles = self.geometry_head(features[-1]) * MODEL_IMAGE_SIZE
-        return self._decode(*features), circles
 
 
 def circle_targets(masks: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

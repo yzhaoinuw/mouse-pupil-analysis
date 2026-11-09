@@ -210,7 +210,8 @@ def test_packaging_writes_the_three_files_and_refuses_to_clobber(tmp_path):
         package_checkpoint(run_dir, checkpoints_dir=packaged_dir)
 
 
-def test_all_labeled_packaging_verifies_cv_recipe_and_records_its_scope(tmp_path):
+@pytest.mark.parametrize("geometry_run", [False, True])
+def test_all_labeled_packaging_verifies_cv_recipe_and_records_its_scope(tmp_path, geometry_run):
     summary = {
         "complete_cv": True,
         "per_fold": [
@@ -255,6 +256,10 @@ def test_all_labeled_packaging_verifies_cv_recipe_and_records_its_scope(tmp_path
         },
     }
     (run_dir / "all_data.pth").write_bytes(b"weights")
+    if geometry_run:
+        run_metadata["geometry_head"] = True
+        run_metadata["geometry_checkpoint_sha256"] = hashlib.sha256(b"full weights").hexdigest()
+        (run_dir / "all_data_geometry.pth").write_bytes(b"full weights")
     (run_dir / "all_data.json").write_text(json.dumps(run_metadata), encoding="utf-8")
     (run_dir / "train.log").write_text('{"checkpoint_dir": "C:\\\\local"}\n', encoding="utf-8")
 
@@ -271,6 +276,7 @@ def test_all_labeled_packaging_verifies_cv_recipe_and_records_its_scope(tmp_path
     assert metadata["balanced_iou"] == pytest.approx(0.62)
     assert metadata["macro_dice"] is None
     assert metadata["training"]["workflow"] == "all_labeled_training"
+    assert targets["weights"].read_bytes() == (b"full weights" if geometry_run else b"weights")
 
 
 def test_packaged_metadata_states_the_scope_of_its_numbers():
@@ -279,3 +285,22 @@ def test_packaged_metadata_states_the_scope_of_its_numbers():
     )
 
     assert packaged["validation_note"].strip(), "Packaged metadata must state its validation scope."
+
+
+@pytest.mark.parametrize("full_weights", [None, b"corrupted full weights"])
+def test_geometry_packaging_never_falls_back_to_mask_export(tmp_path, full_weights):
+    (tmp_path / "all_data.json").write_text(
+        json.dumps(
+            {
+                "geometry_head": True,
+                "geometry_checkpoint_sha256": hashlib.sha256(b"correct full weights").hexdigest(),
+            }
+        )
+    )
+    (tmp_path / "train.log").write_text("{}\n")
+    (tmp_path / "all_data.pth").write_bytes(b"mask-only export")
+    if full_weights is not None:
+        (tmp_path / "all_data_geometry.pth").write_bytes(full_weights)
+    expected_error = FileNotFoundError if full_weights is None else ValueError
+    with pytest.raises(expected_error, match="all_data_geometry.pth"):
+        PACKAGE["_load_packagable_run"](tmp_path)

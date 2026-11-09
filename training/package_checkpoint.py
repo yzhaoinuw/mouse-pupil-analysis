@@ -276,14 +276,21 @@ def _load_packagable_run(run_dir: Path) -> tuple[Path, dict, Path]:
     """Load a complete validation-selected or fixed all-labeled run."""
     all_data_metadata = run_dir / "all_data.json"
     if all_data_metadata.is_file():
-        weights = run_dir / "all_data.pth"
+        metadata = json.loads(all_data_metadata.read_text(encoding="utf-8"))
+        geometry_run = bool(metadata.get("geometry_head", False))
+        weights = run_dir / ("all_data_geometry.pth" if geometry_run else "all_data.pth")
         log_path = run_dir / "train.log"
         for required in (weights, log_path):
             if not required.is_file():
                 raise FileNotFoundError(
                     f"{run_dir} is not a complete all-labeled run; missing {required.name}."
                 )
-        return weights, json.loads(all_data_metadata.read_text(encoding="utf-8")), log_path
+        recorded_hash = metadata.get(
+            "geometry_checkpoint_sha256" if geometry_run else "checkpoint_sha256"
+        )
+        if recorded_hash is not None and _file_sha256(weights) != recorded_hash:
+            raise ValueError(f"{weights.name} does not match the recorded checkpoint hash.")
+        return weights, metadata, log_path
 
     log_path = run_dir / "train.log"
     weights = run_dir / "best.pth"

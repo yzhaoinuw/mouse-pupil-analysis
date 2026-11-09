@@ -26,10 +26,18 @@ unrelated PyPI distribution and must not be claimed here.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
 - Includes an editable `if __name__ == "__main__":` block for direct runs with hardcoded local paths and inference settings.
-- The packaged default is `615pupils_thresh=0.525_iou=0.6088.pth`, the mask
-  export of the all-615 refit trained with auxiliary center/radius supervision.
+- The packaged default is `615pupils_thresh=0.525_iou=0.6088.pth`, the full
+  two-head all-615 refit trained with center/radius supervision.
   Calibration selects threshold 0.525. The filename score summarizes the four
   CV folds used to select the recipe.
+- Accepts full two-head checkpoints as well as legacy mask exports. By default,
+  two-head inference uses the learned center to select one whole blob;
+  `show_all_heads` only changes overlays to show retained/discarded segmentation
+  and the geometry circle. `prefer_geometry_component=False` explicitly disables
+  geometry selection for raw-head inspection. The reusable
+  model and selector live in `mouse_pupil_analysis/geometry.py`; training retains
+  compatibility imports. Published v0.4.0 accidentally contained a mask-only
+  export; the correction is on dev pending a new release.
 
 ### 3. `mouse_pupil_analysis/api.py`
 
