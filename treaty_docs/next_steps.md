@@ -40,8 +40,8 @@ Next actions:
   detached foreground. The learned gate lowered IoU to 0.575 by clipping
   true pupil pixels, especially in HQL086. Four-fold geometry CV is now
   complete at seed 0. Its recipe selected 100 epochs and threshold 0.525.
-  The maintainer accepted the all-615 refit as the packaged default at threshold
-  0.525 on 2026-11-09. Its mask export is installed for ordinary inference.
+  The accepted all-615 refit ships in v0.4.0, published on 2026-11-09,
+  at threshold 0.525. Its mask export is installed for ordinary inference.
   The local comparison is available at
   `images_test_prediction/geometry_release_review_2026-11-06/index.html`.
   Full candidate overlays in the shipped v0.3.0 style are available under

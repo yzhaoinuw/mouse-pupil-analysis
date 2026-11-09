@@ -4,6 +4,21 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-09
 
+### Publish v0.4.0 and record its DOI (Codex, GPT-6, effort and token budget not exposed)
+
+- Fast-forwarded main to the verified release commit and pushed the annotated
+  v0.4.0 tag. The Release workflow completed successfully and published both
+  distributions to PyPI. Created the GitHub release with display title v0.4.0.
+  The existing release titles are v0.3.0 and v0.2.0.
+- Zenodo archived v0.4.0 as DOI `10.5281/zenodo.24089815`. Updated the
+  citation metadata and README to cite that version while retaining the
+  project concept DOI.
+- Verification: checked the remote main and tag refs and successful release
+  workflow, downloaded the PyPI wheel and verified its distribution hash,
+  exact checkpoint hash, and calibration threshold. Verified the GitHub
+  release title and Zenodo version and concept DOI, then ran the metadata
+  tests and `git diff --cached --check`.
+
 ### Prepare v0.4.0 for publication (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer selected version 0.4.0 for the accepted geometry-trained

@@ -325,8 +325,8 @@ If you use this software in a paper or other scholarly work, please cite the exa
 you ran, so your analysis stays reproducible against that code:
 
 > Zhao, Y. (2026). *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and
-> pupil-center velocity analysis using UNet* (v0.2.0). Zenodo.
-> https://doi.org/10.5281/zenodo.21897796
+> pupil-center velocity analysis using UNet* (v0.4.0). Zenodo.
+> https://doi.org/10.5281/zenodo.24089815
 
 Every release is archived on Zenodo under its own [version DOI][doi-version]. The
 [concept DOI][doi-concept] in the badge above always resolves to the newest version, so use
@@ -363,7 +363,7 @@ python training/run_train.py --help
 MIT. See [`LICENSE`][license].
 
 [doi-concept]: https://doi.org/10.5281/zenodo.21897795
-[doi-version]: https://doi.org/10.5281/zenodo.21897796
+[doi-version]: https://doi.org/10.5281/zenodo.24089815
 [treaty]: https://github.com/yzhaoinuw/agent_collab_treaty
 [demo]: https://raw.githubusercontent.com/yzhaoinuw/mouse-pupil-analysis/main/media/pupil_diameter_analysis_result_demo.gif
 [license]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/LICENSE
