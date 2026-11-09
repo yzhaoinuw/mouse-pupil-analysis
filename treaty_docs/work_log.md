@@ -4,6 +4,30 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-09
 
+### Simplify geometry-head inspection (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested a one-line geometry-head example. Kept this as an
+  overlay choice alongside `show_all_heads`: it displays the learned circle and
+  center while the usual CSV/plot retain segmentation-based measurements.
+  The two overlay choices are mutually exclusive and require geometry weights
+  and an output directory. The long README Python example is now a CLI command.
+- Existing selector-review and release follow-ups in `next_steps.md` remain
+  applicable. The maintainer requested commit and push to dev. Delivery is
+  scoped to geometry-only inspection and its documentation; unrelated local
+  experiments and earlier documentation changes remain local.
+- Verification:
+  - Full pytest suite passed with `python -m pytest -q
+    --basetemp=checkpoints_exp/geometry_head_only_2026-11-09/pytest_run` in the
+    `pupil_tracking` environment. New coverage checks geometry-only pixels,
+    unchanged measurements, coordinate projection, and invalid combinations.
+    Used an existing repo-local temp parent after sandbox temp setup failed.
+  - Ruff and Black passed with the unrelated `.pre-commit-cache/` excluded.
+    The initial unrestricted checks traversed cached third-party source.
+    `git diff --check` passed.
+  - Ran the real CLI on three public sample frames with the packaged checkpoint
+    and visually inspected a geometry-only overlay. Local outputs are under
+    `checkpoints_exp/geometry_head_only_2026-11-09/`.
+
 ### Save the two-head pipeline on dev (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer requested commit and push to dev and deferred the selector

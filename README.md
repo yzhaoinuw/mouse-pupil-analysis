@@ -79,43 +79,18 @@ The center marker is calculated from the segmentation.
 <details>
 <summary>Inspect the geometry head independently</summary>
 
-Load the packaged two-head model, print its center and radius, and draw only its
-geometry output. Set the image path to your own frame.
+Save just the predicted circle and center using the packaged two-head model:
 
-```python
-from pathlib import Path
-
-import numpy as np
-import torch
-from PIL import Image, ImageDraw
-
-from mouse_pupil_analysis.preprocessing import resize_with_pad
-from mouse_pupil_analysis.pupil_predictions import find_default_checkpoint, load_unet_checkpoint
-
-checkpoint = find_default_checkpoint()
-image_path = Path("movie_frames/frame_00001.png")
-model = load_unet_checkpoint(checkpoint, torch.device("cpu"))
-
-with Image.open(image_path) as source:
-    view = resize_with_pad(source.convert("L"))
-images = torch.from_numpy(np.array(view)).float()[None, None] / 255
-with torch.inference_mode():
-    _, circles = model.forward_with_geometry(images)
-x, y, radius = circles[0].tolist()
-print(f"Center ({x:.2f}, {y:.2f}), radius {radius:.2f} model pixels")
-
-overlay = view.convert("RGB")
-draw = ImageDraw.Draw(overlay)
-draw.ellipse((x - radius, y - radius, x + radius, y + radius), outline="yellow")
-draw.line((x - 3, y, x + 3, y), fill="yellow")
-draw.line((x, y - 3, x, y + 3), fill="yellow")
-overlay.save("geometry_preview.png")
+```bash
+run-pupil-analysis --image_dir movie_frames/ --output_mask_dir results/geometry_overlays/ --geometry-head-only
 ```
 
-Open `geometry_preview.png` to see the predicted circle and center separately
-from the mask. Coordinates refer to the resized and padded 148 x 148 model
-image, with x increasing right and y increasing down. The circle describes
-the visible-pupil region learned during training.
+Open `results/geometry_overlays/` to see the yellow circle and center on each
+frame's centered source-image crop. This view shows the geometry prediction
+without segmentation colors or a segmentation-derived center marker. The circle
+describes the visible-pupil region learned during training. This flag changes
+overlays only; the usual CSV and plot still report segmentation-based measurements.
+Python callers can pass `geometry_head_only=True` to `analyze_frames` or `analyze_video`.
 
 </details>
 
@@ -183,6 +158,7 @@ run-pupil-analysis \
   | `--prefer_geometry_component` | Keep one whole component using confidence, area support, and the geometry head's predicted center. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
   | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
   | `--show-all-heads` | Diagnostic overlay: retained segmentation in green, discarded segmentation in magenta, geometry circle and center in yellow. Requires `--output_mask_dir`; works with the packaged two-head model. Does not change measurements. Also accepts `--show_all_heads`. |
+  | `--geometry-head-only` | Draw only the yellow geometry circle and center in overlays. Requires `--output_mask_dir` and a two-head checkpoint; mutually exclusive with `--show-all-heads`. Changes overlays only. Also accepts `--geometry_head_only`; Python API: `geometry_head_only=True`. |
   | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
   | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
   | `--max_frames` | Cap on frames extracted from a video (default `10000`). Useful for long recordings. |

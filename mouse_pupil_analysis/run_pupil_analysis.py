@@ -83,13 +83,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep the confidence-weighted component nearest the image center. Off by default.",
     )
     parser.add_argument("--mask_transparency", type=float, default=0.05)
-    parser.add_argument(
+    overlays = parser.add_mutually_exclusive_group()
+    overlays.add_argument(
         "--show-all-heads",
         "--show_all_heads",
         action="store_true",
         help=(
             "Show retained mask (green), discarded mask (magenta), and geometry circle "
             "(yellow). Requires --output_mask_dir and geometry weights (packaged by default). "
+            "Changes overlays only."
+        ),
+    )
+    overlays.add_argument(
+        "--geometry-head-only",
+        "--geometry_head_only",
+        action="store_true",
+        help=(
+            "Draw only the predicted geometry circle and center (yellow). "
+            "Requires --output_mask_dir and geometry weights (packaged by default). "
             "Changes overlays only."
         ),
     )
@@ -148,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         prefer_central_component=args.prefer_central_component,
         prefer_geometry_component=args.prefer_geometry_component,
         show_all_heads=args.show_all_heads,
+        geometry_head_only=args.geometry_head_only,
         mask_transparency=args.mask_transparency,
         extraction_fps=args.extraction_fps,
         max_frames=args.max_frames,
@@ -189,6 +201,7 @@ if __name__ == "__main__":
     prefer_central_component = False  # Keep one centre-favoured component when needed.
     prefer_geometry_component = None  # Auto-enable with geometry weights; False gives raw mask.
     show_all_heads = False  # Also requires output_mask_dir.
+    geometry_head_only = False  # Draw only the learned circle and center in overlays.
     mask_transparency = 0.05
     extraction_fps = 5.0
     max_frames = 10000
@@ -209,6 +222,7 @@ if __name__ == "__main__":
             prefer_central_component=prefer_central_component,
             prefer_geometry_component=prefer_geometry_component,
             show_all_heads=show_all_heads,
+            geometry_head_only=geometry_head_only,
             mask_transparency=mask_transparency,
             extraction_fps=extraction_fps,
             max_frames=max_frames,

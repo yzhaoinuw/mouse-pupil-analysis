@@ -56,6 +56,7 @@ class AnalysisConfig:
     # Off by default: a library should not write to stderr unless asked. The
     # console scripts set this to True.
     show_progress: bool = False
+    geometry_head_only: bool = False
 
     def __post_init__(self) -> None:
         for name in (
@@ -84,6 +85,10 @@ class AnalysisConfig:
             raise ValueError("num_workers cannot be negative.")
         if self.show_all_heads and self.output_mask_dir is None:
             raise ValueError("show_all_heads requires output_mask_dir.")
+        if self.geometry_head_only and self.output_mask_dir is None:
+            raise ValueError("geometry_head_only requires output_mask_dir.")
+        if self.geometry_head_only and self.show_all_heads:
+            raise ValueError("Choose only one of geometry_head_only or show_all_heads.")
         if self.prefer_geometry_component and self.prefer_central_component:
             raise ValueError("Choose only one component-selection method.")
         if self.calculate_velocity and self.image_dir is not None and self.acquisition_fps is None:
@@ -186,6 +191,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
             pred_thresh=prediction_threshold,
             mask_transparency=config.mask_transparency,
             show_all_heads=config.show_all_heads,
+            geometry_head_only=config.geometry_head_only,
         )
 
     results = []
@@ -197,7 +203,7 @@ def run_analysis(config: AnalysisConfig) -> AnalysisResult:
         num_workers=config.num_workers,
         prefer_central_component=config.prefer_central_component,
         prefer_geometry_component=config.prefer_geometry_component,
-        require_geometry=config.show_all_heads,
+        require_geometry=config.show_all_heads or config.geometry_head_only,
         show_progress=config.show_progress,
     ):
         results.append(

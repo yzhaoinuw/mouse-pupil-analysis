@@ -455,24 +455,29 @@ class MaskOverlayAccumulator:
         pred_thresh: float,
         mask_transparency: float,
         show_all_heads: bool = False,
+        geometry_head_only: bool = False,
     ) -> None:
+        if geometry_head_only and show_all_heads:
+            raise ValueError("Choose only one of geometry_head_only or show_all_heads.")
         self.output_mask_dir = Path(output_mask_dir)
         self.pred_thresh = pred_thresh
         self.mask_transparency = mask_transparency
+        self.geometry_head_only = geometry_head_only
         self.confidence_maps: dict[str, np.ndarray] = {}
         self.geometry_circles: dict[str, tuple[float, float, float]] | None = (
-            {} if show_all_heads else None
+            {} if show_all_heads or geometry_head_only else None
         )
 
     def add(self, prediction: PupilPrediction) -> None:
         """Encode one float probability map as a compact uint8 confidence map."""
         if self.geometry_circles is not None:
             if prediction.geometry_circle is None:
-                raise ValueError("All-head overlays require geometry predictions.")
+                raise ValueError("Geometry overlays require geometry predictions.")
             self.geometry_circles[prediction.image_name] = prediction.geometry_circle
             labels = np.zeros(prediction.binary_mask.shape, dtype=np.uint8)
-            labels[prediction.probability_map > self.pred_thresh] = 2
-            labels[prediction.binary_mask] = 1
+            if not self.geometry_head_only:
+                labels[prediction.probability_map > self.pred_thresh] = 2
+                labels[prediction.binary_mask] = 1
             self.confidence_maps[prediction.image_name] = labels
             return
         self.confidence_maps[prediction.image_name] = _encode_thresholded_confidence(
@@ -617,10 +622,15 @@ def generate_pupil_predictions(
     show_progress: bool = False,
     show_all_heads: bool = False,
     prefer_geometry_component: bool | None = None,
+    geometry_head_only: bool = False,
 ) -> list[tuple[str, float]]:
     """Generate diameter results and optional overlays without tracking."""
     if show_all_heads and output_mask_dir is None:
         raise ValueError("show_all_heads requires output_mask_dir.")
+    if geometry_head_only and output_mask_dir is None:
+        raise ValueError("geometry_head_only requires output_mask_dir.")
+    if geometry_head_only and show_all_heads:
+        raise ValueError("Choose only one of geometry_head_only or show_all_heads.")
     pred_thresh = resolve_prediction_threshold(checkpoint_path, pred_thresh)
     overlay_accumulator = None
     if output_mask_dir is not None:
@@ -629,6 +639,7 @@ def generate_pupil_predictions(
             pred_thresh,
             mask_transparency,
             show_all_heads=show_all_heads,
+            geometry_head_only=geometry_head_only,
         )
 
     diameter_results = []
@@ -639,7 +650,7 @@ def generate_pupil_predictions(
         batch_size=batch_size,
         prefer_central_component=prefer_central_component,
         show_progress=show_progress,
-        require_geometry=show_all_heads,
+        require_geometry=show_all_heads or geometry_head_only,
         prefer_geometry_component=prefer_geometry_component,
     ):
         diameter_results.append((prediction.image_name, prediction.estimated_pupil_diameter))

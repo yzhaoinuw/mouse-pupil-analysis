@@ -36,7 +36,9 @@ def test_full_geometry_checkpoint_loads_and_preserves_mask_logits(tmp_path):
     assert resolve_prediction_threshold(checkpoint) == 0.525
 
 
-@pytest.mark.parametrize("flag", ["show_all_heads", "prefer_geometry_component"])
+@pytest.mark.parametrize(
+    "flag", ["show_all_heads", "geometry_head_only", "prefer_geometry_component"]
+)
 def test_geometry_options_reject_mask_only_checkpoint(tmp_path, flag):
     Image.new("L", (148, 148)).save(tmp_path / "eye_00001.png")
     checkpoint = tmp_path / "legacy.pth"
@@ -54,20 +56,34 @@ def test_geometry_options_reject_mask_only_checkpoint(tmp_path, flag):
 def test_diagnostic_options_validate_and_parse():
     with pytest.raises(ValueError, match="requires output_mask_dir"):
         AnalysisConfig(image_dir="frames", show_all_heads=True).validate()
+    with pytest.raises(ValueError, match="requires output_mask_dir"):
+        AnalysisConfig(image_dir="frames", geometry_head_only=True).validate()
+    with pytest.raises(ValueError, match="only one"):
+        AnalysisConfig(
+            image_dir="frames",
+            output_mask_dir="overlays",
+            show_all_heads=True,
+            geometry_head_only=True,
+        ).validate()
     with pytest.raises(ValueError, match="only one"):
         AnalysisConfig(
             image_dir="frames", prefer_central_component=True, prefer_geometry_component=True
         ).validate()
     for flag in ("--show-all-heads", "--show_all_heads"):
         assert build_parser().parse_args([flag]).show_all_heads
+    for flag in ("--geometry-head-only", "--geometry_head_only"):
+        assert build_parser().parse_args([flag]).geometry_head_only
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["--geometry-head-only", "--show-all-heads"])
     assert build_parser().parse_args([]).prefer_geometry_component is None
     assert build_parser().parse_args(["--raw-segmentation"]).prefer_geometry_component is False
 
 
 @pytest.mark.parametrize("size", [(148, 148), (296, 200)])
 @pytest.mark.parametrize("select_component", [None, True, False])
+@pytest.mark.parametrize("geometry_only", [False, True])
 def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
-    tmp_path, monkeypatch, size, select_component
+    tmp_path, monkeypatch, size, select_component, geometry_only
 ):
     # Known two-component prediction: a supported pupil and a detached artifact.
     # Radius deliberately excludes part of the pupil to check it is never a gate.
@@ -110,7 +126,8 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
         frames,
         result_dir=tmp_path / "diagnostic",
         output_mask_dir=tmp_path / "overlays",
-        show_all_heads=True,
+        show_all_heads=not geometry_only,
+        geometry_head_only=geometry_only,
         prefer_geometry_component=select_component,
         mask_transparency=1,
         **common,
@@ -121,8 +138,16 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
     )
     rgb = np.array(Image.open(tmp_path / "overlays" / image_path.name))
     assert rgb.shape == (148, 148, 3)
-    assert np.any(np.all(rgb == [0, 255, 0], axis=-1))
-    assert bool(np.any(np.all(rgb == [255, 0, 255], axis=-1))) == (select_component is not False)
+    if geometry_only:
+        # Neither segmentation fills nor the segmentation-derived QC marker leak
+        # into this view, even though both are still used by the analysis table.
+        yellow = np.all(rgb == [255, 255, 0], axis=-1)
+        assert np.all(rgb[~yellow] == 100)
+    else:
+        assert np.any(np.all(rgb == [0, 255, 0], axis=-1))
+        assert bool(np.any(np.all(rgb == [255, 0, 255], axis=-1))) == (
+            select_component is not False
+        )
     assert np.any(np.all(rgb == [255, 255, 0], axis=-1))
     # Centered projection of (74, 74) is near the center for both source sizes.
     assert np.all(rgb[74, 74] == [255, 255, 0])

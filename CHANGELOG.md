@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--geometry-head-only` to save the predicted circle and center without
+  segmentation colors, with a one-line Usage example and Python API support.
 - Optional `--show-all-heads` overlays for full geometry checkpoints: retained
   segmentation in green, discarded segmentation in magenta, and the predicted
   circle and center in yellow.
