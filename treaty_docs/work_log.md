@@ -4,6 +4,19 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-09
 
+### Prepare v0.4.0 for publication (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer selected version 0.4.0 for the accepted geometry-trained
+  model and requested delivery to main. Updated package and citation version,
+  citation date, and changelog. Release tags and display titles use the bare
+  version. Renamed the existing GitHub release titles to v0.3.0 and v0.2.0.
+- Verification: Ruff and Black passed. Built the 0.4.0 wheel and sdist from
+  a staged snapshot, matched their checkpoint, metadata, and log hashes, and
+  verified package namespaces. Upgraded a separate wheel installation from
+  0.3.0 to 0.4.0, analyzed three real sample images, and checked both console
+  commands. Refreshed stale local egg metadata and passed the metadata tests
+  and full staged pytest suite. Ran `git diff --cached --check`.
+
 ### Promote the geometry-trained checkpoint (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer accepted the all-615 refit for the next release and requested

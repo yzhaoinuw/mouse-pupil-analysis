@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
 ### Added
 
 - An experimental BCE plus soft Dice training loss and a matched, session-held-out
@@ -194,7 +196,8 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 Changes before 0.1.2 predate this changelog; see the Git history for details.
 
-[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.2...v0.1.4
