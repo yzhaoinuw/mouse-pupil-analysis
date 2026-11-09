@@ -26,6 +26,10 @@ unrelated PyPI distribution and must not be claimed here.
 - Streams one transient `PupilPrediction` at a time so diameter, tracking, and overlay consumers share one model pass without retaining all float probability maps.
 - Exposes reusable `generate_pupil_predictions(...)` and `generate_pupil_mask_prediction(...)` functions without depending on the analysis CLI.
 - Includes an editable `if __name__ == "__main__":` block for direct runs with hardcoded local paths and inference settings.
+- The packaged default is `615pupils_thresh=0.525_iou=0.6088.pth`, the mask
+  export of the all-615 refit trained with auxiliary center/radius supervision.
+  Calibration selects threshold 0.525. The filename score summarizes the four
+  CV folds used to select the recipe.
 
 ### 3. `mouse_pupil_analysis/api.py`
 

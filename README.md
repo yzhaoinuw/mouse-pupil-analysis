@@ -275,6 +275,10 @@ threshold) through orange to red (near-certain). Inference normally uses the cal
 stored with the checkpoint. If the mask spills past the pupil, override it with a higher
 `--pred_thresh`; if it catches only part of the pupil, try a lower value.
 
+The packaged model was trained on 615 labeled pairs with auxiliary pupil center
+and radius supervision. It predicts the visible-pupil mask at a calibrated
+threshold of 0.525.
+
 Overlay PNGs are a centered 148 x 148 source-image display crop, with the model prediction
 mapped onto that crop. This diagnostic presentation does not change the resize-and-pad
 preprocessing used for inference or the reported measurements.

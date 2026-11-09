@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The packaged default checkpoint is the 615-pair refit trained with auxiliary
+  pupil center and radius supervision. It uses the ungated mask output and a
+  calibrated prediction threshold of 0.525.
 - Diagnostic mask overlays use a centered source-image crop.
 
 ## [0.3.0] - 2026-08-26

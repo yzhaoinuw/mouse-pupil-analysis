@@ -1,13 +1,13 @@
 {
-  "run_name": "all_615_cv_e100_nat_macro_s0",
-  "prediction_threshold": 0.5,
+  "run_name": "geometry_release_candidate_2026-11-06",
+  "prediction_threshold": 0.525,
   "best_epoch": 100,
-  "balanced_iou": 0.6059222084780534,
-  "macro_iou": 0.6080006882548332,
+  "balanced_iou": 0.613997091849645,
+  "macro_iou": 0.6088253110647202,
   "macro_dice": null,
   "size_iou": null,
   "low_circularity_iou": null,
-  "validation_note": "All-labeled refit on 615 labelled pairs; the filename's 0.6080 score is the mean four-fold grouped-CV macro IoU that selected this fixed recipe, not an evaluation of the final weights.",
+  "validation_note": "All-labeled refit on 615 pairs with auxiliary pupil center and radius supervision. Ungated mask export. Threshold 0.525 is the median of the four calibrated CV thresholds. Filename IoU 0.6088 is the mean four-fold image-mean CV IoU used for recipe selection.",
   "training": {
     "mode": "scratch",
     "source_checkpoint": null,

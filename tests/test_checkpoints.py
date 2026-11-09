@@ -19,8 +19,8 @@ def test_packaged_checkpoint_loads_with_attention():
 
     assert model.use_attention
     assert not model.training
-    assert checkpoint.name == "615pupils_thresh=0.5_iou=0.6080.pth"
-    assert resolve_prediction_threshold(checkpoint) == 0.5
+    assert checkpoint.name == "615pupils_thresh=0.525_iou=0.6088.pth"
+    assert resolve_prediction_threshold(checkpoint) == 0.525
 
 
 def test_checkpoint_without_attention_loads(tmp_path):

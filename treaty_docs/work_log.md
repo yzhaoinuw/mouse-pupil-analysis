@@ -2,6 +2,26 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-11-09
+
+### Promote the geometry-trained checkpoint (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer accepted the all-615 refit for the next release and requested
+  delivery through `dev`. Packaged its ungated mask export with the CV-derived
+  threshold 0.525, metadata, and redacted training log. Archived the prior
+  packaged model locally. The filename's 0.6088 summarizes four-fold CV
+  recipe selection.
+- The velocity fixture now yields 25 valid frames and six area-change warnings.
+  Its model-space diameter range is 17.55 to 25.26 pixels. Updated the
+  fixture expectations and documented the accepted default under Unreleased.
+- Verification: Ruff, Black, and the full pytest suite passed. Rebuilt wheel
+  and sdist from a fresh staged snapshot after finding stale old weights in
+  the local build cache. Matched both distributions' three checkpoint files
+  byte for byte to the accepted export, verified namespace and archive
+  exclusions, and cleared the stale cache files. Installed the wheel in a
+  separate environment, analyzed three real sample frames, and checked both
+  console commands. Ran `git diff --cached --check`.
+
 ## 2026-11-06
 
 ### Prepare the geometry branch for review (Codex, GPT-6, effort and token budget not exposed)

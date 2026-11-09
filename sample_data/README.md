@@ -35,6 +35,10 @@ run-pupil-analysis `
 Use `recording_250616` to try the second acquisition setup. Each folder is analyzed separately,
 so the result plot represents one recording at a time.
 
+With the packaged geometry-supervised model at threshold 0.525, the velocity
+example produces 25 valid frames and six `abrupt_area_change` warnings.
+Model-space pupil diameters span approximately 17.55 to 25.26 pixels.
+
 ## Check the training tools
 
 The [training guide](../training/README.md) explains [augmentation](../training/README.md#inspect-augmentation),
