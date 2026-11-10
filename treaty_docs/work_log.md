@@ -2,7 +2,45 @@
 
 Prepend new session notes to the top of this file. The live log holds at most the 5 most recent unique calendar dates; older groups rotate into `work_log_archive/`.
 
+## 2026-11-10
+
+### Introduce the model design before its heads (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested placing the architecture overview immediately before
+  the segmentation-to-velocity method. Revised its opening to establish the two
+  prediction tasks and why geometry accompanies segmentation before introducing
+  heads and their shared encoder. This lets readers understand the motivation
+  without prior knowledge of the architecture. Existing follow-ups are unchanged.
+- Following the maintainer's wording correction, separated the visible-pupil
+  training target from the motivation for geometry supervision. Covered pupil
+  reconstruction is outside the target; reducing detached false regions is an
+  intended benefit, not a claim that these failures have been eliminated.
+- Simplified the opening further at the maintainer's request: visible-pupil mask,
+  observed detached regions on challenging frames, then geometry prediction as
+  the response to that problem.
+- The maintainer approved the wording and requested commit/push to dev before
+  changing tasks. Delivery includes the architecture overview and its log entries;
+  unrelated local documentation and experiments remain outside this commit.
+- Verification:
+  - Checked heading order, source links, and the retained Mermaid diagram.
+    Verified content outside the moved section stayed byte-identical and ran
+    `git diff --check`. Ruff and Black passed with the local pre-commit cache
+    excluded. Documentation only; no runtime tests.
+
 ## 2026-11-09
+
+### Explain the shared model architecture (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested retaining the architecture illustration and explanation
+  in the project overview. Placed it before the runtime file map so readers first
+  see how the shared encoder, parallel heads, and final-mask postprocessing fit
+  together. Made the center's selection role and the radius's diagnostic role
+  explicit to avoid the ambiguity discussed earlier. Existing selector-review
+  follow-ups in `next_steps.md` remain applicable.
+- Verification:
+  - Checked the description and diagram against the encoder/decoder, geometry
+    head, training loss, and inference code. Verified source links and Markdown
+    structure and ran `git diff --check`. Documentation only; no runtime tests.
 
 ### Simplify geometry-head inspection (Codex, GPT-6, effort and token budget not exposed)
 

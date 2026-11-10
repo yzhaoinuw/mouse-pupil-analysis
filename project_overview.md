@@ -111,6 +111,67 @@ unrelated PyPI distribution and must not be claimed here.
 - The fixture is maintained example data rather than a benchmark. Its velocity sequence preserves source frames `07212`-`07242` at 97 Hz.
 - `MANIFEST.in` includes the fixture and its training utilities in source distributions so the bundled guide and integrity test remain self-contained; wheels exclude them from the installed runtime package.
 
+## Model Architecture Overview
+
+The model predicts a mask of the visible pupil. In practice, on challenging
+frames where contrast, lighting, or whiskers make the pupil appear fragmented,
+we observed that the predicted mask can contain detached false regions.
+We therefore extended the U-Net to also predict the pupil's center and radius.
+This adds geometry supervision during training and provides a predicted center
+for selecting one blob from the segmentation output at inference.
+
+The model produces these outputs through two branches, called **heads**, that
+share one encoder. Sharing the encoder lets both tasks use the same learned
+image features without duplicating the main network. The geometry head reads
+those features directly; it does not consume the predicted segmentation.
+
+```mermaid
+flowchart TD
+    I[Input image] --> E[Shared encoder: extracts image features]
+    E --> S[Segmentation decoder]
+    E --> G[Geometry head]
+    S --> M[Probability for every pixel]
+    G --> C[Center x, center y, radius]
+    M -->|Threshold| P[Blob selection]
+    C -->|Center only| P
+    P --> F[Final mask]
+```
+
+The input is a grayscale image resized and padded to 148 x 148 pixels. The
+**shared encoder** learns features describing the eye, which feed both heads:
+
+- **Segmentation head:** the decoder upsamples the features and combines them
+  with finer features from earlier encoder layers through skip connections.
+  It produces a pixel mask prediction; inference converts its logits to
+  probabilities and thresholds them into candidate blobs.
+- **Geometry head:** a separate branch compresses the shared bottleneck features
+  into three numbers: center **x**, center **y**, and **radius**, expressed in
+  model-image pixels. It does not derive these numbers from the predicted mask.
+
+During training, both the segmentation loss and the center/radius regression
+loss send error signals back into the shared encoder. Geometry supervision can
+therefore influence the features used for segmentation as well as train its own
+head.
+
+The heads are modular because each branch has its own layers and weights. A
+mask-only export can still produce segmentation using the shared encoder and
+decoder. Predicting geometry requires retaining the geometry branch's weights
+alongside that encoder.
+
+**Final blob selection is postprocessing code after the neural network.** For
+full two-head checkpoints, default inference uses segmentation confidence, area
+support, and proximity to the predicted **center** to retain one whole connected
+component. The predicted **radius is currently diagnostic only**: it does not
+affect blob selection or clip the mask. Diameter is calculated from the final
+mask's area. Selecting one component preserves its shape and does not guarantee
+that the chosen region is the correct pupil. `--raw-segmentation` bypasses this
+geometry-based selection for independent inspection.
+
+Implementation: [`unet.py`](mouse_pupil_analysis/unet.py) defines the encoder and
+segmentation decoder; [`geometry.py`](mouse_pupil_analysis/geometry.py) adds the
+geometry head and component selector. [`pupil_predictions.py`](mouse_pupil_analysis/pupil_predictions.py)
+connects the predictions to thresholding and final-mask measurement.
+
 ## Segmentation-To-Velocity Method
 
 Velocity mode is postprocessing around the existing pupil-segmentation model; it does not alter the UNet or its checkpoint.
