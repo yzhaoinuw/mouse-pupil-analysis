@@ -87,7 +87,7 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
     tmp_path, monkeypatch, size, select_component, geometry_only
 ):
     # Known two-component prediction: a supported pupil and a detached artifact.
-    # Radius deliberately excludes part of the pupil to check it is never a gate.
+    # Radius excludes part of the pupil to check accepted blobs are never clipped.
     class KnownGeometry(GeometryUNet):
         def forward(self, images):
             logits = images.new_full((len(images), 1, 148, 148), -8)
@@ -96,7 +96,7 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
             return logits
 
         def forward_with_geometry(self, images):
-            return self(images), images.new_tensor([[74, 74, 5]]).repeat(len(images), 1)
+            return self(images), images.new_tensor([[74, 74, 6]]).repeat(len(images), 1)
 
     monkeypatch.setattr(
         "mouse_pupil_analysis.pupil_predictions.load_unet_checkpoint",
@@ -158,9 +158,7 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
 
 
 def test_packaged_default_uses_both_heads_and_matches_selector():
-    import cv2
-
-    from mouse_pupil_analysis.geometry import select_predicted_center_component
+    from mouse_pupil_analysis.geometry import select_circle_components
 
     # This public fixture has multiple components, so this catches silently
     # omitting the selector even when the geometry weights are present.
@@ -180,10 +178,39 @@ def test_packaged_default_uses_both_heads_and_matches_selector():
     changed = 0
     for before, after in zip(raw, final, strict=True):
         assert after.geometry_circle is not None
-        expected = select_predicted_center_component(
-            before.probability_map, before.binary_mask, after.geometry_circle[:2]
-        )
+        expected = select_circle_components(before.binary_mask, after.geometry_circle)
         np.testing.assert_array_equal(after.binary_mask, expected)
-        assert cv2.connectedComponents(after.binary_mask.astype(np.uint8), connectivity=8)[0] <= 2
+        assert after.measure_all_components
         changed += int(not np.array_equal(before.binary_mask, after.binary_mask))
     assert changed > 0
+
+
+def test_pipeline_measures_all_circle_retained_blobs(tmp_path, monkeypatch):
+    class FragmentedGeometry(GeometryUNet):
+        def forward_with_geometry(self, images):
+            logits = images.new_full((len(images), 1, 148, 148), -8)
+            logits[:, :, 65:70, 65:70] = 8
+            logits[:, :, 75:80, 75:80] = 8
+            logits[:, :, 20:40, 100:120] = 8
+            return logits, images.new_tensor([[74, 74, 15]]).repeat(len(images), 1)
+
+    monkeypatch.setattr(
+        "mouse_pupil_analysis.pupil_predictions.load_unet_checkpoint",
+        lambda *_: FragmentedGeometry(use_attention=False).eval(),
+    )
+    Image.new("L", (148, 148), color=100).save(tmp_path / "eye_00001.png")
+    result = analyze_frames(
+        tmp_path,
+        checkpoint=tmp_path / "full.pth",
+        pred_thresh=0.525,
+        num_workers=0,
+        result_dir=tmp_path / "results",
+        output_mask_dir=tmp_path / "overlays",
+        show_all_heads=True,
+    )
+    row = result.segmentation_dataframe.iloc[0]
+    assert row.selected_component_area == row.foreground_area == 50
+    assert row.component_count == 2
+    assert result.analysis_table.estimated_pupil_diameter.iloc[0] == pytest.approx(
+        np.sqrt(50 * 4 / np.pi)
+    )

@@ -12,11 +12,12 @@ UNet ships inside the package, so there is no model to download. It targets the 
 low-resolution frames that rodent eye cameras actually produce. With `--calculate_velocity`,
 it also tracks pupil center, speed, and per-frame segmentation quality.
 
-The default model predicts segmentation and pupil geometry in one pass. After
-thresholding the segmentation, confidence, area support, and the predicted center
-select one whole connected component as the final mask. Diameter is measured from
-that final mask's area. The predicted radius is available for inspection and does
-not clip the mask.
+The default model predicts segmentation and pupil geometry in one pass. On the
+experimental `experiment/blob-selection` branch, thresholding produces candidate
+blobs and every blob with at least 20% of its area inside the predicted circle is
+kept whole. The circle is not expanded and accepted blobs are not clipped.
+Diameter is measured from the combined retained area; no qualifying blobs means
+an empty mask. The checkpoint and automatic threshold of 0.525 are unchanged.
 
 ## Contents
 
@@ -157,8 +158,8 @@ run-pupil-analysis \
   | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
   | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
   | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
-  | `--prefer_central_component` | **Deprecated.** Retained for compatibility with the legacy fixed-image-center selector and emits a warning when used. Omit it to use the default learned-center selection with two-head checkpoints. |
-  | `--prefer_geometry_component` | Keep one whole component using confidence, area support, and the geometry head's predicted center. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
+  | `--prefer_central_component` | **Deprecated.** Retained for compatibility with the legacy fixed-image-center selector and emits a warning when used. Omit it to use the default geometry selection with two-head checkpoints. |
+  | `--prefer_geometry_component` | On this experimental branch, keep every whole blob with at least 20% of its area inside the predicted circle. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
   | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
   | `--show-all-heads` | Show all segmentation blobs in their usual confidence colors and the yellow geometry circle/center. A subtle white dashed contour marks the retained mask. Requires `--output_mask_dir`; changes overlays only. Also accepts `--show_all_heads`. |
   | `--geometry-head-only` | Draw only the yellow geometry circle and center in overlays. Requires `--output_mask_dir` and a two-head checkpoint; mutually exclusive with `--show-all-heads`. Changes overlays only. Also accepts `--geometry_head_only`; Python API: `geometry_head_only=True`. |

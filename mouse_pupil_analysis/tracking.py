@@ -79,8 +79,10 @@ def measure_probability_map(
     pred_thresh: float,
     original_size: tuple[int, int],
     binary_mask: np.ndarray | None = None,
+    *,
+    measure_all_components: bool = False,
 ) -> tuple[dict[str, object], np.ndarray, np.ndarray]:
-    """Measure the most plausible pupil component in one probability map."""
+    """Measure the largest component, or the union of geometry-retained blobs."""
     probabilities = np.asarray(probability_map, dtype=np.float32).squeeze()
     if probabilities.ndim != 2:
         raise ValueError("Probability map must be two-dimensional after squeezing.")
@@ -122,10 +124,14 @@ def measure_probability_map(
 
     component_areas = stats[1:, cv2.CC_STAT_AREA]
     selected_label = 1 + int(np.argmax(component_areas))
-    selected_mask = (labels == selected_label).astype(np.uint8)
+    selected_mask = (
+        binary_mask.copy()
+        if measure_all_components
+        else (labels == selected_label).astype(np.uint8)
+    )
     selected_area = int(selected_mask.sum())
     foreground_area = int(binary_mask.sum())
-    dominance = selected_area / foreground_area
+    dominance = int(component_areas.max()) / foreground_area
     mean_confidence = float(probabilities[selected_mask.astype(bool)].mean())
 
     selected_y, selected_x = np.nonzero(selected_mask)
@@ -234,6 +240,7 @@ class SegmentationAccumulator:
             pred_thresh=self.pred_thresh,
             original_size=prediction.original_size,
             binary_mask=prediction.binary_mask,
+            measure_all_components=getattr(prediction, "measure_all_components", False),
         )
         measurement.update(
             {

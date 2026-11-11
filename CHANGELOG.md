@@ -17,21 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--raw-segmentation` for inspecting the segmentation head before component
   selection, and combined-head inspection examples in Usage.
 
+### Changed
+
+- On `experiment/blob-selection`, geometry selection keeps every whole blob with
+  at least 20% of its area inside the predicted circle, including single-blob
+  rejection and empty results. Measurements and centers use all retained pixels.
+  Checkpoint weights, training loss, and the calibrated threshold are unchanged.
+
 ### Deprecated
 
 - `--prefer_central_component`: the CLI warns when this legacy image-center
   override is used. It still works for compatibility; omit it to use the
-  checkpoint's default selection, based on the learned center for two-head models.
+  checkpoint's default geometry selection for two-head models.
 
 ### Fixed
 
 - Restore full-image resize-and-pad overlay displays so larger input frames are
   not cut off by a centered source crop. Prediction and measurement are unchanged.
-- Package the full two-head checkpoint and use the predicted center, confidence,
-  and area support to select the final mask by default. Published v0.4.0
+- Package the full two-head checkpoint for geometry-based mask selection. Published v0.4.0
   incorrectly shipped the segmentation-only export and omitted this inference
   step. The trained weights and calibration are unchanged; the full geometry
-  weights are now retained. The predicted radius does not clip the mask.
+  weights are now retained. The predicted circle selects whole blobs without
+  clipping accepted components.
 
 ## [0.4.0] - 2026-11-09
 

@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from mouse_pupil_analysis.extract_frames import ExtractedFrame
-from mouse_pupil_analysis.geometry import GeometryUNet, select_predicted_center_component
+from mouse_pupil_analysis.geometry import GeometryUNet, select_circle_components
 from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
@@ -106,6 +106,7 @@ class PupilPrediction:
     estimated_pupil_diameter: float
     original_size: tuple[int, int]
     geometry_circle: tuple[float, float, float] | None = None
+    measure_all_components: bool = False
 
     @property
     def image_name(self) -> str:
@@ -585,9 +586,7 @@ def iter_pupil_predictions(
                         else None
                     )
                     if use_geometry_selection:
-                        binary_mask = select_predicted_center_component(
-                            probabilities[index].squeeze(), binary_mask, circle[:2]
-                        )
+                        binary_mask = select_circle_components(binary_mask, circle)
                     if prefer_central_component:
                         binary_mask = select_central_component(
                             probabilities[index].squeeze(),
@@ -602,6 +601,7 @@ def iter_pupil_predictions(
                         estimated_pupil_diameter=float(diameter),
                         original_size=size_by_name[name],
                         geometry_circle=circle,
+                        measure_all_components=bool(use_geometry_selection),
                     )
                     progress.update(1)
     finally:

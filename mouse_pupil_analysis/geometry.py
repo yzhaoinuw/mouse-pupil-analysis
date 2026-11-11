@@ -34,6 +34,39 @@ class GeometryUNet(UNet):
 
 CENTER_SCALE_PIXELS = 12.0
 AREA_SCALE_PIXELS = 64.0
+CIRCLE_MIN_OVERLAP = 0.20
+
+
+def select_circle_components(
+    binary_mask: np.ndarray,
+    circle: tuple[float, float, float],
+    min_overlap: float = CIRCLE_MIN_OVERLAP,
+) -> np.ndarray:
+    """Keep every whole 8-connected blob with sufficient area inside the circle.
+
+    The overlap denominator is the blob's area. There is no circle expansion,
+    confidence ranking, or fallback to an outside blob, even for a single blob.
+    Invalid or nonpositive-radius circles retain no foreground.
+    """
+    mask = np.asarray(binary_mask, dtype=bool)
+    if mask.ndim != 2:
+        raise ValueError("Binary mask must be a two-dimensional array.")
+    if not 0 < min_overlap <= 1:
+        raise ValueError("Minimum circle overlap must be in (0, 1].")
+    if len(circle) != 3:
+        raise ValueError("Circle must contain x, y, and radius.")
+    x, y, radius = circle
+    if not np.isfinite(circle).all() or radius <= 0:
+        return np.zeros_like(mask)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(
+        mask.astype(np.uint8), connectivity=8
+    )
+    rows, columns = np.indices(mask.shape)
+    inside = (columns - x) ** 2 + (rows - y) ** 2 <= radius**2
+    overlap = np.bincount(labels[inside], minlength=count)
+    keep = np.zeros(count, dtype=bool)
+    keep[1:] = overlap[1:] >= min_overlap * stats[1:, cv2.CC_STAT_AREA]
+    return keep[labels]
 
 
 def select_predicted_center_component(

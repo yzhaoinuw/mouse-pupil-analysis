@@ -31,7 +31,8 @@ unrelated PyPI distribution and must not be claimed here.
   Calibration selects threshold 0.525. The filename score summarizes the four
   CV folds used to select the recipe.
 - Accepts full two-head checkpoints as well as legacy mask exports. By default,
-  two-head inference uses the learned center to select one whole blob;
+  two-head inference on `experiment/blob-selection` keeps all whole blobs with
+  at least 20% of their area inside the predicted circle;
   `show_all_heads` only changes overlays to show all segmentation confidence
   colors, the geometry circle, and a dashed contour of the retained mask.
   `prefer_geometry_component=False` explicitly disables
@@ -56,7 +57,7 @@ unrelated PyPI distribution and must not be claimed here.
 - Implements the `run-pupil-analysis` CLI: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback. Running the source file with no arguments instead uses its editable direct-run configuration block.
 - Accepts either `--video_path` or `--image_dir`.
 - The deprecated `--prefer_central_component` flag warns and retains its legacy
-  fixed-image-center behavior; ordinary two-head inference uses the learned center.
+  fixed-image-center behavior; this branch's two-head inference uses circle overlap.
 - Enables console logging so terminal output matches the historical `print`-based behavior.
 
 ### 5. `mouse_pupil_analysis/results.py` and `mouse_pupil_analysis/plotting.py`
@@ -120,8 +121,10 @@ The model predicts a mask of the visible pupil. In practice, on challenging
 frames where contrast, lighting, or whiskers make the pupil appear fragmented,
 we observed that the predicted mask can contain detached false regions.
 We therefore extended the U-Net to also predict the pupil's center and radius.
-This adds geometry supervision during training and provides a predicted center
-for selecting one blob from the segmentation output at inference.
+This adds geometry supervision during training and provides a predicted circle
+for selecting whole blobs from the segmentation output at inference. The
+`experiment/blob-selection` branch tests a 20% area-overlap rule with unchanged
+weights and training loss.
 
 The model produces these outputs through two branches, called **heads**, that
 share one encoder. Sharing the encoder lets both tasks use the same learned
@@ -136,7 +139,7 @@ flowchart TD
     S --> M[Probability for every pixel]
     G --> C[Center x, center y, radius]
     M -->|Threshold| P[Blob selection]
-    C -->|Center only| P
+    C -->|Circle overlap| P
     P --> F[Final mask]
 ```
 
@@ -162,13 +165,18 @@ decoder. Predicting geometry requires retaining the geometry branch's weights
 alongside that encoder.
 
 **Final blob selection is postprocessing code after the neural network.** For
-full two-head checkpoints, default inference uses segmentation confidence, area
-support, and proximity to the predicted **center** to retain one whole connected
-component. The predicted **radius is currently diagnostic only**: it does not
-affect blob selection or clip the mask. Diameter is calculated from the final
-mask's area. Selecting one component preserves its shape and does not guarantee
-that the chosen region is the correct pupil. `--raw-segmentation` bypasses this
-geometry-based selection for independent inspection.
+full two-head checkpoints on this experimental branch, inference keeps every
+8-connected blob with at least 20% of its pixels inside the predicted circle.
+It uses both center and radius without circle expansion, extra confidence
+ranking, or clipping accepted blobs. A single blob is also checked; if none
+qualify the result is empty. Diameter uses the total retained area. QC and
+tracking measure the union and its probability-weighted center, while largest-blob
+dominance still flags fragmentation. Legacy/raw modes retain largest-component
+QC. This rule does not guarantee correct pupil identification.
+`--raw-segmentation` bypasses geometry selection for independent inspection.
+The old confidence/area/center selector remains available for comparisons.
+Geometry training still ignores empty masks; zero-radius supervision is a
+separate proposed experiment, not part of this branch's initial comparison.
 
 Implementation: [`unet.py`](mouse_pupil_analysis/unet.py) defines the encoder and
 segmentation decoder; [`geometry.py`](mouse_pupil_analysis/geometry.py) adds the
@@ -182,8 +190,8 @@ Velocity mode is postprocessing around the existing pupil-segmentation model; it
 1. **Preserve the timebase.** The pipeline analyzes consecutive source frames and assigns each frame a timestamp from its source-frame index and the actual acquisition rate.
 2. **Prepare the model image.** Each grayscale frame is resized with its aspect ratio preserved, padded to the model's 148 x 148 input size, and passed through the attention UNet.
 3. **Create the pupil segmentation.** A sigmoid converts model output to per-pixel probabilities. Unless `--pred_thresh` overrides it, inference uses calibration metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint.
-4. **Select and center the pupil candidate.** The largest 8-connected foreground component is selected. Its center is the probability-weighted centroid of its pixels, so higher-confidence pixels contribute more strongly. The resize and padding are then inverted to report the center in original-frame pixels.
-5. **Apply per-frame quality control.** Empty masks are rejected. The selected component is rejected if its mean probability is below `0.90`, its circularity is below `0.45`, or it touches the model-image border. If it contains less than 80% of all foreground pixels, `low_component_dominance` is recorded as a warning but does not by itself reject the frame.
+4. **Select and center the pupil candidate.** This branch's geometry selector keeps all blobs passing the 20% circle-overlap test and measures their union; raw and legacy modes measure the largest component. The center is the probability-weighted centroid of measured pixels, so higher-confidence pixels contribute more strongly. The resize and padding are then inverted to report the center in original-frame pixels.
+5. **Apply per-frame quality control.** Empty masks are rejected. The measured mask is rejected if its mean probability is below `0.90`, its circularity is below `0.45`, or it touches the model-image border. If the largest component contains less than 80% of all foreground pixels, `low_component_dominance` is recorded as a warning but does not by itself reject the frame. These flags do not remove pixels from the final diameter mask or its dashed contour.
 6. **Apply temporal area control.** Initially valid components are compared with the median component area within approximately +/-0.5 seconds. With at least four valid neighbors, an area below `0.65` or above `2.0` times that median is recorded as an `abrupt_area_change` warning while the center remains usable.
 7. **Calculate motion without bridging gaps.** Published center coordinates are retained for usable `valid` and `warning` frames. For consecutive usable frame pairs, the pipeline calculates horizontal and vertical displacement, divides each by the actual elapsed time to obtain x/y velocity, and reports scalar speed as `sqrt(velocity_x^2 + velocity_y^2)`. It does not interpolate across rejected or missing frames.
 8. **Preserve diagnostic evidence.** Every run retains an internal segmentation table and exposes visibility, a valid/warning/invalid status, and a concise reason in the compact CSV. Velocity mode adds the internal temporal table plus usable centers and speed. The unified plot supports frame-indexed review. Optional overlays map threshold-passing pixel probabilities from yellow just above the prediction threshold, through orange, to red near probability 1.0; thin center markers locate accepted and rejected candidates.

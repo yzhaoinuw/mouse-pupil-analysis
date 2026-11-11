@@ -5,6 +5,8 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
 
 ## Currently Hot
 
+- [Circle-overlap blob selection](#circle-overlap-blob-selection) — review the
+  accepted 20% whole-blob rule before considering integration into dev.
 - [Treaty v0.9.1 feedback](#treaty-v091-feedback) — feedback posted; revisit the
   upstream fix when planning the next treaty update.
 - [Cross-recording generalization](#cross-recording-generalization) — diagnose the
@@ -13,6 +15,30 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
   bound, then validate the quality thresholds on more recordings.
 - [Frame recommendation](#frame-recommendation) — make its completed-CV-committee prerequisite
   clear wherever a fresh-clone user encounters it.
+
+## Circle-Overlap Blob Selection
+
+Status: the maintainer accepted circle-overlap selection and requested commit
+and push on `experiment/blob-selection`, raising the minimum overlap from 5%
+to 20%. Keep every whole 8-connected blob with at least 20% of its area inside
+the predicted circle, with
+no circle expansion or confidence ranking. The existing checkpoint and 0.525
+threshold isolate postprocessing from the proposed training change. Measurements
+use all retained pixels; QC still reports confidence and fragmentation.
+
+- Review `images_test_prediction/blob_selection_2026-11-11/` against
+  `images_test_prediction/all_heads_2026-11-10/`, particularly the HQL090 frame
+  `HQL090_sleep251012_010_eye_24367.png`, empty results, and fragmented pupils.
+  That completed 12,950-image batch records the original 5% setting. The 20%
+  runner defaults to `images_test_prediction/blob_selection_20pct_2026-11-11/`
+  for a separate rerun; the existing 5% overlays are preserved.
+- Compare with raw masks and the previous center/confidence/area selector on
+  labeled fold predictions before claiming an accuracy improvement. Check
+  per-session scores and empty-label false foreground; tune overlap or circle
+  expansion only if the comparison supports it.
+- Test radius-to-zero supervision on empty masks separately. Current geometry
+  training ignores those frames, so its circle is not a trained presence signal.
+- Integration into dev remains a separate maintainer decision.
 
 ## Treaty v0.9.1 Feedback
 

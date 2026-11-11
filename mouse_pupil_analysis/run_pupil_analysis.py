@@ -117,8 +117,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=None,
         help=(
-            "Keep one whole mask component using confidence, area, and the predicted "
-            "center. Enabled automatically for geometry checkpoints."
+            "Keep every whole mask component with at least 20%% of its area inside "
+            "the predicted circle. Enabled automatically for geometry checkpoints."
         ),
     )
     selection.add_argument(
@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.prefer_central_component:
         logger.warning(
             "--prefer_central_component is deprecated. Omit it to use the checkpoint's "
-            "default selection (the learned center for two-head models). "
+            "default selection (circle overlap for two-head models). "
             "This run will still use the legacy image-center selector."
         )
 

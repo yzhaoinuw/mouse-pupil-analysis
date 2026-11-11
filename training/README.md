@@ -211,8 +211,15 @@ python training\run_train.py `
 
 The refit trains from scratch on all labeled pairs and writes
 `all_data_geometry.pth` with both heads and `all_data.pth` as a mask-only export.
-The runtime automatically uses the geometry center to select one whole component
-when full weights are loaded; `--raw-segmentation` disables this step for inspection.
+On `experiment/blob-selection`, the runtime keeps every whole component with at
+least 20% of its area inside the predicted circle when full weights are loaded;
+`--raw-segmentation` disables this step for inspection. This postprocessing
+experiment changes neither training loss nor weights.
+`python scripts/run_blob_selection.py` runs the 20% rule through the analysis CLI
+on every PNG under `images_test/`, with all-head overlays, hashes, a manifest,
+and per-directory analysis outputs. Its default output is
+`images_test_prediction/blob_selection_20pct_2026-11-11/`; the earlier
+`blob_selection_2026-11-11/` batch used 5% and is preserved for comparison.
 Packaging a geometry run selects `all_data_geometry.pth` and verifies its recorded
 hash. The metadata records the recipe and both weight hashes. Review the candidate
 before promotion.
