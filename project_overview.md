@@ -32,8 +32,9 @@ unrelated PyPI distribution and must not be claimed here.
   CV folds used to select the recipe.
 - Accepts full two-head checkpoints as well as legacy mask exports. By default,
   two-head inference uses the learned center to select one whole blob;
-  `show_all_heads` only changes overlays to show retained/discarded segmentation
-  and the geometry circle. `prefer_geometry_component=False` explicitly disables
+  `show_all_heads` only changes overlays to show all segmentation confidence
+  colors, the geometry circle, and a dashed contour of the retained mask.
+  `prefer_geometry_component=False` explicitly disables
   geometry selection for raw-head inspection. `geometry_head_only=True` (CLI
   `--geometry-head-only`) draws just the learned circle and center in overlays;
   the analysis measurements still use the final segmentation. The reusable

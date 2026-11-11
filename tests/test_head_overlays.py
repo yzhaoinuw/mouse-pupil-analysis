@@ -9,6 +9,7 @@ from PIL import Image
 from mouse_pupil_analysis import analyze_frames
 from mouse_pupil_analysis.api import AnalysisConfig
 from mouse_pupil_analysis.geometry import GeometryUNet
+from mouse_pupil_analysis.preprocessing import resize_with_pad
 from mouse_pupil_analysis.pupil_predictions import (
     find_default_checkpoint,
     frames_from_image_directory,
@@ -142,14 +143,17 @@ def test_diagnostics_show_kept_removed_and_circle_without_changing_results(
         # Neither segmentation fills nor the segmentation-derived QC marker leak
         # into this view, even though both are still used by the analysis table.
         yellow = np.all(rgb == [255, 255, 0], axis=-1)
-        assert np.all(rgb[~yellow] == 100)
-    else:
-        assert np.any(np.all(rgb == [0, 255, 0], axis=-1))
-        assert bool(np.any(np.all(rgb == [255, 0, 255], axis=-1))) == (
-            select_component is not False
+        background = np.array(resize_with_pad(Image.new("L", size, color=100)))
+        np.testing.assert_array_equal(
+            rgb[~yellow], np.repeat(background[:, :, None], 3, axis=2)[~yellow]
         )
+    else:
+        # Both retained and discarded interiors retain the normal confidence
+        # heatmap. Selection changes the outline, never the confidence colors.
+        np.testing.assert_array_equal(rgb[75, 75], [255, 0, 0])
+        np.testing.assert_array_equal(rgb[52, 52], [255, 0, 0])
     assert np.any(np.all(rgb == [255, 255, 0], axis=-1))
-    # Centered projection of (74, 74) is near the center for both source sizes.
+    # All heads and contours use the same model-image coordinates at every source size.
     assert np.all(rgb[74, 74] == [255, 255, 0])
 
 

@@ -4,6 +4,115 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-10
 
+### Deliver overlay corrections on dev (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer approved the restored full-image display and requested commit
+  and push. Delivery includes confidence-preserving all-head overlays, dashed
+  retained contours, full-image resize/padding in all overlay modes, and the
+  Usage and regression updates. The successful README CLI rerun provides review
+  artifacts; generated predictions remain local. Unrelated experiment files and
+  earlier local documentation edits are excluded from the commit.
+- Verification:
+  - Rechecked all 196 tests successfully on `.pytest_tmp_overlay_commit`, plus
+    repository-wide Ruff and Black with the local pre-commit cache excluded.
+    Reviewed the scoped staged diff and whitespace before committing. The
+    12,950-image CLI coverage and unchanged-diameter verification are recorded
+    below. This delivery targets dev without a main merge, tag, or release.
+
+### Restore full-image overlays through the README CLI (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested deleting the cropped predictions and starting over,
+  preferably through the documented Usage command. Restored the renderer's
+  full-image aspect-preserving resize/pad, with probabilities, geometry, contour,
+  and segmentation center drawn directly in the same 148-square model coordinates.
+  Input preprocessing, learned weights, selection, and measurements are unchanged.
+- Verified the absolute deletion target stayed inside this repository and was
+  exactly `images_test_prediction/all_heads_2026-11-10/`, with no linked children.
+  Deleted its 12,950 cropped PNGs. Preserved only its run/manifest metadata under
+  `checkpoints_exp/cli_all_heads_2026-11-10/` for measurement comparisons; source
+  images and other prediction directories were left untouched.
+- Regeneration uses the actual `run-pupil-analysis.exe` console entry point and
+  README's `--image_dir`, `--output_mask_dir`, `--show-all-heads`, and
+  `--mask_transparency 0.35` arguments, once per PNG-containing directory.
+  Documented `--result_dir` keeps analysis outputs outside the test inputs;
+  `--num_workers 0` avoids repeated Windows worker startup. No custom inference
+  or renderer is used by the batch driver. Commands and CLI logs are retained.
+- Verification:
+  - All 23 focused head/overlay tests passed. Full pytest ran 196 cases: 195
+    passed and one unrelated annotation-import test hit Windows `WinError 5`
+    while renaming its temporary directory; that test passed on a fresh short
+    temporary path. Ruff and Black passed with the pre-commit cache excluded.
+  - Regression coverage checks the full rectangular source survives resizing
+    and padding and both heads retain model-space alignment. Ran the console on
+    the reported HQL088 frame separately and inspected the corrected full eye.
+  - Completed all 15 console invocations in 395.89 seconds: 12,950 readable RGB
+    overlays, including seven pre-existing derived PNGs. Exact source/output/
+    manifest inventories match, source hashes are unchanged, and every CLI
+    diameter matches the prior retained-mask area. Inspected the actual batch's
+    corrected HQL088 overlay. `run.json` records every command and log path;
+    the manifest links each image to its analysis CSV. Ran `git diff --check`.
+
+### Diagnose cropped overlay displays (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer flagged the apparent zoom/crop in the all-head batch using
+  `HQL088_whiskerb251006_008_eye_58779.png`. Confirmed that source is 249 x 203,
+  while both historical U-Net and new overlays are 148 x 148. The historical
+  renderer resizes and pads the entire source; the current renderer instead takes
+  source pixels from x=50..197, y=27..174 and reprojects the mask onto that crop.
+- Traced the rendering change to commit `ee08fe7` on 2026-11-06. It is independent
+  of the geometry head and dashed-contour feature. The latest batch inherited it.
+  Inference preprocessing still resizes and pads the full image, so this display
+  crop does not alter model inputs or measurements. Restoring the earlier full
+  image view and regenerating overlays is recorded as a follow-up.
+- Verification:
+  - Inspected source, historical U-Net overlay, and new overlay. Compared the
+    current renderer against v0.3.0 and the introducing commit, and checked the
+    current inference dataset preprocessing. Investigation only; runtime code
+    and generated predictions were left unchanged. Ran `git diff --check`.
+
+### Render all test images with head contours (Codex, GPT-6, effort and token budget not exposed)
+
+- Ran the updated all-head view on all 12,950 PNGs recursively under
+  `images_test/`, preserving relative paths under
+  `images_test_prediction/all_heads_2026-11-10/`. This includes 12,943 original
+  frames and seven existing preview/plot PNGs, flagged in the manifest. Earlier
+  predictions were preserved. Used the packaged full checkpoint, threshold
+  0.525, and the approved 0.35 confidence blend with unchanged geometry styling
+  and dashed retained contours.
+- The run completed in 322.15 seconds. Selection removed 26,820 model pixels
+  across 1,346 images, matching the prior selector run. `manifest.csv` records
+  source/output hashes, geometry, and retained/removed areas; `run.json` records
+  settings, checkpoint and source hashes, software versions, and folder coverage.
+- Verification:
+  - Verified every rendered PNG is readable RGB at 148 x 148. Independently
+    matched the complete input, output, and manifest inventories with no missing
+    or extra images, checked manifest totals, decoded a representative image
+    from every folder, and inspected the actual batch output for frame 03279.
+    Ran `git diff --check`. Inference only; no runtime changes or new training.
+
+### Preserve head colors in combined overlays (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested combining each head's existing appearance rather than
+  recoloring retained/discarded regions. All-head overlays now retain the full
+  yellow-orange-red segmentation confidence map and the existing yellow geometry
+  circle/center. A one-pixel, half-opacity white dashed contour identifies the
+  retained region; discarded blobs remain visible with their original confidence.
+- Contours are projected from the final model-space mask onto the source crop,
+  with dash spacing measured in display pixels. Only rendering changes; selection
+  and measurements are unchanged. Geometry-only and ordinary segmentation views
+  keep their existing styling. The selector deep-dive follow-up remains unchanged.
+- Verification:
+  - The 23 targeted overlay/head tests passed after creating the missing parent
+    directory for the repo-local pytest temporary path. Coverage checks confidence
+    color preservation, dashed gaps only on the retained contour, empty masks,
+    coordinate projection, and unchanged analysis tables. Ruff and Black passed
+    with `.pre-commit-cache/` excluded; `git diff --check` passed.
+  - Ran the actual CLI on Purple trial 8 frame 03279 and visually inspected the
+    raw-segmentation, geometry-only, and combined comparison. Its analysis CSV
+    is byte-identical to the prior rendering. Local outputs are under
+    `checkpoints_exp/all_heads_contour_2026-11-10/`.
+  - The full 196-test suite passed with the existing deprecation warnings.
+
 ### Introduce the model design before its heads (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer requested placing the architecture overview immediately before

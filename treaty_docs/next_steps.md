@@ -59,6 +59,13 @@ Next actions:
   See the [work log](work_log.md#complete-geometry-cv-and-train-the-release-candidate-codex-gpt-6-effort-and-token-budget-not-exposed).
 - Resume the geometry-selector deep dive before a new release. The predicted
   center influences blob selection; the radius is currently diagnostic only.
+  Full-image resize-and-pad overlay rendering is restored, including HQL088
+  frame 58779. All test PNGs were regenerated through the README console command
+  with unchanged measurements. The updated overlays are available under
+  `images_test_prediction/all_heads_2026-11-10/`, retaining confidence colors and
+  marking the final region with a dashed contour. Its manifest records coverage
+  and analysis CSV paths; `run.json` records the commands and CLI logs. Prior
+  removal statistics remain in `checkpoints_exp/cli_all_heads_2026-11-10/previous_cropped_manifest.csv`.
   Review Purple trial 8 frame 03279: area support makes the 76-pixel left blob
   score 0.429 and beat the closer, more confident 49-pixel right blob at 0.373.
   It removes 68 pixels across three components and is flagged uncertain/invalid.

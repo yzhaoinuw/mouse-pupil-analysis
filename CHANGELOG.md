@@ -11,14 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `--geometry-head-only` to save the predicted circle and center without
   segmentation colors, with a one-line Usage example and Python API support.
-- Optional `--show-all-heads` overlays for full geometry checkpoints: retained
-  segmentation in green, discarded segmentation in magenta, and the predicted
-  circle and center in yellow.
+- Optional `--show-all-heads` overlays for full geometry checkpoints: all blobs
+  retain their segmentation confidence colors alongside the yellow geometry
+  circle and center. A subtle dashed contour identifies the retained mask.
 - `--raw-segmentation` for inspecting the segmentation head before component
   selection, and combined-head inspection examples in Usage.
 
 ### Fixed
 
+- Restore full-image resize-and-pad overlay displays so larger input frames are
+  not cut off by a centered source crop. Prediction and measurement are unchanged.
 - Package the full two-head checkpoint and use the predicted center, confidence,
   and area support to select the final mask by default. Published v0.4.0
   incorrectly shipped the segmentation-only export and omitted this inference

@@ -30,7 +30,7 @@ from mouse_pupil_analysis.preprocessing import (
     MODEL_IMAGE_SIZE,
     InferenceDataset,
     model_to_input_length,
-    resize_scale,
+    resize_with_pad,
 )
 from mouse_pupil_analysis.unet import UNet
 
@@ -317,6 +317,33 @@ def _confidence_heatmap_colors(encoded_confidence: np.ndarray) -> np.ndarray:
     ).astype(np.uint8)
 
 
+def _draw_dashed_contours(image: Image.Image, contours: list[np.ndarray]) -> Image.Image:
+    """Mark selected outlines with a thin, translucent white dash every six pixels."""
+    layer = image.copy()
+    draw = ImageDraw.Draw(layer)
+    for points in contours:
+        if len(points) == 0:
+            continue
+        if len(points) == 1:
+            draw.point(tuple(points[0]), fill="white")
+            continue
+        points = np.vstack((points, points[0]))
+        distance = np.concatenate(
+            ([0.0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1)))
+        )
+        for start in np.arange(0.0, distance[-1], 6.0):
+            end = min(start + 3.0, distance[-1])
+            endpoints = np.column_stack(
+                [np.interp([start, end], distance, points[:, axis]) for axis in range(2)]
+            )
+            # Include intervening corners so a dash follows the contour rather
+            # than cutting across the blob at changes in direction.
+            vertices = points[(distance > start) & (distance < end)]
+            dash = np.vstack((endpoints[0], vertices, endpoints[1]))
+            draw.line([tuple(point) for point in dash], fill="white", width=1)
+    return Image.blend(image, layer, 0.5)
+
+
 def _save_mask_overlays(
     image_frames: list[ExtractedFrame],
     confidence_maps: dict[str, np.ndarray],
@@ -324,6 +351,7 @@ def _save_mask_overlays(
     mask_transparency: float,
     tracking_dataframe: pd.DataFrame | None = None,
     geometry_circles: dict[str, tuple[float, float, float]] | None = None,
+    selected_contours: dict[str, list[np.ndarray]] | None = None,
 ) -> None:
     output_mask_dir.mkdir(parents=True, exist_ok=True)
     tracking_rows = {}
@@ -335,72 +363,37 @@ def _save_mask_overlays(
         if image_name not in confidence_maps:
             continue
 
-        original = Image.open(frame.image_path).convert("L")
-        original_width, original_height = original.size
-        crop_left = (original_width - MODEL_IMAGE_SIZE) // 2
-        crop_top = (original_height - MODEL_IMAGE_SIZE) // 2
-        display_image = original.crop(
-            (
-                crop_left,
-                crop_top,
-                crop_left + MODEL_IMAGE_SIZE,
-                crop_top + MODEL_IMAGE_SIZE,
-            )
-        )
+        with Image.open(frame.image_path) as original:
+            display_image = resize_with_pad(original.convert("L"), target_size=MODEL_IMAGE_SIZE)
         grayscale = np.asarray(display_image, dtype=np.uint8)
         rgb = np.stack([grayscale] * 3, axis=-1)
-        confidence_map = confidence_maps[image_name]
-        if confidence_map.shape != (MODEL_IMAGE_SIZE, MODEL_IMAGE_SIZE):
+        display_confidence = confidence_maps[image_name]
+        if display_confidence.shape != grayscale.shape:
             raise ValueError("Confidence map must match the model-image shape.")
-        scale_x, scale_y, pad_left, pad_top = resize_scale(
-            original_width,
-            original_height,
-            MODEL_IMAGE_SIZE,
-        )
-        x_coordinates = np.rint(
-            pad_left + (crop_left + np.arange(MODEL_IMAGE_SIZE) + 0.5) * scale_x - 0.5
-        ).astype(int)
-        y_coordinates = np.rint(
-            pad_top + (crop_top + np.arange(MODEL_IMAGE_SIZE) + 0.5) * scale_y - 0.5
-        ).astype(int)
-        valid_x = (x_coordinates >= 0) & (x_coordinates < MODEL_IMAGE_SIZE)
-        valid_y = (y_coordinates >= 0) & (y_coordinates < MODEL_IMAGE_SIZE)
-        display_confidence = np.zeros((MODEL_IMAGE_SIZE, MODEL_IMAGE_SIZE), dtype=np.uint8)
-        display_confidence[np.ix_(valid_y, valid_x)] = confidence_map[
-            np.ix_(y_coordinates[valid_y], x_coordinates[valid_x])
-        ]
         mask = display_confidence > 0
 
         tracking_row = tracking_rows.get(image_name)
         is_valid = tracking_row is None or bool(tracking_row["segmentation_valid"])
         blended = rgb.copy()
         if mask.any():
-            if geometry_circles is not None:
-                heatmap_colors = np.where(
-                    (display_confidence[mask] == 1)[:, None],
-                    np.array([0, 255, 0]),
-                    np.array([255, 0, 255]),
-                )
-            else:
-                heatmap_colors = _confidence_heatmap_colors(display_confidence[mask])
+            heatmap_colors = _confidence_heatmap_colors(display_confidence[mask])
             blended[mask] = (
                 (1 - mask_transparency) * rgb[mask] + mask_transparency * heatmap_colors
             ).astype(np.uint8)
         overlay_image = Image.fromarray(blended)
 
+        if selected_contours is not None:
+            overlay_image = _draw_dashed_contours(overlay_image, selected_contours[image_name])
+
         if geometry_circles is not None:
-            x, y, radius = geometry_circles[image_name]
-            # Invert the same pixel-center resize used to project the mask.
-            center_x = (x - pad_left + 0.5) / scale_x - 0.5 - crop_left
-            center_y = (y - pad_top + 0.5) / scale_y - 0.5 - crop_top
-            radius_x, radius_y = radius / scale_x, radius / scale_y
+            center_x, center_y, radius = geometry_circles[image_name]
             draw = ImageDraw.Draw(overlay_image)
             draw.ellipse(
                 (
-                    center_x - radius_x,
-                    center_y - radius_y,
-                    center_x + radius_x,
-                    center_y + radius_y,
+                    center_x - radius,
+                    center_y - radius,
+                    center_x + radius,
+                    center_y + radius,
                 ),
                 outline="yellow",
                 width=1,
@@ -408,12 +401,8 @@ def _save_mask_overlays(
             draw.line((center_x - 3, center_y, center_x + 3, center_y), fill="yellow")
             draw.line((center_x, center_y - 3, center_x, center_y + 3), fill="yellow")
         elif tracking_row is not None and np.isfinite(tracking_row["raw_center_x_model_pixels"]):
-            center_x = (
-                float(tracking_row["raw_center_x_model_pixels"]) - pad_left
-            ) / scale_x - crop_left
-            center_y = (
-                float(tracking_row["raw_center_y_model_pixels"]) - pad_top
-            ) / scale_y - crop_top
+            center_x = float(tracking_row["raw_center_x_model_pixels"])
+            center_y = float(tracking_row["raw_center_y_model_pixels"])
             center_color = "cyan" if is_valid else "yellow"
             marker_layer = overlay_image.copy()
             draw = ImageDraw.Draw(marker_layer)
@@ -464,6 +453,7 @@ class MaskOverlayAccumulator:
         self.mask_transparency = mask_transparency
         self.geometry_head_only = geometry_head_only
         self.confidence_maps: dict[str, np.ndarray] = {}
+        self.selected_contours: dict[str, list[np.ndarray]] | None = {} if show_all_heads else None
         self.geometry_circles: dict[str, tuple[float, float, float]] | None = (
             {} if show_all_heads or geometry_head_only else None
         )
@@ -474,17 +464,23 @@ class MaskOverlayAccumulator:
             if prediction.geometry_circle is None:
                 raise ValueError("Geometry overlays require geometry predictions.")
             self.geometry_circles[prediction.image_name] = prediction.geometry_circle
-            labels = np.zeros(prediction.binary_mask.shape, dtype=np.uint8)
-            if not self.geometry_head_only:
-                labels[prediction.probability_map > self.pred_thresh] = 2
-                labels[prediction.binary_mask] = 1
-            self.confidence_maps[prediction.image_name] = labels
+        if self.geometry_head_only:
+            self.confidence_maps[prediction.image_name] = np.zeros(
+                prediction.binary_mask.shape, dtype=np.uint8
+            )
             return
         self.confidence_maps[prediction.image_name] = _encode_thresholded_confidence(
             prediction.probability_map,
             self.pred_thresh,
-            prediction.binary_mask,
+            None if self.selected_contours is not None else prediction.binary_mask,
         )
+        if self.selected_contours is not None:
+            contours, _ = cv2.findContours(
+                prediction.binary_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            self.selected_contours[prediction.image_name] = [
+                contour.reshape(-1, 2) for contour in contours
+            ]
 
     def save(
         self,
@@ -499,6 +495,7 @@ class MaskOverlayAccumulator:
             self.mask_transparency,
             tracking_dataframe=tracking_dataframe,
             geometry_circles=self.geometry_circles,
+            selected_contours=self.selected_contours,
         )
 
 

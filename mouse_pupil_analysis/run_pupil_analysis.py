@@ -89,8 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--show_all_heads",
         action="store_true",
         help=(
-            "Show retained mask (green), discarded mask (magenta), and geometry circle "
-            "(yellow). Requires --output_mask_dir and geometry weights (packaged by default). "
+            "Show all segmentation confidence colors, the yellow geometry circle, "
+            "and a dashed outline of the retained mask. Requires --output_mask_dir "
+            "and geometry weights (packaged by default). "
             "Changes overlays only."
         ),
     )

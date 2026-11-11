@@ -86,7 +86,7 @@ run-pupil-analysis --image_dir movie_frames/ --output_mask_dir results/geometry_
 ```
 
 Open `results/geometry_overlays/` to see the yellow circle and center on each
-frame's centered source-image crop. This view shows the geometry prediction
+frame resized and padded to 148 x 148. This view shows the geometry prediction
 without segmentation colors or a segmentation-derived center marker. The circle
 describes the visible-pupil region learned during training. This flag changes
 overlays only; the usual CSV and plot still report segmentation-based measurements.
@@ -107,15 +107,17 @@ run-pupil-analysis \
   --mask_transparency 0.35
 ```
 
-Green shows the retained segmentation, magenta shows discarded segmentation
-pixels (when present), and yellow marks the geometry head's circle and center.
-Together, green and magenta show the complete thresholded segmentation output.
-The circle is projected onto the same centered source-image crop as the mask.
+All threshold-passing segmentation pixels keep their usual yellow-orange-red
+confidence colors, including blobs removed during selection. The geometry
+circle and center keep the same yellow styling as `--geometry-head-only`.
+A thin, translucent white dashed contour marks the retained mask. Everything
+uses the same full-image resize and padding as the model input; no source crop is taken.
 
 Geometry-based component selection runs by default. `--show-all-heads` changes
-the overlay only; it shows the same final mask used for diameter and tracking.
-Add `--raw-segmentation` to inspect the unfiltered segmentation instead; all
-threshold-passing pixels are then green. `--prefer_central_component` overrides
+the overlay only; the dashed contour identifies the final mask used for diameter
+and tracking while the other blobs remain visible for inspection.
+Add `--raw-segmentation` to bypass selection; all threshold-passing regions are
+then retained and outlined. `--prefer_central_component` overrides
 the geometry selector with the existing image-center selector.
 
 Custom checkpoints can be supplied with `--checkpoint`. Legacy mask-only
@@ -157,7 +159,7 @@ run-pupil-analysis \
   | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
   | `--prefer_geometry_component` | Keep one whole component using confidence, area support, and the geometry head's predicted center. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
   | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
-  | `--show-all-heads` | Diagnostic overlay: retained segmentation in green, discarded segmentation in magenta, geometry circle and center in yellow. Requires `--output_mask_dir`; works with the packaged two-head model. Does not change measurements. Also accepts `--show_all_heads`. |
+  | `--show-all-heads` | Show all segmentation blobs in their usual confidence colors and the yellow geometry circle/center. A subtle white dashed contour marks the retained mask. Requires `--output_mask_dir`; changes overlays only. Also accepts `--show_all_heads`. |
   | `--geometry-head-only` | Draw only the yellow geometry circle and center in overlays. Requires `--output_mask_dir` and a two-head checkpoint; mutually exclusive with `--show-all-heads`. Changes overlays only. Also accepts `--geometry_head_only`; Python API: `geometry_head_only=True`. |
   | `--mask_transparency` | Blend weight of the heatmap color over the source image in overlays (default `0.05`). Higher values are more saturated. |
   | `--extraction_fps` | Frames per second to extract from the video (default `5`). If extracting at this rate would exceed `--max_frames`, the rate is automatically reduced so that `--max_frames` frames are extracted. |
@@ -196,7 +198,7 @@ The result files contain:
 |------|--------------|
 | `*_pupil_analysis.csv` | The per-frame table, columns below. |
 | `*_pupil_analysis.png` | Frame-indexed diameter plot with valid/warning/invalid points. Velocity mode adds center, speed, and a dedicated quality-control panel. |
-| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. With `--show-all-heads`, colors instead distinguish retained/discarded segmentation and the geometry circle, as described above. |
+| Mask images in `--output_mask_dir` | Optional. Confidence heatmaps over threshold-passing pupil pixels: yellow near the threshold, orange intermediate, red near-certain. A thin center cross is cyan when accepted and yellow when rejected. With `--show-all-heads`, all blobs remain visible in the same confidence colors, with the geometry circle/center and a dashed contour of the retained mask. |
 
 Segmentation visibility and quality are written for every run. Timestamp, center, speed,
 and `tracking_status` are added in velocity mode:
@@ -353,9 +355,9 @@ The packaged model was trained on 615 labeled pairs with auxiliary pupil center
 and radius supervision. It predicts the visible-pupil mask at a calibrated
 threshold of 0.525.
 
-Overlay PNGs are a centered 148 x 148 source-image display crop, with the model prediction
-mapped onto that crop. This diagnostic presentation does not change the resize-and-pad
-preprocessing used for inference or the reported measurements.
+Overlay PNGs show the entire input image resized with its aspect ratio preserved
+and padded to 148 x 148, matching the model input. Segmentation, geometry, and
+the retained contour share these coordinates; no source-image crop is taken.
 
 `pupil_visibility` and the status/reason columns distinguish a clean segmentation from an
 empty, low-confidence, border-touching, or low-circularity candidate. A narrow visible sliver
