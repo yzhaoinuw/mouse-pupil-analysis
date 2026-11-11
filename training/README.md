@@ -211,8 +211,8 @@ python training\run_train.py `
 
 The refit trains from scratch on all labeled pairs and writes
 `all_data_geometry.pth` with both heads and `all_data.pth` as a mask-only export.
-On `experiment/blob-selection`, the runtime keeps every whole component with at
-least 20% of its area inside the predicted circle when full weights are loaded;
+When full weights are loaded, the runtime keeps every whole component with at
+least 20% of its area inside the predicted circle;
 `--raw-segmentation` disables this step for inspection. This postprocessing
 experiment changes neither training loss nor weights.
 `python scripts/run_blob_selection.py` runs the 20% rule through the analysis CLI

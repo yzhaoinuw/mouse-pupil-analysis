@@ -6,7 +6,7 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
 ## Currently Hot
 
 - [Circle-overlap blob selection](#circle-overlap-blob-selection) — review the
-  accepted 20% whole-blob rule before considering integration into dev.
+  accepted 20% rule on labeled predictions after integration into dev.
 - [Treaty v0.9.1 feedback](#treaty-v091-feedback) — feedback posted; revisit the
   upstream fix when planning the next treaty update.
 - [Cross-recording generalization](#cross-recording-generalization) — diagnose the
@@ -18,11 +18,9 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
 
 ## Circle-Overlap Blob Selection
 
-Status: the maintainer accepted circle-overlap selection and requested commit
-and push on `experiment/blob-selection`, raising the minimum overlap from 5%
-to 20%. Keep every whole 8-connected blob with at least 20% of its area inside
-the predicted circle, with
-no circle expansion or confidence ranking. The existing checkpoint and 0.525
+Status: the accepted 20% circle-overlap rule is integrated into `dev`. Keep every
+whole 8-connected blob with at least 20% of its area inside the predicted circle,
+with no circle expansion or confidence ranking. The existing checkpoint and 0.525
 threshold isolate postprocessing from the proposed training change. Measurements
 use all retained pixels; QC still reports confidence and fragmentation.
 
@@ -38,7 +36,6 @@ use all retained pixels; QC still reports confidence and fragmentation.
   expansion only if the comparison supports it.
 - Test radius-to-zero supervision on empty masks separately. Current geometry
   training ignores those frames, so its circle is not a trained presence signal.
-- Integration into dev remains a separate maintainer decision.
 
 ## Treaty v0.9.1 Feedback
 

@@ -31,7 +31,7 @@ unrelated PyPI distribution and must not be claimed here.
   Calibration selects threshold 0.525. The filename score summarizes the four
   CV folds used to select the recipe.
 - Accepts full two-head checkpoints as well as legacy mask exports. By default,
-  two-head inference on `experiment/blob-selection` keeps all whole blobs with
+  two-head inference keeps all whole blobs with
   at least 20% of their area inside the predicted circle;
   `show_all_heads` only changes overlays to show all segmentation confidence
   colors, the geometry circle, and a dashed contour of the retained mask.
@@ -123,7 +123,7 @@ we observed that the predicted mask can contain detached false regions.
 We therefore extended the U-Net to also predict the pupil's center and radius.
 This adds geometry supervision during training and provides a predicted circle
 for selecting whole blobs from the segmentation output at inference. The
-`experiment/blob-selection` branch tests a 20% area-overlap rule with unchanged
+default selector uses a 20% area-overlap rule with unchanged
 weights and training loss.
 
 The model produces these outputs through two branches, called **heads**, that
@@ -165,7 +165,7 @@ decoder. Predicting geometry requires retaining the geometry branch's weights
 alongside that encoder.
 
 **Final blob selection is postprocessing code after the neural network.** For
-full two-head checkpoints on this experimental branch, inference keeps every
+full two-head checkpoints, inference keeps every
 8-connected blob with at least 20% of its pixels inside the predicted circle.
 It uses both center and radius without circle expansion, extra confidence
 ranking, or clipping accepted blobs. A single blob is also checked; if none

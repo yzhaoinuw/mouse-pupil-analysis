@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- On `experiment/blob-selection`, geometry selection keeps every whole blob with
+- Geometry selection keeps every whole blob with
   at least 20% of its area inside the predicted circle, including single-blob
   rejection and empty results. Measurements and centers use all retained pixels.
   Checkpoint weights, training loss, and the calibrated threshold are unchanged.

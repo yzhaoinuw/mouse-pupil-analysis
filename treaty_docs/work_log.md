@@ -4,6 +4,22 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Integrate blob selection into dev (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested merging the accepted experiment into dev. Fetched
+  origin and confirmed dev was an ancestor of `experiment/blob-selection`, then
+  fast-forwarded dev through `486b07e` without conflicts. Temporarily stashed only
+  the three modified tracked documents and restored each byte for byte; unrelated
+  experiments and generated outputs remain local.
+- Updated current pipeline references to describe the 20% selector as dev's
+  default and removed the pending integration follow-up. This integration changes
+  no model weights, prediction threshold, runtime code, or tests after acceptance.
+- Verification: checked remote refs and fast-forward ancestry, matched the
+  integrated runtime/test/script trees to the accepted branch, and checked scoped
+  documentation and whitespace. The existing 209-test and four-CLI-test results
+  apply to the unchanged runtime; no duplicate test run was needed. Push and
+  remote-ref verification complete the dev handoff.
+
 ### Tighten README and selector help (Codex, GPT-6, effort and token budget not exposed)
 
 - Replaced the opening's experiment history and implementation detail with the
