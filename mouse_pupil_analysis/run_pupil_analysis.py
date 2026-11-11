@@ -9,6 +9,7 @@ so it can also be driven from Python without a shell.
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -27,6 +28,7 @@ __all__ = [
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -80,7 +82,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--prefer_central_component",
         action="store_true",
-        help="Keep the confidence-weighted component nearest the image center. Off by default.",
+        help=(
+            "Deprecated compatibility option: use the legacy image-center selector. "
+            "Omit for the default learned-center selection with two-head checkpoints."
+        ),
     )
     parser.add_argument("--mask_transparency", type=float, default=0.05)
     overlays = parser.add_mutually_exclusive_group()
@@ -146,6 +151,12 @@ def main(argv: list[str] | None = None) -> int:
     configure_cli_logging()
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.prefer_central_component:
+        logger.warning(
+            "--prefer_central_component is deprecated. Omit it to use the checkpoint's "
+            "default selection (the learned center for two-head models). "
+            "This run will still use the legacy image-center selector."
+        )
 
     config = AnalysisConfig(
         video_path=args.video_path,

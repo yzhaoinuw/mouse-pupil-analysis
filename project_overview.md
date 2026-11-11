@@ -55,6 +55,8 @@ unrelated PyPI distribution and must not be claimed here.
 
 - Implements the `run-pupil-analysis` CLI: it parses arguments, builds an `AnalysisConfig`, and reports validation failures through `parser.error(...)` so usage mistakes print usage text rather than a traceback. Running the source file with no arguments instead uses its editable direct-run configuration block.
 - Accepts either `--video_path` or `--image_dir`.
+- The deprecated `--prefer_central_component` flag warns and retains its legacy
+  fixed-image-center behavior; ordinary two-head inference uses the learned center.
 - Enables console logging so terminal output matches the historical `print`-based behavior.
 
 ### 5. `mouse_pupil_analysis/results.py` and `mouse_pupil_analysis/plotting.py`

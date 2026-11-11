@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--raw-segmentation` for inspecting the segmentation head before component
   selection, and combined-head inspection examples in Usage.
 
+### Deprecated
+
+- `--prefer_central_component`: the CLI warns when this legacy image-center
+  override is used. It still works for compatibility; omit it to use the
+  checkpoint's default selection, based on the learned center for two-head models.
+
 ### Fixed
 
 - Restore full-image resize-and-pad overlay displays so larger input frames are

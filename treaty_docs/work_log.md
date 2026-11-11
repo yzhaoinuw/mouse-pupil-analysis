@@ -4,6 +4,33 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-10
 
+### Deprecate the image-center CLI override (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested deprecating `--prefer_central_component` now that
+  ordinary two-head inference already selects using the learned center. The CLI
+  visibly warns and labels the flag deprecated in help, while preserving its
+  fixed-image-center behavior for existing scripts. The underlying selector and
+  Python compatibility parameter remain available for legacy checkpoints and
+  comparisons. No removal version was set.
+- Removed the active recommendation from the combined-head example and marked
+  the options-table entry deprecated. Added the requested single-sentence
+  introduction immediately before the inspection foldouts, linking "two heads"
+  to the architecture overview. Existing selector-review follow-ups are unchanged.
+- The maintainer requested commit and push to dev. Scope is the deprecation,
+  inspection introduction, and their verification/context; unrelated local
+  experiments and older documentation edits remain local. No release is requested.
+- Verification:
+  - All eight focused CLI/central-selector tests passed. New tests invoke the
+    actual console command on public frames, verify warning presence only when
+    the flag is used, and match CLI diameters against the corresponding Python
+    API behavior with and without the legacy override. Ruff and Black passed for
+    changed Python files; `git diff --check` passed. Verified the README sentence's
+    placement and architecture link target.
+  - Commit checks re-ran repository-wide Ruff and Black successfully. Full pytest
+    ran 198 cases: 197 passed and one existing annotation-import test hit Windows
+    `WinError 5` during a temporary-folder rename. All four tests in that module
+    passed on a fresh temporary path immediately afterward.
+
 ### Deliver overlay corrections on dev (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer approved the restored full-image display and requested commit

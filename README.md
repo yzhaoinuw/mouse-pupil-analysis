@@ -61,6 +61,8 @@ To save confidence overlays on the original images:
 run-pupil-analysis --video_path data/mouse1.avi --output_mask_dir data/predicted_masks_mouse1
 ```
 
+The model has [two heads](project_overview.md#model-architecture-overview); the collapsible examples below show how to inspect each head separately or both together.
+
 <details>
 <summary>Inspect the segmentation output</summary>
 
@@ -117,8 +119,7 @@ Geometry-based component selection runs by default. `--show-all-heads` changes
 the overlay only; the dashed contour identifies the final mask used for diameter
 and tracking while the other blobs remain visible for inspection.
 Add `--raw-segmentation` to bypass selection; all threshold-passing regions are
-then retained and outlined. `--prefer_central_component` overrides
-the geometry selector with the existing image-center selector.
+then retained and outlined.
 
 Custom checkpoints can be supplied with `--checkpoint`. Legacy mask-only
 checkpoints still support ordinary inference, but cannot show a geometry output.
@@ -156,7 +157,7 @@ run-pupil-analysis \
   | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
   | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
   | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
-  | `--prefer_central_component` | Keep one confidence-weighted component with a gentle preference for the image centre. Off by default. It preserves occluded/crescent pupil shapes and is useful when a separate off-centre dark structure is falsely segmented. |
+  | `--prefer_central_component` | **Deprecated.** Retained for compatibility with the legacy fixed-image-center selector and emits a warning when used. Omit it to use the default learned-center selection with two-head checkpoints. |
   | `--prefer_geometry_component` | Keep one whole component using confidence, area support, and the geometry head's predicted center. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
   | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
   | `--show-all-heads` | Show all segmentation blobs in their usual confidence colors and the yellow geometry circle/center. A subtle white dashed contour marks the retained mask. Requires `--output_mask_dir`; changes overlays only. Also accepts `--show_all_heads`. |

@@ -44,7 +44,7 @@ class AnalysisConfig:
     output_mask_dir: Path | None = None
     batch_size: int = 32
     pred_thresh: float | None = None
-    prefer_central_component: bool = False
+    prefer_central_component: bool = False  # Compatibility override for the deprecated CLI flag.
     prefer_geometry_component: bool | None = None
     show_all_heads: bool = False
     mask_transparency: float = 0.05
