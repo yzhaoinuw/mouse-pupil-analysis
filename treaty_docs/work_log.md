@@ -4,6 +4,20 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Tighten README and selector help (Codex, GPT-6, effort and token budget not exposed)
+
+- Replaced the opening's experiment history and implementation detail with the
+  user-facing mask, circle-overlap, and combined-area behavior. The option table
+  now explicitly describes multiple-or-empty results, automatic geometry selection,
+  its checkpoint requirement and alias, and the current 0.525 pixel threshold.
+- Aligned CLI help, including a leftover learned-center description on the
+  deprecated option. Clarified retained-versus-discarded overlay colors and
+  fragmentation warnings. No inference behavior or future work changed.
+- Verification: all four CLI-help/API parity tests passed; Ruff and Black passed
+  for the help module. Checked the README against the selector, threshold resolver,
+  overlay renderer, and union measurements. Final help rendering and whitespace
+  checks accompany the documentation follow-up on `experiment/blob-selection`.
+
 ### Adopt 20% circle overlap and deliver the branch (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer accepted whole-blob circle selection after reviewing the 5%

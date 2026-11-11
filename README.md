@@ -12,12 +12,9 @@ UNet ships inside the package, so there is no model to download. It targets the 
 low-resolution frames that rodent eye cameras actually produce. With `--calculate_velocity`,
 it also tracks pupil center, speed, and per-frame segmentation quality.
 
-The default model predicts segmentation and pupil geometry in one pass. On the
-experimental `experiment/blob-selection` branch, thresholding produces candidate
-blobs and every blob with at least 20% of its area inside the predicted circle is
-kept whole. The circle is not expanded and accepted blobs are not clipped.
-Diameter is measured from the combined retained area; no qualifying blobs means
-an empty mask. The checkpoint and automatic threshold of 0.525 are unchanged.
+The model predicts a pupil mask and a circle around it. It keeps whole blobs with
+at least 20% of their area inside the circle and measures diameter from their
+combined area.
 
 ## Contents
 
@@ -157,9 +154,9 @@ run-pupil-analysis \
   | `--out_dir` | Where to write extracted frames. Defaults to `<video_stem>_frames/` next to the video. |
   | `--result_dir` | Where to write the CSV and plot. Defaults to `<video_stem>_result/` for video input and `<image_dir>_result/` for `--image_dir`. |
   | `--output_mask_dir` | Save translucent confidence-heatmap overlays for threshold-passing pupil pixels. Yellow is closest to the prediction threshold, orange is intermediate, and red is near-perfect confidence. |
-  | `--pred_thresh` | Optional confidence-threshold override from 0 to 1. By default, inference uses calibrated metadata beside the checkpoint, then a threshold encoded in its filename, and finally `0.7` for an uncalibrated custom checkpoint. Increase it when segmentation overpredicts the pupil; reduce it when it finds only part of the pupil. |
+  | `--pred_thresh` | Override the pixel-confidence threshold with a value strictly between 0 and 1. The packaged model uses `0.525`. Custom checkpoints use their calibration metadata, then a threshold in the filename, then `0.7` as a fallback. Increase it to reduce foreground; decrease it to include more. |
   | `--prefer_central_component` | **Deprecated.** Retained for compatibility with the legacy fixed-image-center selector and emits a warning when used. Omit it to use the default geometry selection with two-head checkpoints. |
-  | `--prefer_geometry_component` | On this experimental branch, keep every whole blob with at least 20% of its area inside the predicted circle. Enabled automatically for two-head checkpoints; mutually exclusive with `--prefer_central_component`. |
+  | `--prefer_geometry_component` | Keep every whole segmentation blob with at least 20% of its area inside the predicted circle. May retain multiple blobs or return an empty mask. Requires a two-head checkpoint; enabled by default. Mutually exclusive with `--prefer_central_component`. Also accepts `--prefer-geometry-component`. |
   | `--raw-segmentation` | Disable geometry component selection to inspect the thresholded segmentation head directly. Python API: `prefer_geometry_component=False`. Also accepts `--raw_segmentation`. |
   | `--show-all-heads` | Show all segmentation blobs in their usual confidence colors and the yellow geometry circle/center. A subtle white dashed contour marks the retained mask. Requires `--output_mask_dir`; changes overlays only. Also accepts `--show_all_heads`. |
   | `--geometry-head-only` | Draw only the yellow geometry circle and center in overlays. Requires `--output_mask_dir` and a two-head checkpoint; mutually exclusive with `--show-all-heads`. Changes overlays only. Also accepts `--geometry_head_only`; Python API: `geometry_head_only=True`. |
@@ -348,9 +345,10 @@ confidence overlays and look at them:
 run-pupil-analysis --video_path movie.avi --output_mask_dir movie_overlays
 ```
 
-Each overlay shades the pupil pixels that passed the threshold, from yellow (just over the
-threshold) through orange to red (near-certain). Inference normally uses the calibration
-stored with the checkpoint. If the mask spills past the pupil, override it with a higher
+Ordinary overlays shade the retained pupil pixels, from yellow (just over the
+threshold) through orange to red (near-certain). Use `--show-all-heads` to compare
+the predicted circle and retained contours with discarded blobs. Inference normally
+uses the calibration stored with the checkpoint. If the mask spills past the pupil, override it with a higher
 `--pred_thresh`; if it catches only part of the pupil, try a lower value.
 
 The packaged model was trained on 615 labeled pairs with auxiliary pupil center
@@ -393,8 +391,8 @@ or cropping; it is kept for continuity with earlier results. If your frames were
 Because the pipeline neither publishes nor interpolates values it cannot stand behind.
 Center and speed are empty when segmentation is rejected, and speed is additionally empty
 when either adjacent frame is invalid or when the two source frames are not consecutive. A
-`warning` frame remains usable, such as extra foreground components when the selected pupil
-component is still acceptable; `quality_reason` names the check that fired.
+`warning` frame remains usable, such as a fragmented mask that passes the other
+quality checks; `quality_reason` names the check that fired.
 
 
 ## Citation

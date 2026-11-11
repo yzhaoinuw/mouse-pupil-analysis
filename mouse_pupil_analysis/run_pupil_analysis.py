@@ -84,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Deprecated compatibility option: use the legacy image-center selector. "
-            "Omit for the default learned-center selection with two-head checkpoints."
+            "Omit for the default circle-overlap selection with two-head checkpoints."
         ),
     )
     parser.add_argument("--mask_transparency", type=float, default=0.05)
@@ -117,8 +117,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=None,
         help=(
-            "Keep every whole mask component with at least 20%% of its area inside "
-            "the predicted circle. Enabled automatically for geometry checkpoints."
+            "Keep every whole segmentation blob with at least 20%% of its area inside "
+            "the predicted circle; the result may contain multiple blobs or be empty. "
+            "Requires a geometry checkpoint; enabled by default."
         ),
     )
     selection.add_argument(
