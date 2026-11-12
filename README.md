@@ -7,14 +7,11 @@
 
 *Left: confidence-colored pupil mask and estimated center. Right: pupil diameter, center, and speed over time.*
 
-Measure mouse pupil diameter from a video or a folder of frames, in one command. A trained
-UNet ships inside the package, so there is no model to download. It targets the low-contrast,
-low-resolution frames that rodent eye cameras actually produce. With `--calculate_velocity`,
-it also tracks pupil center, speed, and per-frame segmentation quality.
+Measure mouse pupil diameter, track its center, and estimate velocity from videos
+or PNG frames, with quality checks for each frame. A trained U-Net is included
+for low-contrast, low-resolution rodent eye recordings.
 
-The model predicts a pupil mask and a circle around it. It keeps whole blobs with
-at least 20% of their area inside the circle and measures diameter from their
-combined area.
+[How it works](project_overview.md#model-architecture-overview)
 
 ## Contents
 
@@ -59,7 +56,9 @@ To save confidence overlays on the original images:
 run-pupil-analysis --video_path data/mouse1.avi --output_mask_dir data/predicted_masks_mouse1
 ```
 
-The model has [two heads](project_overview.md#model-architecture-overview); the collapsible examples below show how to inspect each head separately or both together.
+The model has [two heads](project_overview.md#model-architecture-overview).
+The commands above already use both heads together by default with the packaged model.
+To inspect their outputs in more detail, follow the collapsible examples below.
 
 <details>
 <summary>Inspect the segmentation output</summary>

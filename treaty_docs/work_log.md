@@ -4,6 +4,18 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Clarify the README introduction and default heads (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer requested a brief opening covering diameter, center tracking,
+  velocity, and quality checks, with implementation detail replaced by a How it
+  works link. Usage now explicitly states that the preceding commands already
+  use both packaged heads, so the inspection foldouts are clearly optional.
+- Commit/push is requested. Keep dev and main synchronized for the public README;
+  no new tag or package publication is needed for this documentation follow-up.
+- Verification: checked the architecture anchor, Usage command context, Markdown
+  structure, and scoped whitespace. Runtime is unchanged from the tested v0.4.1
+  release; no additional runtime tests were needed. Unrelated local edits remain local.
+
 ### Publish v0.4.1 and record its archive DOI (Codex, GPT-6, effort and token budget not exposed)
 
 - Published annotated tag `v0.4.1` at `92a759e17a6086da3ad60ff6f9119662cf5f3c38`
