@@ -4,6 +4,21 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Keep the training guide focused on user workflows (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer identified the BCE/Dice comparison and geometry-head screen as
+  internal experiments rather than instructions for adapting the model to user
+  data. Removed those sections, their nested historical refit/selector procedures,
+  and their contents entries. Experiment scripts and Git history remain available;
+  normal labeling, validation, training, fine-tuning, and checkpoint use stay in place.
+- Found a related follow-up while checking scope: the ordinary trainer uses
+  segmentation loss, including when it loads full geometry weights for fine-tuning.
+  The geometry head then lacks direct supervision. Record this as a separate
+  training-guide/runtime scope issue rather than adding an experiment to the user path.
+- Verification: checked remaining local section anchors and Markdown structure,
+  searched for links to the removed headings, and ran scoped whitespace checks.
+  Documentation only; runtime and its existing release validation are unchanged.
+
 ### Clarify the README introduction and default heads (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer requested a brief opening covering diameter, center tracking,

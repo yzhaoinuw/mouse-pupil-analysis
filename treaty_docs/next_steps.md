@@ -30,6 +30,9 @@ splitting and morphological opening are deferred; no extra cleanup is enabled.
   grouping when evaluating model changes and include clean frames and tiny or
   partially occluded pupils alongside failure cases.
 - Use the collected failure modes to choose the next model/data experiment.
+- Clarify the supported training scope before recommending two-head adaptation:
+  ordinary training/fine-tuning uses segmentation loss only. A loaded geometry
+  head currently receives no direct geometry supervision in that path.
 
 ## Circle-Overlap Blob Selection
 
