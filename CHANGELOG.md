@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-11
+
 ### Added
 
 - `--geometry-head-only` to save the predicted circle and center without
@@ -19,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Mean segmentation confidence is diagnostic only; it no longer rejects or warns
+  on tracking measurements. Pixel thresholding and probability-weighted centers
+  are unchanged.
 - Geometry selection keeps every whole blob with
   at least 20% of its area inside the predicted circle, including single-blob
   rejection and empty results. Measurements and centers use all retained pixels.
@@ -229,7 +234,8 @@ pupil-center velocity feature, first ships here. Version 0.1.3 was never release
 
 Changes before 0.1.2 predate this changelog; see the Git history for details.
 
-[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yzhaoinuw/mouse-pupil-analysis/compare/v0.1.4...v0.2.0

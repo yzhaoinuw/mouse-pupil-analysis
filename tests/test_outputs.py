@@ -94,7 +94,7 @@ def test_velocity_mode_appends_compact_tracking_fields(tmp_path: Path):
             "pupil_diameter_input_pixels": [20.0, 22.0, 24.0],
             "pupil_visibility": ["visible", "visible", "uncertain"],
             "segmentation_valid": [True, True, False],
-            "quality_reason": ["", "abrupt_area_change", "low_component_confidence"],
+            "quality_reason": ["", "abrupt_area_change", "component_touches_border"],
         }
     )
     _table, csv_path, plot_path = write_analysis_outputs(

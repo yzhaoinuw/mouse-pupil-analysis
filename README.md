@@ -359,9 +359,16 @@ Overlay PNGs show the entire input image resized with its aspect ratio preserved
 and padded to 148 x 148, matching the model input. Segmentation, geometry, and
 the retained contour share these coordinates; no source-image crop is taken.
 
-`pupil_visibility` and the status/reason columns distinguish a clean segmentation from an
-empty, low-confidence, border-touching, or low-circularity candidate. A narrow visible sliver
-may be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.
+`pupil_visibility` and the status/reason columns flag empty, border-touching, or
+low-circularity masks. Mean segmentation confidence remains in the detailed
+diagnostics without a rejection or warning threshold. A narrow visible sliver may
+be marked `partially_visible_or_uncertain`; a fully hidden pupil is not reconstructed.
+
+If a prediction still looks wrong, [report a failure case][failure-report] with
+the original frame, an all-head overlay, the software version, the command and
+any custom checkpoint, and a short description of the expected visible pupil.
+Keep the recording/session identifier and frame number so related examples can
+be grouped when preparing new training data.
 
 
 ### How do I improve or fine-tune the model on my data?
@@ -401,10 +408,11 @@ If you use this software in a paper or other scholarly work, please cite the exa
 you ran, so your analysis stays reproducible against that code:
 
 > Zhao, Y. (2026). *mouse-pupil-analysis: Automated mouse pupil segmentation, diameter, and
-> pupil-center velocity analysis using UNet* (v0.4.0). Zenodo.
-> https://doi.org/10.5281/zenodo.24089815
+> pupil-center velocity analysis using UNet* (v0.4.1).
+> https://github.com/yzhaoinuw/mouse-pupil-analysis/releases/tag/v0.4.1
 
-Every release is archived on Zenodo under its own [version DOI][doi-version]. The
+Every release is archived on Zenodo under its own version DOI, added here after
+archiving completes. The
 [concept DOI][doi-concept] in the badge above always resolves to the newest version, so use
 it only when you mean the project as a whole rather than a specific analysis.
 
@@ -439,7 +447,7 @@ python training/run_train.py --help
 MIT. See [`LICENSE`][license].
 
 [doi-concept]: https://doi.org/10.5281/zenodo.21897795
-[doi-version]: https://doi.org/10.5281/zenodo.24089815
+[failure-report]: https://github.com/yzhaoinuw/mouse-pupil-analysis/issues/new
 [treaty]: https://github.com/yzhaoinuw/agent_collab_treaty
 [demo]: https://raw.githubusercontent.com/yzhaoinuw/mouse-pupil-analysis/main/media/pupil_diameter_analysis_result_demo.gif
 [license]: https://github.com/yzhaoinuw/mouse-pupil-analysis/blob/main/LICENSE

@@ -88,6 +88,39 @@ def test_measure_probability_map_warns_on_low_component_dominance():
     assert "low_component_dominance" in measurement["quality_reason"]
 
 
+def test_lower_confidence_mask_still_produces_centers_and_velocity():
+    probabilities = np.zeros((30, 30), dtype=np.float32)
+    probabilities[10:15, 10:15] = 0.60
+    probabilities[10:15, 15] = 0.80
+    measurements = []
+    for index in range(2):
+        measurement, _, _ = measure_probability_map(
+            np.roll(probabilities, index, axis=1), 0.525, (30, 30)
+        )
+        assert measurement["mean_component_confidence"] == pytest.approx(19 / 30)
+        assert measurement["segmentation_valid"]
+        assert measurement["quality_reason"] == ""
+        # The 0.80 column still has more influence on the centroid.
+        assert measurement["raw_center_x_pixels"] > 12.5 + index
+        measurement["source_frame_index"] = index
+        measurements.append(measurement)
+    dataframe = build_tracking_dataframe(measurements, acquisition_fps=10)
+    assert dataframe.loc[1, "speed_pixels_per_second"] == pytest.approx(10)
+
+
+def test_lower_confidence_does_not_bypass_shape_or_border_checks():
+    probabilities = np.zeros((40, 40), dtype=np.float32)
+    probabilities[20:22, 8:32] = 0.60
+    measurement, _, _ = measure_probability_map(probabilities, 0.525, (40, 40))
+    assert not measurement["segmentation_valid"]
+    assert measurement["quality_reason"] == "low_component_circularity"
+    probabilities[:] = 0
+    probabilities[:5, 10:15] = 0.60
+    measurement, _, _ = measure_probability_map(probabilities, 0.525, (40, 40))
+    assert not measurement["segmentation_valid"]
+    assert measurement["quality_reason"] == "component_touches_border"
+
+
 def test_tracking_accumulator_reuses_streamed_binary_mask(tmp_path: Path):
     image_path = tmp_path / "eye_00001.png"
     Image.fromarray(np.zeros((148, 148), dtype=np.uint8)).save(image_path)
@@ -207,12 +240,12 @@ def test_temporal_area_warning_does_not_restore_prior_invalid_frame():
         _measurement(index, index, index, area=300 if index == 5 else 100) for index in range(11)
     ]
     measurements[5]["segmentation_valid"] = False
-    measurements[5]["quality_reason"] = "low_component_confidence"
+    measurements[5]["quality_reason"] = "component_touches_border"
 
     dataframe = build_tracking_dataframe(measurements, acquisition_fps=10)
 
     assert not dataframe.loc[5, "segmentation_valid"]
-    assert dataframe.loc[5, "quality_reason"] == "low_component_confidence"
+    assert dataframe.loc[5, "quality_reason"] == "component_touches_border"
     assert np.isnan(dataframe.loc[5, "center_x_pixels"])
     assert np.isnan(dataframe.loc[5, "speed_pixels_per_second"])
 

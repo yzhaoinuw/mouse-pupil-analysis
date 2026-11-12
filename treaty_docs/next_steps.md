@@ -5,6 +5,8 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
 
 ## Currently Hot
 
+- [Targeted user failure cases](#targeted-user-failure-cases) — collect examples
+  from v0.4.1 users before the next model improvement.
 - [Circle-overlap blob selection](#circle-overlap-blob-selection) — review the
   accepted 20% rule on labeled predictions after integration into dev.
 - [Treaty v0.9.1 feedback](#treaty-v091-feedback) — feedback posted; revisit the
@@ -15,6 +17,19 @@ Use this file only for active follow-ups and decisions. Historical evidence belo
   bound, then validate the quality thresholds on more recordings.
 - [Frame recommendation](#frame-recommendation) — make its completed-CV-committee prerequisite
   clear wherever a fresh-clone user encounters it.
+
+## Targeted User Failure Cases
+
+Status: the maintainer chose to release the approved pipeline as v0.4.1 and
+prioritize targeted user data for a systemic model improvement. Thin-bridge
+splitting and morphological opening are deferred; no extra cleanup is enabled.
+
+- Collect original frames, all-head overlays, software version/command/checkpoint,
+  expected visible-pupil boundaries, and recording/session identifiers.
+- Follow `training/data_collection.md` for annotation and intake. Preserve recording
+  grouping when evaluating model changes and include clean frames and tiny or
+  partially occluded pupils alongside failure cases.
+- Use the collected failure modes to choose the next model/data experiment.
 
 ## Circle-Overlap Blob Selection
 
@@ -99,13 +114,18 @@ Next actions:
 
 ## Velocity Quality Control
 
-Status: provisional quality thresholds are implemented.
+Status: mean segmentation confidence is diagnostic only; the extra 0.90
+confidence rejection/warning was removed. Pixel thresholding and weighted centers
+are unchanged. Empty-mask, circularity, border, and temporal-area checks remain.
 
 Next actions:
 
 - Measure a mouse PLR maximum constriction velocity on this rig.
 - Validate the quality thresholds on additional recordings before treating them as universal.
 - Consider smoothing only after measuring center jitter and preserving fast REM movements.
+- Review `images_test_prediction/HQL090_centers_2026-11-11/HQL090_sleep251012_010_eye/`
+  and the matching center table/plot under `results/HQL090_centers_2026-11-11/`.
+  This is the requested sparse-frame center inspection, not a velocity run.
 
 ## Frame Recommendation
 

@@ -4,6 +4,74 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Prepare v0.4.1 for user feedback (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer declined thin-bridge cleanup: its limited return does not justify
+  another postprocessing rule. Prioritize user failure cases and a systemic model
+  improvement after targeted data collection. No opening, erosion, or splitting
+  operation is enabled in this release.
+- Requested a new tagged version containing all approved changes. Selected patch
+  v0.4.1 to correct the v0.4.0 geometry packaging/inference issues and include the
+  accepted 20% selector, inspection/overlay fixes, and mean-confidence QC removal.
+  Trained weights and the calibrated pixel threshold 0.525 remain unchanged.
+- Updated version/date metadata, changelog, user failure-report guidance, and
+  pipeline/release documentation. Only approved changes and scoped documentation
+  join the release; older local experiment files and notes remain unpublished.
+  The release will reach main before tagging, then use the tag workflow for PyPI
+  and a GitHub Release for Zenodo. The new version DOI is a post-release follow-up.
+- Verification:
+  - All 211 tests passed on a clean Git-tree export after a fresh-temp retry of
+    the known Windows annotation-folder rename failure. Ruff and Black passed.
+    Exported only staged files, excluding unrelated local experiments and notes.
+  - Wheel and sdist built with the pupil_tracking environment, --no-isolation,
+    and repository-local temporary storage. A shorter export path avoided the
+    Windows path-length limit in source-distribution assembly.
+  - Verified version 0.4.1 in both artifacts, byte-identical intended checkpoint,
+    training log and calibration metadata, exactly one checkpoint, no archived
+    weights, no unrelated namespace, and no mean-confidence rejection in runtime.
+  - Installed the wheel into a fresh smoke venv using existing runtime dependencies
+    and tested outside the source tree. Verified version/import location, both
+    model heads, threshold 0.525, 20% overlap, and a low-confidence valid centroid.
+    Both console help commands passed. The actual velocity/all-head CLI produced
+    31 readable overlays and 30 finite speeds on the consecutive 97-Hz fixture.
+  - Scoped whitespace checks passed. CI and publication checks follow the release
+    commit; the tag will only be published after it reaches main.
+
+### Remove mean-confidence rejection and inspect HQL090 centers (Codex, GPT-6, effort and token budget not exposed)
+
+- The maintainer chose to trust the calibrated pixel threshold rather than add
+  a fixed 0.90 mean-confidence rejection. Removed both that rejection and warning,
+  retaining mean confidence as a continuous diagnostic and retaining probability
+  weighting of the centroid. Circle-overlap selection, empty/border/circularity
+  checks, and temporal rules are unchanged. Updated the README and pipeline docs.
+- Audited 232 HQL090 PNGs across four recordings: none has a consecutive frame
+  pair. No matching source video or acquisition metadata was found under videos.
+  After clarification, the maintainer requested centers only on all 89
+  `HQL090_sleep251012_010_eye` images, without requiring a velocity calculation.
+  Kept recordings separate and did not invent a frame rate or bridge missing frames.
+- Ran the public analysis API with the unchanged packaged checkpoint, threshold
+  0.525, 20% circle overlap, and 0.35 confidence blend. Wrote center-marked overlays
+  to `images_test_prediction/HQL090_centers_2026-11-11/HQL090_sleep251012_010_eye/`.
+  The matching directory under `results/HQL090_centers_2026-11-11/` contains the
+  standard analysis outputs, `estimated_centers.csv`, `center_diagnostics.csv`,
+  a sparse-frame x/y scatter plot, and `run.json` with source/code/checkpoint hashes.
+- Estimated centers for 87 frames; two masks are empty. Of 69 frames passing
+  remaining QC, 30 would previously have failed mean confidence. Eighteen frames
+  remain rejected for circularity; their raw center estimates are still exported
+  and marked in yellow for inspection. These are inspection results, not an
+  accuracy assessment. Changes are local on dev pending further review.
+- Verification:
+  - All 17 focused tracking/output tests passed, including a below-0.90 mask
+    producing valid center/velocity and continued shape/border rejection. Full
+    pytest ran 211 tests: 210 passed and the existing annotation-import test hit
+    Windows WinError 5 during a temporary-folder rename. All four annotation-import
+    tests passed on the fresh `.pytest_tmp_confidence_retry` path immediately after.
+  - Repository-wide Ruff and Black passed with `.pre-commit-cache/` excluded.
+    Matched all 89 output names to inputs, verified source/copied-input hashes and
+    unchanged checkpoint hash, and matched run settings to the calibrated model.
+    Visually inspected the center scatter plot and frame 24367's centroid overlay.
+    Confirmed no low-confidence reason is generated and ran `git diff --check`.
+
 ### Integrate blob selection into dev (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer requested merging the accepted experiment into dev. Fetched

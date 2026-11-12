@@ -15,7 +15,6 @@ from mouse_pupil_analysis.extract_frames import ExtractedFrame
 from mouse_pupil_analysis.preprocessing import MODEL_IMAGE_SIZE, resize_scale
 
 MIN_COMPONENT_DOMINANCE = 0.80
-MIN_MEAN_COMPONENT_CONFIDENCE = 0.90
 MIN_COMPONENT_CIRCULARITY = 0.45
 MIN_LOCAL_AREA_RATIO = 0.65
 MAX_LOCAL_AREA_RATIO = 2.00
@@ -163,9 +162,6 @@ def measure_probability_map(
     rejection_reasons: list[str] = []
     if dominance < MIN_COMPONENT_DOMINANCE:
         quality_reasons.append("low_component_dominance")
-    if mean_confidence < MIN_MEAN_COMPONENT_CONFIDENCE:
-        quality_reasons.append("low_component_confidence")
-        rejection_reasons.append("low_component_confidence")
     if circularity < MIN_COMPONENT_CIRCULARITY:
         quality_reasons.append("low_component_circularity")
         rejection_reasons.append("low_component_circularity")

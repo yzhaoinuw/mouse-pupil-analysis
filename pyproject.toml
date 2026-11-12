@@ -1,6 +1,6 @@
 [project]
 name = "mouse-pupil-analysis"
-version = "0.4.0"
+version = "0.4.1"
 description = "Automated mouse pupil segmentation, diameter, and pupil-center velocity analysis using UNet."
 authors = [{ name = "Yue Zhao" }]
 license = "MIT"
