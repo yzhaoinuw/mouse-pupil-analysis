@@ -4,6 +4,30 @@ Prepend new session notes to the top of this file. The live log holds at most th
 
 ## 2026-11-11
 
+### Publish v0.4.1 and record its archive DOI (Codex, GPT-6, effort and token budget not exposed)
+
+- Published annotated tag `v0.4.1` at `92a759e17a6086da3ad60ff6f9119662cf5f3c38`
+  after main CI passed. The tag-triggered release workflow built, verified and
+  published both distributions to PyPI. Created the GitHub Release with those
+  exact verified artifacts and user failure-report guidance.
+- Zenodo archived the release as record 24148777, version DOI
+  `10.5281/zenodo.24148777`, under the unchanged concept DOI
+  `10.5281/zenodo.21897795`. Updated both citation DOI fields, kept the per-version
+  identifier first, and updated the README citation in the required post-tag commit.
+- Main and dev receive the citation follow-up; the release tag remains on the
+  verified release commit. Unrelated local edits and experiments remain local.
+- Verification:
+  - Main CI run 43130970690 passed the supported Python/OS matrix and clean-wheel
+    checks; Release run 43131494532 passed all build and PyPI publishing checks.
+  - PyPI reports version 0.4.1. Both public distribution SHA-256 values match the
+    downloaded GitHub Actions artifacts exactly. Installed v0.4.1 from PyPI in the
+    smoke venv outside the source tree; verified version/import location, both
+    model heads, 20% circle overlap, calibration 0.525, and diagnostic-only mean
+    confidence. The published console help command passed.
+  - Queried the published Zenodo record and verified its version and concept DOI.
+    Checked matching citation/README version DOI and release date, scoped whitespace,
+    remote tag target and branch refs. The local 211-test release suite passed.
+
 ### Prepare v0.4.1 for user feedback (Codex, GPT-6, effort and token budget not exposed)
 
 - The maintainer declined thin-bridge cleanup: its limited return does not justify
